@@ -1,7 +1,7 @@
 Welcome to the changelog for Angband 4. This file tracks the changes made since
 3.5.1.
 
-Angband 4.2.0
+Angband 4.2.0.EF
 =============
 
 This version is mainly a major overhaul of classes and the monster list.  As
@@ -448,3 +448,5 @@ General code stuff
  - re-organisation of lib directory
  - document!
 
+AI rebuild
+ - change titan 1 class to marvokian chain module
