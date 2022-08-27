@@ -8,6 +8,7 @@ CLEAN = config.status config.log *.dll *.exe
 tests:
 	$(MAKE) -C src tests
 
+
 TAG = angband-`git describe`
 OUT = $(TAG).tar.gz
 
