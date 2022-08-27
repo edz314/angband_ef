@@ -31,7 +31,7 @@ timestamp='2012-02-10'
 #
 # This script attempts to guess a canonical system name similar to
 # config.sub.  If it succeeds, it prints the system name on stdout, and
-# exits with 0.  Otherwise, it exits with 1.
+# exits with 0.  Otherwise, it exits with 1.1
 #
 # You can get the latest version of this script from:
 # http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD
