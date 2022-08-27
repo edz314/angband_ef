@@ -11,6 +11,7 @@
 # even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.
 
+
 AC_DEFUN([_MY_PROG_MAKE_VAR],
 	 [AC_ARG_VAR([MAKE], [Name of a make program to use])dnl
 my_make=${MAKE-make}
@@ -65,6 +66,7 @@ EOF
 		rm conftest.mk
 	fi])
 
+
 AC_SUBST([MAKE_SINCLUDE])
 if test x$my_cv_make_sinc@&t@lude_syntax = xgnu ; then
 	MAKE_SINCLUDE=-inc@&t@lude
@@ -84,6 +86,7 @@ AC_DEFUN([MY_EXPAND_DIR],
 		eval echo \""[$]$1"\"
 	)`]
 )
+
 
 
 dnl PKG_CHECK_MODULES(GSTUFF, gtk+-2.0 >= 1.3 glib = 1.3.4, action-if, action-not)
