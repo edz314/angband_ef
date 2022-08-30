@@ -22,3 +22,4 @@ dist:
 	rm -rf $(TAG)/autogen.sh $(TAG)/autom4te.cache
 	tar --exclude .gitignore --exclude *.dll -czvf $(OUT) $(TAG)
 	rm -rf $(TAG)
+
