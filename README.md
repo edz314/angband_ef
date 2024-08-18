@@ -1,4 +1,5 @@
-# Angband 4.2.0
+# Angband 4.2.0.EF AI Rebuild
+
 
 
 Angband is a graphical dungeon adventure game that uses textual characters

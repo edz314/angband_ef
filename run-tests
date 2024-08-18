@@ -1,5 +1,6 @@
 #!/bin/sh
 
+
 RAN=0
 OK=0
 

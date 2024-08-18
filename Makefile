@@ -8,6 +8,7 @@ CLEAN = config.status config.log *.dll *.exe
 tests:
 	$(MAKE) -C src tests
 
+
 TAG = angband-`git describe`
 OUT = $(TAG).tar.gz
 
@@ -21,3 +22,4 @@ dist:
 	rm -rf $(TAG)/autogen.sh $(TAG)/autom4te.cache
 	tar --exclude .gitignore --exclude *.dll -czvf $(OUT) $(TAG)
 	rm -rf $(TAG)
+
