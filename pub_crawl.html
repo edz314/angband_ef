@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Reading Pub Crawl — A Roguelike Adventure</title>
+<style>
+  :root {
+    --bg:      #0d0d0d;
+    --bg2:     #141414;
+    --border:  #2a2a2a;
+    --text:    #c8c8c8;
+    --dim:     #555;
+    --green:   #5af078;
+    --yellow:  #f0c040;
+    --red:     #f05050;
+    --cyan:    #40d0f0;
+    --magenta: #d060f0;
+    --white:   #ffffff;
+    --amber:   #f0a020;
+    --font:    'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px;
+  }
+  #game {
+    width: 100%;
+    max-width: 780px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  #output {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    min-height: 360px;
+    max-height: 55vh;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  #output p { margin: 2px 0; }
+  #output .sep { color: var(--border); }
+  #stats {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 24px;
+    font-size: 12px;
+  }
+  #stats .stat-label { color: var(--dim); }
+  #pubs-row {
+    font-size: 12px;
+    grid-column: 1 / -1;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+  }
+  #menu {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 16px;
+  }
+  #menu h3 { color: var(--cyan); font-size: 13px; margin-bottom: 8px; }
+  .menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 4px;
+  }
+  .btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+    text-align: left;
+    transition: border-color 0.1s, background 0.1s;
+  }
+  .btn:hover { border-color: var(--cyan); background: #1a1a2a; color: var(--white); }
+  .btn:active { background: #1a2a3a; }
+  .btn .key { color: var(--yellow); font-weight: bold; }
+  .btn .note { color: var(--dim); font-size: 11px; }
+  .btn.primary { border-color: var(--cyan); color: var(--cyan); }
+  .btn.danger  { border-color: var(--red);  color: var(--red); }
+  .btn.muted   { opacity: 0.5; cursor: not-allowed; }
+  /* text colours */
+  .g  { color: var(--green); }
+  .y  { color: var(--yellow); }
+  .r  { color: var(--red); }
+  .c  { color: var(--cyan); }
+  .m  { color: var(--magenta); }
+  .w  { color: var(--white); }
+  .d  { color: var(--dim); }
+  .b  { font-weight: bold; }
+  .a  { color: var(--amber); }
+  /* stat bars */
+  .bar-wrap { display: inline-block; width: 80px; height: 10px; background: var(--border); border-radius: 2px; vertical-align: middle; margin-left: 4px; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+  .bar-sob  { background: var(--green); }
+  .bar-bld  { background: var(--amber); }
+  .bar-chm  { background: var(--magenta); }
+  .bar-csh  { background: var(--yellow); }
+  kbd { background: var(--border); border-radius: 2px; padding: 0 4px; font-family: var(--font); font-size: 11px; }
+  #map-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 16px;
+    display: none;
+    font-size: 11px;
+    white-space: pre;
+    color: var(--dim);
+  }
+  #map-panel.visible { display: block; }
+  .pub-done   { color: var(--green); }
+  .pub-next   { color: var(--cyan); }
+  .pub-future { color: var(--dim); }
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="output"></div>
+  <div id="stats">
+    <div><span class="stat-label">Sobriety </span><span id="s-sob">100</span>/100
+      <span class="bar-wrap"><span class="bar-fill bar-sob" id="b-sob" style="width:100%"></span></span>
+      <span id="t-sob" class="g"> Stone cold sober</span>
+    </div>
+    <div><span class="stat-label">Cash     </span><span class="y" id="s-csh">£40.00</span></div>
+    <div><span class="stat-label">Bladder  </span><span id="s-bld">0</span>%
+      <span class="bar-wrap"><span class="bar-fill bar-bld" id="b-bld" style="width:0%"></span></span>
+      <span id="t-bld" class="g"> Fine</span>
+    </div>
+    <div><span class="stat-label">Charm    </span><span id="s-chm">50</span>/100
+      <span class="bar-wrap"><span class="bar-fill bar-chm" id="b-chm" style="width:50%"></span></span>
+      <span id="t-chm" class="g"> Friendly</span>
+    </div>
+    <div id="pubs-row"><span class="stat-label">Pubs: </span><span id="s-pubs">0</span>/10 &nbsp;<span id="pub-stars"></span></div>
+  </div>
+  <div id="menu">
+    <h3 id="menu-title">THE READING PUB CRAWL</h3>
+    <div class="menu-grid" id="menu-grid"></div>
+  </div>
+  <div id="map-panel"></div>
+</div>
+
+<script>
+'use strict';
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+
+const PUBS = [
+  {
+    id:0, name:"The Three Guineas", street:"Station Hill", emoji:"🚂",
+    desc:"A grand Victorian pub right outside Reading station. Named after the meeting point of Berkshire, Oxfordshire and Buckinghamshire. Packed with commuters, stag dos and confused tourists who missed the last train to London.",
+    specialty:"London Pride", pintPrice:5.50, bouncer:false, stickyCarpet:false, music:"background jazz", fruitMachine:false,
+    encounters:[
+      "A stag do from Swindon piles in, wearing matching pink cowboy hats. You nod respectfully.",
+      "A man in a suit stares at the departure board through the window, nursing a pint with quiet desperation.",
+      "Someone announces 'I'm only staying for one' very loudly. They have clearly been here for four.",
+      "A group of Reading FC fans are relitigating a match from 2012 in extraordinary detail.",
+      "A delayed-train announcement echoes faintly from the concourse. Half the pub checks their phones.",
+    ],
+  },
+  {
+    id:1, name:"The Greyfriar", street:"Greyfriars Road", emoji:"🍺",
+    desc:"A proper old-school Reading boozer on Greyfriars Road. Real ales, proper locals, and a carpet that has seen things no carpet should see. The kind of pub where everyone knows everyone, and they're mildly suspicious of you.",
+    specialty:"Brakspear Oxford Gold", pintPrice:4.80, bouncer:false, stickyCarpet:true, music:"jukebox", fruitMachine:true,
+    encounters:[
+      "A regular called Dave gives you a detailed history of the pub since 1987. You didn't ask.",
+      "The jukebox blares early-2000s indie. Half the pub silently mouths along to Mr Brightside.",
+      "A terrier under the bar table stares at you with unsettling intelligence.",
+      "Someone wins the quiz machine and does a small, private victory dance.",
+      "The landlord polishes a glass he's been polishing for twenty minutes. It is very clean.",
+    ],
+  },
+  {
+    id:2, name:"The Nag's Head", street:"Friar Street", emoji:"🐴",
+    desc:"Right on Friar Street, the Nag's Head is a Reading institution. Two floors, a proper bar, and the kind of Friday-night energy that starts at 5pm and does not stop. The beer garden is technically a fire escape. Nobody minds.",
+    specialty:"Guinness", pintPrice:5.20, bouncer:true, stickyCarpet:true, music:"loud chart music",
+    encounters:[
+      "A hen party sweeps through like a glittery tidal wave. The bride is wearing a veil and crying — in a good way.",
+      "Someone loudly explains why Reading FC absolutely deserves to be in the Premier League.",
+      "A man carries four pints back from the bar with the focused calm of a brain surgeon.",
+      "Someone from your school appears. You immediately study your phone.",
+      "Two people try to claim the same table. After a brief standoff, they agree to share it.",
+    ],
+  },
+  {
+    id:3, name:"The Monk's Retreat", street:"Friar Street", emoji:"🍽️",
+    desc:"Reading's Wetherspoon on Friar Street. Cavernous, cheap, and philosophically committed to the idea that pints should cost under £3. The menu is the size of a small novel. It is somehow already absolutely rammed at 4pm.",
+    specialty:"whatever's cheapest", pintPrice:2.75, bouncer:false, stickyCarpet:false, music:"none (blissfully)", wetherspoons:true,
+    encounters:[
+      "A table of pensioners are absolutely destroying a full breakfast at 4pm with complete serenity.",
+      "Someone is having a work meeting here. In a Wetherspoon. On Friday afternoon. Deep respect.",
+      "The app crashes when you try to order. You go to the bar like a normal person and feel good about it.",
+      "A child runs past carrying a plate of chips. No parent is visible. The chips are gone.",
+      "The price of a pint is displayed in very large font. You feel something like joy.",
+    ],
+  },
+  {
+    id:4, name:"The Blagrave Arms", street:"Blagrave Street", emoji:"🎯",
+    desc:"A proper boozer just off the main drag, named after the Blagrave family who once owned half of Reading. Good real ales, pub quiz on Wednesdays, and a dartboard that gets genuinely competitive. The kind of place where you accidentally stay for three extra pints.",
+    specialty:"West Berkshire Good Old Boy", pintPrice:4.90, bouncer:false, stickyCarpet:false, music:"radio", fruitMachine:true,
+    encounters:[
+      "A quiz team argues whether a hedgehog is a mammal. It is. They refuse to believe you.",
+      "The landlord knows everyone's name. He does not know yours but is trying very hard.",
+      "Someone challenges you to darts. They are extraordinarily good at darts.",
+      "A birthday party in the corner is on round eight and invites you to join them.",
+      "A bloke at the bar says 'same again' and the barman is already pulling it.",
+    ],
+  },
+  {
+    id:5, name:"The Butler", street:"Broad Street", emoji:"🎩",
+    desc:"Right on Broad Street in a converted bank building with high ceilings and prices to match. Popular with after-work crowds and people who say 'craft beer' unironically. The cocktail list is extensive. The gin menu is a genuine commitment.",
+    specialty:"rotating craft IPA", pintPrice:6.00, bouncer:false, stickyCarpet:false, music:"curated indie playlist",
+    encounters:[
+      "A group of office workers are doing 'team bonding'. It is not working.",
+      "The bartender explains the provenance of a hop variety for ninety uninterrupted seconds.",
+      "Someone is on a first date. It appears to be going well. You give them an encouraging nod.",
+      "A bloke orders a Stella. The bartender's face does something involuntary.",
+      "The bar sells fourteen types of gin. You choose the one you've actually heard of.",
+    ],
+  },
+  {
+    id:6, name:"Allied Arms", street:"St Mary's Butts", emoji:"⚓",
+    desc:"A no-nonsense pub on St Mary's Butts — one of Reading's oldest surviving boozers. Real ale, proper crisps (not 'artisan'), and a landlord who has no time for nonsense. The locals are deeply loyal. You are not a local. That is fine. Probably.",
+    specialty:"Abbot Ale", pintPrice:4.50, bouncer:false, stickyCarpet:true, music:"none", fruitMachine:true,
+    encounters:[
+      "A man with a very impressive beard nods at you once. You feel assessed and, somehow, accepted.",
+      "Someone is reading an actual newspaper. A physical, paper newspaper. Like a wizard.",
+      "A dog of indeterminate breed and enormous dignity walks to the far corner and lies down.",
+      "The fruit machine pays out. The winner does not react. This is not their first time.",
+      "Someone orders a port and lemon. The barman doesn't even blink.",
+    ],
+  },
+  {
+    id:7, name:"Purple Turtle", street:"Gun Street", emoji:"🐢",
+    desc:"Reading's legendary dive bar on Gun Street. Dark, loud, and absolutely essential. The Purple Turtle has been fuelling Reading's nights since time immemorial. Famous for cheap drinks and a clientele that spans every walk of life imaginable.",
+    specialty:"Purple Rain cocktail", pintPrice:4.20, bouncer:true, stickyCarpet:true, music:"BANGING",
+    encounters:[
+      "The DJ drops something that makes everyone simultaneously look up from their phones.",
+      "You find a mystery token on the floor. Bar staff say it's from 2009. They still honour it.",
+      "A Reading Uni student explains their dissertation topic to the bar. The bar listens politely.",
+      "Someone spills a drink on you. They are immediately, profusely apologetic. The vibes survive.",
+      "A group in full cowboy fancy dress are committed to the bit with impressive intensity.",
+      "The bass physically vibrates your pint glass. This is correct.",
+    ],
+  },
+  {
+    id:8, name:"The Back of Beyond", street:"King's Road", emoji:"🌍",
+    desc:"Reading's second Wetherspoon, on King's Road near the Oracle. Massive, efficient, and democratically cheap. Named for its slightly strange location behind everything. The breakfast is served until noon. It is 11:47. You may still make it.",
+    specialty:"whatever's cheapest (again)", pintPrice:2.80, bouncer:false, stickyCarpet:false, music:"none", wetherspoons:true,
+    encounters:[
+      "You are technically in two postcodes simultaneously in this pub.",
+      "A family of German tourists are baffled and delighted by the prices.",
+      "Someone orders a 'pint of lager' and when asked which one says 'the yellow one'.",
+      "You spot an abandoned, completely full pint on a table. No one nearby. A genuine moral dilemma.",
+      "The Oracle shopping centre is visible through the window, dark and cavernous.",
+    ],
+  },
+  {
+    id:9, name:"Zerodegrees", street:"Bridge Street", emoji:"🍕",
+    desc:"A microbrewery and pizzeria by the Oracle and the River Kennet. Brews its own beer in big visible tanks on the premises. The pizza is genuinely good. The Mango Beer is either brilliant or appalling depending on your current sobriety level. The Kennet glitters outside.",
+    specialty:"Zerodegrees Black Lager", pintPrice:5.80, bouncer:false, stickyCarpet:false, music:"ambient",
+    encounters:[
+      "You can see the actual brewing tanks from your seat. You pretend to understand them.",
+      "A table orders the Mango Beer and immediately disagrees about whether it's nice.",
+      "The Oracle River is right outside. Someone sits on the steps eating chips by the water.",
+      "A couple share a pizza and look annoyingly content with life. Fair enough.",
+      "A waiter offers you the food menu. You stare at it for a long time, then order another drink.",
+    ],
+  },
+];
+
+const FINAL = {
+  name:"Perfect Fried Chicken", street:"Oxford Road",
+  desc:"The legendary Perfect Fried Chicken, Oxford Road. The lights are fluorescent and entirely unforgiving. The queue is twenty deep. You order large chips and a piece of chicken. It is, in this moment, the single greatest meal you have ever eaten in your entire life. You have done it. You have completed the Reading Pub Crawl.",
+};
+
+const STREET_EVENTS = [
+  { text:"You spot a kebab van on Friar Street. A donor wrap for £6 sobers you up a bit.", type:"food", cost:6, sobriety:+12 },
+  { text:"You find a fiver on the pavement outside the Oracle. Today IS your day.", type:"found", cash:+5, sobriety:0 },
+  { text:"It starts drizzling. Classic Reading. You walk faster.", type:"flavor" },
+  { text:"A night bus rumbles past. You briefly consider going home. You don't.", type:"flavor" },
+  { text:"A group of lads in Reading FC shirts cheer at you from across the road. You cheer back.", type:"flavor" },
+  { text:"Broad Street is heaving. You navigate through a river of people in various states.", type:"flavor" },
+  { text:"A chip shop. You buy a small chips for £3. Salt and vinegar. Life-affirming.", type:"food", cost:3, sobriety:+8 },
+  { text:"There's a cash machine on Broad Street. You withdraw £20 (plus a £1.75 fee you barely notice).", type:"atm", cost:1.75, cash:+20 },
+  { text:"A taxi driver shouts 'Y'alright mate?' You are, broadly speaking, alright.", type:"flavor" },
+  { text:"You stub your toe on a kerb. Ow.", type:"flavor" },
+  { text:"Someone from school recognises you. You can't remember their name. Neither can they. Perfect equilibrium.", type:"flavor" },
+  { text:"A burger van. You buy one onion ring for £1.50. Just the one. It's enormous.", type:"food", cost:1.5, sobriety:+3 },
+  { text:"The Oracle fountain is lit up. It's actually quite beautiful at night.", type:"flavor" },
+  { text:"You pass the IDR underpass. It smells like all underpasses smell. You walk through quickly.", type:"flavor" },
+];
+
+// ── GAME STATE ────────────────────────────────────────────────────────────────
+
+const G = {
+  sobriety: 100,
+  cash: 40.0,
+  bladder: 0,
+  charm: 50,
+  visited: new Set(),
+  phase: 'title',       // title | street | pub | gameover | win
+  pubIndex: 0,          // which pub we're currently at / heading to
+  drankHere: false,     // drunk at least once in current pub
+  bouncerFailed: false,
+};
+
+// ── OUTPUT ────────────────────────────────────────────────────────────────────
+
+const out = document.getElementById('output');
+function print(html) {
+  const p = document.createElement('p');
+  p.innerHTML = html;
+  out.appendChild(p);
+  out.scrollTop = out.scrollHeight;
+}
+function hr() { print('<span class="sep">─────────────────────────────────────────────────────────────────────────</span>'); }
+function blank() { print('&nbsp;'); }
+
+function sobrietyLabel(s) {
+  if (s >= 90) return '<span class="g">Stone cold sober</span>';
+  if (s >= 75) return '<span class="g">Feeling fine</span>';
+  if (s >= 60) return '<span class="y">Nicely warmed up</span>';
+  if (s >= 45) return '<span class="y">Getting there</span>';
+  if (s >= 30) return '<span class="r">Noticeably wobbly</span>';
+  if (s >= 15) return '<span class="r">Quite drunk</span>';
+  return '<span class="r"><b>DANGEROUSLY DRUNK</b></span>';
+}
+function bladderLabel(b) {
+  if (b <= 20) return '<span class="g">Fine</span>';
+  if (b <= 50) return '<span class="g">Manageable</span>';
+  if (b <= 70) return '<span class="y">Getting urgent</span>';
+  if (b <= 89) return '<span class="r">URGENT</span>';
+  return '<span class="r"><b>⚠️ CRITICAL</b></span>';
+}
+function charmLabel(c) {
+  if (c >= 75) return '<span class="g">Charming</span>';
+  if (c >= 50) return '<span class="g">Friendly</span>';
+  if (c >= 30) return '<span class="y">Passable</span>';
+  return '<span class="r">Rough-looking</span>';
+}
+
+function updateStats() {
+  const clampSob = Math.max(0, Math.min(100, G.sobriety));
+  document.getElementById('s-sob').textContent = clampSob;
+  document.getElementById('b-sob').style.width = clampSob + '%';
+  document.getElementById('b-sob').style.background = clampSob > 60 ? 'var(--green)' : clampSob > 30 ? 'var(--yellow)' : 'var(--red)';
+  document.getElementById('t-sob').innerHTML = ' ' + sobrietyLabel(clampSob);
+
+  document.getElementById('s-csh').textContent = '£' + G.cash.toFixed(2);
+
+  const clampBld = Math.max(0, Math.min(100, G.bladder));
+  document.getElementById('s-bld').textContent = clampBld;
+  document.getElementById('b-bld').style.width = clampBld + '%';
+  document.getElementById('b-bld').style.background = clampBld > 80 ? 'var(--red)' : clampBld > 50 ? 'var(--yellow)' : 'var(--amber)';
+  document.getElementById('t-bld').innerHTML = ' ' + bladderLabel(clampBld);
+
+  const clampChm = Math.max(0, Math.min(100, G.charm));
+  document.getElementById('s-chm').textContent = clampChm;
+  document.getElementById('b-chm').style.width = clampChm + '%';
+  document.getElementById('t-chm').innerHTML = ' ' + charmLabel(clampChm);
+
+  const n = G.visited.size;
+  document.getElementById('s-pubs').textContent = n;
+  let stars = '';
+  for (let i = 0; i < 10; i++) {
+    stars += G.visited.has(i)
+      ? `<span class="g" title="${PUBS[i].name}">★</span>`
+      : `<span class="d" title="${PUBS[i].name}">☆</span>`;
+    if (i < 9) stars += ' ';
+  }
+  document.getElementById('pub-stars').innerHTML = stars;
+}
+
+// ── MENU ──────────────────────────────────────────────────────────────────────
+
+function setMenu(title, buttons) {
+  document.getElementById('menu-title').textContent = title;
+  const grid = document.getElementById('menu-grid');
+  grid.innerHTML = '';
+  for (const b of buttons) {
+    const el = document.createElement('button');
+    el.className = 'btn' + (b.cls ? ' ' + b.cls : '');
+    if (b.disabled) el.className += ' muted';
+    el.innerHTML = b.label;
+    if (!b.disabled) el.onclick = b.action;
+    grid.appendChild(el);
+  }
+}
+
+// ── PHASES ────────────────────────────────────────────────────────────────────
+
+function startGame() {
+  out.innerHTML = '';
+  G.sobriety = 100; G.cash = 40; G.bladder = 0; G.charm = 50;
+  G.visited = new Set(); G.pubIndex = 0; G.drankHere = false; G.chatUsed = false;
+  updateStats();
+  enterPub(0);
+}
+
+function showTitle() {
+  G.phase = 'title';
+  out.innerHTML = '';
+  print('<span class="c b">╔════════════════════════════════════════════════════════════╗</span>');
+  print('<span class="c b">║                                                            ║</span>');
+  print('<span class="c b">║       T H E   R E A D I N G   P U B   C R A W L          ║</span>');
+  print('<span class="c b">║                                                            ║</span>');
+  print('<span class="c b">║          A Roguelike Adventure — Reading, UK              ║</span>');
+  print('<span class="c b">║                                                            ║</span>');
+  print('<span class="c b">╚════════════════════════════════════════════════════════════╝</span>');
+  blank();
+  print('Your goal: visit all <b class="y">10 legendary pubs</b> of Reading town centre and make it to <b class="y">Perfect Fried Chicken</b> on Oxford Road.');
+  blank();
+  print('<b class="w">Sobriety</b> — your health. Hits 0 and you pass out. <span class="r">Game over.</span>');
+  print('<b class="w">Cash</b>     — money for drinks. Start with <span class="y">£40</span>.');
+  print('<b class="w">Bladder</b>  — fills as you drink. Find toilets or face <span class="r">consequences</span>.');
+  print('<b class="w">Charm</b>    — affects bouncers and random encounters. Be nice.');
+  blank();
+  print('<span class="d">In each pub: order at least one alcoholic drink to stamp your crawl card.</span>');
+  print('<span class="d">Tap water is free and restores sobriety. Use it wisely.</span>');
+  print('<span class="d">Earn money: chat to strangers (charm check), fruit machines (Greyfriar, Blagrave, Allied), cash machines between pubs.</span>');
+  updateStats();
+  setMenu('Ready?', [
+    { label:'<span class="key">▶</span> Begin the Crawl', cls:'primary', action: startGame },
+    { label:'<span class="key">?</span> Show Map', action: toggleMap },
+  ]);
+}
+
+// ── MAP ───────────────────────────────────────────────────────────────────────
+
+const MAP_TEMPLATE = `
+  ╔═══════════════════════════════════════════════════════════════╗
+  ║                READING TOWN CENTRE                            ║
+  ║  ← OXFORD RD ════════ ST MARY'S BUTTS ══════ BROAD STREET →  ║
+  ║         │                   │                    │            ║
+  ║  [6] Allied Arms     [7] Purple Turtle    [5] The Butler      ║
+  ║                                                               ║
+  ║                    ══ FRIAR STREET ══                         ║
+  ║               [2] Nag's Head  [3] Monk's Retreat              ║
+  ║                         [4] Blagrave Arms                     ║
+  ║  ══════════════════ KING'S ROAD ════════════════              ║
+  ║       [8] Back of Beyond        [9] Zerodegrees               ║
+  ║  [1] Greyfriar                        │                       ║
+  ║  (Greyfriars Rd)              READING STATION                 ║
+  ║                               [0] Three Guineas ← START      ║
+  ║  FINISH → Perfect Fried Chicken, Oxford Road                  ║
+  ╚═══════════════════════════════════════════════════════════════╝`;
+
+function toggleMap() {
+  const panel = document.getElementById('map-panel');
+  if (panel.classList.contains('visible')) {
+    panel.classList.remove('visible');
+    return;
+  }
+  let html = MAP_TEMPLATE;
+  for (const pub of PUBS) {
+    const num = `[${pub.id}]`;
+    const cls = G.visited.has(pub.id) ? 'pub-done' : (pub.id === G.pubIndex ? 'pub-next' : 'pub-future');
+    const mark = G.visited.has(pub.id) ? '★' : (pub.id === G.pubIndex ? '▶' : '·');
+    html = html.replace(num, `<span class="${cls}" title="${pub.name}">[${mark}]</span>`);
+  }
+  panel.innerHTML = html;
+  panel.classList.add('visible');
+}
+
+// ── STREET ────────────────────────────────────────────────────────────────────
+
+function walkToNext() {
+  const nextIdx = G.pubIndex + 1;
+  if (nextIdx >= PUBS.length) {
+    walkToFinish();
+    return;
+  }
+  G.phase = 'street';
+  const from = PUBS[G.pubIndex];
+  const to   = PUBS[nextIdx];
+  hr();
+  print(`<b>You leave ${from.name} and head towards ${to.name}...</b>`);
+  print('<span class="d">The streets of Reading stretch ahead. The night air is cool and the pavement is busy with other souls on their own Saturday odysseys.</span>');
+  blank();
+
+  // 1-2 random street events
+  const evCount = Math.floor(Math.random() * 2) + 1;
+  const used = new Set();
+  for (let i = 0; i < evCount; i++) {
+    let idx;
+    do { idx = Math.floor(Math.random() * STREET_EVENTS.length); } while (used.has(idx));
+    used.add(idx);
+    const ev = STREET_EVENTS[idx];
+    print(`🚶 ${ev.text}`);
+    if (ev.type === 'food') {
+      G.cash = round2(G.cash - ev.cost);
+      G.sobriety = clamp(G.sobriety + ev.sobriety);
+      print(`<span class="d">   Cost: £${ev.cost.toFixed(2)} &nbsp;|&nbsp; Sobriety +${ev.sobriety}</span>`);
+    } else if (ev.type === 'found') {
+      G.cash = round2(G.cash + ev.cash);
+      print(`<span class="g">   Cash +£${ev.cash.toFixed(2)}</span>`);
+    } else if (ev.type === 'atm') {
+      G.cash = round2(G.cash + ev.cash - ev.cost);
+      print(`<span class="d">   Cash +£${ev.cash.toFixed(2)} (fee: £${ev.cost.toFixed(2)})</span>`);
+    }
+  }
+
+  if (G.bladder >= 80) {
+    blank();
+    print('<span class="r">⚠️  You are in dire need of a toilet. Get inside a pub fast.</span>');
+  }
+
+  updateStats();
+  G.pubIndex = nextIdx;
+
+  blank();
+  setMenu(`Heading to ${to.name}`, [
+    { label:`<span class="key">▶</span> Arrive at ${to.name}`, cls:'primary', action: () => enterPub(nextIdx) },
+    { label:`<span class="key">£</span> Cash machine <span class="note">+£20 (£1.75 fee)</span>`, action: () => useCashMachine(() => enterPub(nextIdx), to.name) },
+    { label:'<span class="key">?</span> Map', action: toggleMap },
+  ]);
+}
+
+function walkToFinish() {
+  G.phase = 'street';
+  const from = PUBS[G.pubIndex];
+  hr();
+  print(`<b>You leave ${from.name}.</b>`);
+  print('<span class="d">You\'ve done all ten. Now you just need to make it to Oxford Road.</span>');
+  blank();
+
+  // one last event
+  const ev = STREET_EVENTS[Math.floor(Math.random() * STREET_EVENTS.length)];
+  print(`🚶 ${ev.text}`);
+  if (ev.type === 'food')  { G.cash = round2(G.cash - ev.cost); G.sobriety = clamp(G.sobriety + ev.sobriety); }
+  if (ev.type === 'found') { G.cash = round2(G.cash + ev.cash); }
+
+  updateStats();
+  blank();
+  setMenu('The final stretch...', [
+    { label:'<span class="key">▶</span> Head to Perfect Fried Chicken', cls:'primary', action: arriveFinish },
+    { label:`<span class="key">£</span> Cash machine <span class="note">+£20 (£1.75 fee)</span>`, action: () => useCashMachine(arriveFinish, 'Oxford Road') },
+  ]);
+}
+
+// ── PUB ───────────────────────────────────────────────────────────────────────
+
+function enterPub(idx) {
+  G.phase = 'pub';
+  G.pubIndex = idx;
+  G.drankHere = G.visited.has(idx);
+  G.bouncerFailed = false;
+  G.chatUsed = false;
+
+  const pub = PUBS[idx];
+  hr();
+  print(`<b class="c">${pub.emoji}  ${pub.name.toUpperCase()}</b>`);
+  print(`<span class="d">${pub.street}</span>`);
+  blank();
+  print(pub.desc);
+  if (pub.stickyCarpet) print('<span class="d">(The carpet makes a faint peeling sound with every step.)</span>');
+  if (pub.music !== 'none') print(`<span class="d">Music: ${pub.music}</span>`);
+  blank();
+
+  // bouncer check
+  if (pub.bouncer && G.sobriety < 70) {
+    bouncerCheck(pub);
+    return;
+  }
+
+  pubEncounter(pub);
+  showPubMenu(pub);
+}
+
+function bouncerCheck(pub) {
+  const lines = [ 
+    "The bouncer squints at you. <i>'How much have you had tonight, mate?'</i>",
+    "The bouncer crosses their arms. <i>'I'm not sure about this one.'</i>",
+    "The bouncer looks you up and down. Very slowly.",
+    "<i>'ID?'</i> You show your ID. They examine it like it's a peace treaty.",
+  ];
+  print(`<span class="y">🚷  ${lines[Math.floor(Math.random() * lines.length)]}</span>`);
+  blank();
+  updateStats();
+  setMenu(`Outside ${pub.name}`, [
+    { label:'<span class="key">😊</span> Flash your best smile (Charm check)', cls:'primary', action: () => attemptBouncer(pub, false) },
+    { label:'<span class="key">🧍</span> Straighten up and walk confidently', action: () => attemptBouncer(pub, true) },
+    { label:'<span class="key">⏳</span> Wait outside, sober up a bit', action: () => waitOutside(pub) },
+    { label:'<span class="key">↩</span> Skip this pub', cls:'danger', action: skipPub },
+  ]);
+}
+
+function attemptBouncer(pub, confident) {
+  const threshold = 40 - Math.floor((G.charm - 50) / 3) + (confident ? -10 : 5);
+  const roll = Math.floor(Math.random() * 100) + 1;
+  if (roll > threshold || G.sobriety >= 60) {
+    print('<span class="g">You straighten up, make eye contact, and are waved through. The bouncer gives a reluctant nod.</span>');
+    blank();
+    pubEncounter(pub);
+    showPubMenu(pub);
+  } else {
+    print('<span class="r">"Not tonight, mate." You are denied entry.</span>');
+    G.charm = clamp(G.charm - 5);
+    G.bouncerFailed = true;
+    updateStats();
+    blank();
+    setMenu(`Refused entry to ${pub.name}`, [
+      { label:'<span class="key">⏳</span> Wait and try again', action: () => waitOutside(pub) },
+      { label:'<span class="key">↩</span> Skip this pub', cls:'danger', action: skipPub },
+    ]);
+  }
+}
+
+function waitOutside(pub) {
+  G.sobriety = clamp(G.sobriety + 8);
+  print('<span class="d">You stand on the pavement outside, breathing the night air. Someone nearby is eating chips.</span>');
+  print('<span class="g">Sobriety +8 from the fresh air.</span>');
+  updateStats();
+  blank();
+  if (G.sobriety >= 55) {
+    print('<span class="g">You\'re looking more presentable. Worth another try.</span>');
+  }
+  setMenu(`Outside ${pub.name}`, [
+    { label:'<span class="key">🚪</span> Try the door again', cls:'primary', action: () => attemptBouncer(pub, false) },
+    { label:'<span class="key">↩</span> Skip this pub', cls:'danger', action: skipPub },
+  ]);
+}
+
+function skipPub() {
+  const pub = PUBS[G.pubIndex];
+  print(`<span class="r">You skip ${pub.name}. It won't count toward your crawl.</span>`);
+  blank();
+  if (G.pubIndex >= PUBS.length - 1) {
+    walkToFinish();
+  } else {
+    walkToNext();
+  }
+}
+
+function pubEncounter(pub) {
+  if (pub.encounters && pub.encounters.length) {
+    const enc = pub.encounters[Math.floor(Math.random() * pub.encounters.length)];
+    print(`<span class="m">👀  ${enc}</span>`);
+    blank();
+  }
+}
+
+function showPubMenu(pub) {
+  const p = pub.pintPrice;
+  const alreadyDone = G.visited.has(pub.id);
+  const drinkNote = alreadyDone ? '' : ' <span class="d">(need at least one to count this pub)</span>';
+  updateStats();
+  setMenu(`You're in ${pub.name}`, [
+    { label:`<span class="key">P</span> Pint of ${pub.specialty} <span class="note y">£${p.toFixed(2)}</span>${drinkNote}`, action: () => orderDrink(pub, 'pint', p, -15, 20, 3) },
+    { label:`<span class="key">D</span> Double spirit &amp; mixer <span class="note y">£${(p*1.25).toFixed(2)}</span>`, action: () => orderDrink(pub, 'double', round2(p*1.25), -25, 10, 2) },
+    { label:`<span class="key">S</span> Shot <span class="note y">£${(p*0.70).toFixed(2)}</span>`, action: () => orderDrink(pub, 'shot', round2(p*0.70), -30, 5, 1) },
+    { label:`<span class="key">H</span> Half pint <span class="note y">£${(p*0.55).toFixed(2)}</span>`, action: () => orderDrink(pub, 'half', round2(p*0.55), -7, 10, 1) },
+    { label:`<span class="key">W</span> Tap water <span class="note g">FREE</span>`, action: () => orderDrink(pub, 'water', 0, +10, 10, 0) },
+    { label:`<span class="key">C</span> Soft drink <span class="note y">£2.50</span>`, action: () => orderDrink(pub, 'soft', 2.50, +5, 12, 0) },
+    { label:`<span class="key">J</span> Jägerbomb <span class="note y">£6.50</span>`, action: () => orderDrink(pub, 'jager', 6.50, -35, 8, 5) },
+    { label:`<span class="key">T</span> Find the toilet <span class="note">(Bladder: ${G.bladder}%)</span>`, action: () => useToilet(pub) },
+    { label: G.chatUsed
+        ? `<span class="key">N</span> Chat to someone <span class="note d">(done)</span>`
+        : `<span class="key">N</span> Chat to someone <span class="note">charm check — might get a free drink</span>`,
+      disabled: G.chatUsed,
+      action: () => chatSomeone(pub) },
+    ...(pub.fruitMachine ? [{ label:`<span class="key">F</span> Fruit machine <span class="note y">£1/play</span>`, action: () => playFruitMachine(pub) }] : []),
+    { label:`<span class="key">L</span> Leave ${pub.name}`, cls: alreadyDone ? '' : 'danger', action: () => leavePub(pub) },
+  ]);
+}
+
+function orderDrink(pub, type, cost, sobEffect, bldEffect, charmEffect) {
+  if (cost > G.cash) {
+    print(`<span class="r">You can't afford that (£${cost.toFixed(2)}). You have £${G.cash.toFixed(2)}.</span>`);
+    showPubMenu(pub);
+    return;
+  }
+
+  const isAlcoholic = ['pint','double','shot','half','jager'].includes(type);
+  const drinkNames = {
+    pint:`a pint of ${pub.specialty}`, double:'a double spirit and mixer',
+    shot:'a shot', half:'a half pint', water:'a tap water',
+    soft:'a soft drink', jager:'a Jägerbomb',
+  };
+
+  const sobBefore = G.sobriety;
+  const bldBefore = G.bladder;
+  const chmBefore = G.charm;
+
+  G.cash     = round2(G.cash - cost);
+  G.sobriety = clamp(G.sobriety + sobEffect);
+  G.bladder  = clamp(G.bladder  + bldEffect);
+  G.charm    = clamp(G.charm    + charmEffect);
+
+  print(`<b>You order ${drinkNames[type]}.</b>`);
+  if (cost > 0) print(`<span class="d">The barman takes</span> <span class="y">£${cost.toFixed(2)}</span> <span class="d">from your hand.</span>`);
+  else print('<span class="g">It\'s free. Wonderful.</span>');
+
+  if (sobEffect !== 0) print(statChange('Sobriety', sobBefore, G.sobriety));
+  print(statChange('Bladder', bldBefore, G.bladder, '%'));
+  if (charmEffect > 0) print(statChange('Charm', chmBefore, G.charm));
+
+  // stamp the pub if alcoholic drink
+  if (isAlcoholic && !G.visited.has(pub.id)) {
+    G.visited.add(pub.id);
+    G.drankHere = true;
+    blank();
+    print(`<span class="g b">★  You've had a drink in ${pub.name}!  (${G.visited.size}/10)</span>`);
+  }
+
+  // random mid-pub encounter
+  if (Math.random() < 0.35 && pub.encounters) {
+    blank();
+    pubEncounter(pub);
+  }
+
+  // bladder warning
+  if (G.bladder >= 85) {
+    blank();
+    print('<span class="r">⚠️  Your bladder is at critical levels. FIND THE TOILET NOW.</span>');
+  }
+
+  updateStats();
+
+  if (G.sobriety <= 0) {
+    gameOver(`You order one too many in ${pub.name} and slide gently off your barstool. The barman calls you a cab.`);
+    return;
+  }
+
+  blank();
+  showPubMenu(pub);
+}
+
+function useToilet(pub) {
+  const before = G.bladder;
+  const relief = Math.min(G.bladder, Math.floor(Math.random() * 25) + 55);
+  G.bladder = clamp(G.bladder - relief);
+  G.charm   = clamp(G.charm + 2);
+  print('<b>You find the toilet</b> <span class="d">(past the bar, down the stairs, left, right, past the fire exit door).</span>');
+  print('<span class="g">Relief washes over you.</span>');
+  print(statChange('Bladder', before, G.bladder, '%'));
+  updateStats();
+  blank();
+  showPubMenu(pub);
+}
+
+function leavePub(pub) {
+  if (!G.drankHere && !G.visited.has(pub.id)) {
+    print(`<span class="r">You haven't had an alcoholic drink here. This pub won't count toward your crawl.</span>`);
+    blank();
+    setMenu(`Leaving ${pub.name} unstamped`, [
+      { label:'<span class="key">↩</span> Go back and have a drink', cls:'primary', action: () => showPubMenu(pub) },
+      { label:'<span class="key">🚪</span> Leave anyway (won\'t count)', cls:'danger', action: () => confirmLeave(pub) },
+    ]);
+    return;
+  }
+  doLeave(pub);
+}
+
+function confirmLeave(pub) { doLeave(pub); }
+
+function doLeave(pub) {
+  // bladder accident on exit?
+  if (G.bladder >= 95) {
+    blank();
+    print('<span class="r">You don\'t quite make it out of the door. An embarrassing incident in the doorway. Charm -15.</span>');
+    G.charm  = clamp(G.charm - 15);
+    G.bladder = clamp(G.bladder - 40);
+    updateStats();
+  }
+
+  // low cash warning
+  if (G.cash < 3.00) {
+    blank();
+    print(`<span class="r">⚠️  You're nearly skint (£${G.cash.toFixed(2)}). There's a cash machine on Broad Street.</span>`);
+  }
+
+  blank();
+  hr();
+  if (G.pubIndex >= PUBS.length - 1) {
+    walkToFinish();
+  } else {
+    walkToNext();
+  }
+}
+
+// ── EARN MONEY ───────────────────────────────────────────────────────────────
+
+function chatSomeone(pub) {
+  G.chatUsed = true;
+  blank();
+  // chance scales with charm
+  const roll = Math.random() * 100;
+  const threshold = 30 + (G.charm - 50) * 0.6;  // 0 charm=0%, 50 charm=30%, 100 charm=60%
+
+  if (roll < threshold) {
+    // someone buys you a drink
+    const freeDrink = pub.pintPrice;
+    const reactions = [
+      `A bloke at the bar catches your eye. "Go on then, I'll get this one." He buys you a ${pub.specialty}.`,
+      `A friendly local insists on buying the next round. "You look like you need one," she says, not unkindly.`,
+      `"First time in here?" asks the man next to you. Before you can answer he's already at the bar getting you a pint.`,
+      `Someone taps you on the shoulder. "Birthday drinks — everyone gets one on me." Free pint incoming.`,
+    ];
+    print(`<span class="g">🍻  ${reactions[Math.floor(Math.random()*reactions.length)]}</span>`);
+    const sobBefore = G.sobriety;
+    const bldBefore = G.bladder;
+    G.sobriety = clamp(G.sobriety - 15);
+    G.bladder  = clamp(G.bladder  + 20);
+    if (!G.visited.has(pub.id)) { G.visited.add(pub.id); G.drankHere = true; }
+    print(statChange('Sobriety', sobBefore, G.sobriety));
+    print(statChange('Bladder',  bldBefore, G.bladder, '%'));
+    print(`<span class="g">  (Saved £${freeDrink.toFixed(2)}!)</span>`);
+    if (!G.visited.has(pub.id - 1 + 1)) {  // already added above, just announce
+      blank();
+      print(`<span class="g b">★  You've had a drink in ${pub.name}!  (${G.visited.size}/10)</span>`);
+    }
+  } else if (roll < threshold + 25) {
+    // they ask YOU to buy them one — costs £4, gives charm
+    const costBefore = G.cash;
+    if (G.cash >= 4) {
+      G.cash  = round2(G.cash - 4);
+      G.charm = clamp(G.charm + 8);
+      print(`<span class="y">🤝  "Go on, get us one in?" You oblige. It costs £4.00 but you're the most popular person in the pub for the next five minutes.</span>`);
+      print(statChange('Cash',  Math.round(costBefore*100)/100, G.cash));
+      print(statChange('Charm', G.charm - 8, G.charm));
+    } else {
+      print(`<span class="d">💬  You chat pleasantly to a few people. Nobody offers to buy you a drink, but it passes the time.</span>`);
+    }
+  } else {
+    // nothing useful
+    const duds = [
+      "You chat to someone about the price of pints these days. You agree that it's too much. Neither of you does anything about it.",
+      "You have a perfectly pleasant conversation with a stranger about buses. No drinks are purchased.",
+      "You spend several minutes explaining your job to someone who wasn't really listening. They nod and leave.",
+      "A man tells you an extremely long story about a car he used to own. You listen politely. No drinks appear.",
+    ];
+    print(`<span class="d">💬  ${duds[Math.floor(Math.random()*duds.length)]}</span>`);
+  }
+
+  updateStats();
+  blank();
+  showPubMenu(pub);
+}
+
+function playFruitMachine(pub) {
+  if (G.cash < 1) {
+    print('<span class="r">You don\'t have £1 for the fruit machine.</span>');
+    showPubMenu(pub);
+    return;
+  }
+  G.cash = round2(G.cash - 1);
+  blank();
+
+  // symbols: 🍋 🍊 🍇 🔔 💎 7️⃣
+  const reels = ['🍋','🍊','🍇','🔔','💎','7️⃣'];
+  const r = () => reels[Math.floor(Math.random() * reels.length)];
+  const s1 = r(), s2 = r(), s3 = r();
+  print(`<span class="y">🎰  [ ${s1} | ${s2} | ${s3} ]</span>`);
+
+  let win = 0, msg = '';
+  if (s1 === '7️⃣' && s2 === '7️⃣' && s3 === '7️⃣') {
+    win = 20; msg = '<span class="g b">JACKPOT! Three sevens! £20!</span> The machine makes a triumphant noise. Several people look over.';
+  } else if (s1 === s2 && s2 === s3) {
+    win = 8; msg = `<span class="g">Three ${s1}! You win £8.</span>`;
+  } else if (s1 === s2 || s2 === s3 || s1 === s3) {
+    win = 2; msg = '<span class="y">Two matching. You win £2. Better than nothing.</span>';
+  } else if (s1 === '🔔' || s2 === '🔔' || s3 === '🔔') {
+    win = 1; msg = '<span class="d">A bell. You get your £1 back. The machine mocks you.</span>';
+  } else {
+    msg = '<span class="r">Nothing. The £1 is gone. The machine is indifferent to your suffering.</span>';
+  }
+
+  print(msg);
+  if (win > 0) {
+    G.cash = round2(G.cash + win);
+    print(statChange('Cash', round2(G.cash - win), G.cash));
+  }
+
+  updateStats();
+  blank();
+  showPubMenu(pub);
+}
+
+function useCashMachine(continueFn, nextName) {
+  const fee = 1.75;
+  const amount = 20;
+  G.cash = round2(G.cash + amount - fee);
+  print(`<span class="d">🏧  You find a cash machine. You withdraw £${amount.toFixed(2)} — plus a £${fee.toFixed(2)} fee that you only notice afterward.</span>`);
+  print(statChange('Cash', round2(G.cash - amount + fee), G.cash));
+  updateStats();
+  blank();
+  setMenu(`Heading to ${nextName}`, [
+    { label:`<span class="key">▶</span> Continue to ${nextName}`, cls:'primary', action: continueFn },
+    { label:'<span class="key">?</span> Map', action: toggleMap },
+  ]);
+}
+
+// ── FINISH ────────────────────────────────────────────────────────────────────
+
+function arriveFinish() {
+  if (G.sobriety <= 0) {
+    gameOver('You pass out on Oxford Road within sight of Perfect Fried Chicken. So close. So very, very close.');
+    return;
+  }
+  G.phase = 'win';
+  hr();
+  print('<b class="y">★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★</b>');
+  blank();
+  print('<b class="c" style="font-size:16px">  CONGRATULATIONS! YOU HAVE COMPLETED THE READING PUB CRAWL!</b>');
+  blank();
+  print(FINAL.desc);
+  blank();
+  print(`<b>Final stats:</b>`);
+  print(`  Pubs completed:  <span class="g">${G.visited.size}/10</span>  ${G.visited.size === 10 ? '<span class="g">— FULL CRAWL!</span>' : '<span class="r">— incomplete</span>'}`);
+  print(`  Sobriety:        <span class="${G.sobriety >= 50 ? 'g' : G.sobriety >= 25 ? 'y' : 'r'}">${G.sobriety}/100</span>`);
+  print(`  Cash remaining:  <span class="y">£${G.cash.toFixed(2)}</span>`);
+  print(`  Charm:           ${G.charm}/100`);
+  blank();
+
+  if (G.visited.size === 10) {
+    if (G.sobriety >= 60) print('<span class="g">You\'re barely even drunk. Legendary constitution. An inspiration to us all.</span>');
+    else if (G.sobriety >= 35) print('<span class="y">You\'re pleasantly wobbly. A dignified performance. Well done.</span>');
+    else if (G.sobriety >= 15) print('<span class="r">You are extremely drunk. The chicken is definitely helping. Just about.</span>');
+    else print('<span class="r">You can barely hold the chips. And yet — you did it. A true Reading legend.</span>');
+  } else {
+    print(`<span class="y">You visited ${G.visited.size} of 10 pubs. Not bad. Try again for the full crawl?</span>`);
+  }
+
+  print('<b class="y">★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★</b>');
+  updateStats();
+  blank();
+  setMenu('The End', [
+    { label:'<span class="key">▶</span> Play again', cls:'primary', action: startGame },
+    { label:'<span class="key">?</span> Map', action: toggleMap },
+  ]);
+}
+
+// ── GAME OVER ────────────────────────────────────────────────────────────────
+
+function gameOver(reason) {
+  G.phase = 'gameover';
+  hr();
+  print('<b class="r">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>');
+  blank();
+  print('<b class="r" style="font-size:16px">  GAME OVER</b>');
+  blank();
+  print(reason);
+  blank();
+  print(`You made it to <b>${G.visited.size}/10</b> pubs.`);
+  if (G.visited.size > 0) {
+    const names = [...G.visited].map(i => PUBS[i].name).join(', ');
+    print(`<span class="d">Visited: ${names}</span>`);
+  }
+  print('<b class="r">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>');
+  updateStats();
+  blank();
+  setMenu('Game Over', [
+    { label:'<span class="key">▶</span> Try again', cls:'primary', action: startGame },
+  ]);
+}
+
+// ── UTILS ────────────────────────────────────────────────────────────────────
+
+function clamp(n, lo=0, hi=100) { return Math.max(lo, Math.min(hi, Math.round(n))); }
+function round2(n) { return Math.round(n * 100) / 100; }
+
+function statChange(label, before, after, unit='') {
+  const delta = after - before;
+  const sign  = delta > 0 ? '+' : '';
+  const cls   = delta > 0 ? 'g' : delta < 0 ? 'r' : 'd';
+  const arrow = delta > 0 ? '▲' : delta < 0 ? '▼' : '—';
+  return `<span class="d">  ${label}: ${before}${unit}</span> <span class="${cls}">${arrow}${sign}${delta}${unit}</span> <span class="d">→ ${after}${unit}</span>`;
+}
+
+// ── KEYBOARD SHORTCUTS ────────────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (G.phase === 'title' && e.key === 'Enter') { startGame(); return; }
+  if (e.key === 'm' || e.key === 'M') { toggleMap(); return; }
+});
+
+// ── BOOT ────────────────────────────────────────────────────────────────────
+
+showTitle();
+</script>
+</body>
+</html>
