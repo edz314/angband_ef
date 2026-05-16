@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Rogue: Terminal Edition</title>
+<!-- === CSS / TUI THEME === -->
+<style>
+    :root {
+        --bg-color: #0d0d0d;
+        --fg-color: #33ff33; /* Standard ANSI Green */
+        --ansi-red: #ff5555;
+        --ansi-green: #55ff55;
+        --ansi-yellow: #ffff55;
+        --ansi-blue: #5555ff;
+        --ansi-magenta: #ff55ff;
+        --ansi-cyan: #55ffff;
+        --ansi-white: #ffffff;
+        --panel-bg: #1a1a1a;
+        --border-color: #444;
+    }
+
+    body {
+        background-color: var(--bg-color);
+        color: var(--fg-color);
+        font-family: 'Courier New', Courier, monospace;
+        margin: 0;
+        padding: 20px;
+        height: 100vh;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    /* CRT Scanline Effect */
+    body::after {
+        content: " ";
+        display: block;
+        position: absolute;
+        top: 0; left: 0; bottom: 0; right: 0;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+        z-index: 10;
+        background-size: 100% 2px, 3px 100%;
+        pointer-events: none;
+    }
+
+    #app {
+        display: grid;
+        grid-template-columns: 250px 1fr 300px;
+        grid-template-rows: auto 1fr auto;
+        gap: 10px;
+        height: calc(100% - 40px);
+    }
+
+    .panel {
+        background-color: var(--panel-bg);
+        border: 1px solid var(--border-color);
+        padding: 10px;
+        overflow-y: auto;
+        box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    }
+
+    #status-bar {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 2px solid var(--fg-color);
+        padding-bottom: 5px;
+        margin-bottom: 10px;
+    }
+
+    #map-panel {
+        grid-column: 2 / 3;
+        font-size: 14px;
+        line-height: 1.2;
+        white-space: pre;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #log-panel {
+        grid-column: 3 / 4;
+        font-size: 12px;
+        color: var(--ansi-white);
+    }
+
+    #inventory-panel {
+        grid-column: 1 / 2;
+        font-size: 12px;
+    }
+
+    #input-prompt {
+        grid-column: 1 / -1;
+        border-top: 1px solid var(--border-color);
+        padding-top: 5px;
+        min-height: 40px;
+    }
+
+    /* ANSI Colors Classes */
+    .ansi-red { color: var(--ansi-red); font-weight: bold; }
+    .ansi-green { color: var(--ansi-green); }
+    .ansi-yellow { color: var(--ansi-yellow); }
+    .ansi-blue { color: var(--ansi-blue); }
+    .ansi-magenta { color: var(--ansi-magenta); }
+    .ansi-cyan { color: var(--ansi-cyan); }
+
+    /* Map Tiles */
+    .tile-wall { color: #555; }
+    .tile-floor { color: #333; }
+    .tile-player { color: var(--fg-color); font-weight: bold; text-shadow: 0 0 5px var(--fg-color); }
+    .tile-hazard { color: var(--ansi-red); animation: blink 2s infinite; }
+    .tile-npc { color: var(--ansi-magenta); font-weight: bold; }
+    
+    @keyframes blink {
+        0% { opacity: 1; }
+        50% { opacity: 0.3; }
+        100% { opacity: 1; }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #222; }
+    ::-webkit-scrollbar-thumb { background: #444; }
+</style>
+</head>
+<body>
+
+<!-- === HTML STRUCTURE === -->
+<div id="app">
+    <div id="status-bar" class="panel"></div>
+    
+    <div id="inventory-panel" class="panel">
+        <h3 class="ansi-cyan">INVENTORY</h3>
+        <div id="inv-list"></div>
+        <hr style="border-color: #444;">
+        <h3 class="ansi-cyan">SKILLS</h3>
+        <div id="skill-list"></div>
+    </div>
+
+    <div id="map-panel" class="panel"></div>
+
+    <div id="log-panel" class="panel">
+        <h3 class="ansi-cyan">SYSTEM LOG</h3>
+        <div id="log-content"></div>
+    </div>
+
+    <div id="input-prompt" class="panel">
+        <span id="prompt-text" class="ansi-green">&gt; </span><span id="prompt-input"></span>
+    </div>
+</div>
+
+<script>
+// === CONFIG & CONSTANTS === -->
+const CONFIG = {
+    mapWidth: 40,
+    mapHeight: 20,
+    fogRadius: 5,
+    llmConfig: {
+        endpoint: 'http://localhost:11434/api/generate', // Ollama default
+        model: 'llama3.1:8b',
+        timeoutMs: 8000,
+        fallbackEnabled: true
+    }
+};
+
+const ZONES = {
+    oracle: { 
+        id: 'oracle', name: "The Oracle Mall", theme: "Glass & Steel Labyrinth",
+        hazards: ['glass_shards'], enemies: ['security_guard', 'shop_assistant'] 
+    },
+    kennet: { 
+        id: 'kennet', name: "River Kennet Path", theme: "Misty Riverbanks",
+        hazards: ['slippery_moss'], enemies: ['jogger', 'fisherman_widow'] 
+    },
+    station: { 
+        id: 'station', name: "Reading Station", theme: "Industrial Transit Hub",
+        hazards: ['train_horn_deafening'], enemies: ['commuter', 'porter'] 
+    },
+    gaol: { 
+        id: 'gaol', name: "Reading Gaol Vicinity", theme: "Victorian Stone & Iron",
+        hazards: ['iron_rust'], enemies: ['prisoner', 'warden'] 
+    }
+};
+
+const ITEMS = [
+    { id: 'leather_cuffs', name: 'Leather Cuffs', slot: 'wrists', desc: '+2 Dom Affinity', mod: { dom_affinity: 2 } },
+    { id: 'silk_blindfold', name: 'Silk Blindfold', slot: 'eyes', desc: '+10% Pleasure Gain', mod: { pleasure_mult: 1.1 } },
+    { id: 'flogger', name: 'Leather Flogger', slot: 'hands', desc: '+5 Base Damage', mod: { base_dmg: 5 } },
+    { id: 'collar', name: 'Iron Collar', slot: 'neck', desc: '-2 Max Stamina, +10% AP Regen', mod: { max_stamina: -2, ap_regen: 0.1 } }
+];
+
+const FALLBACK_NARRATIVE = [
+    "The mist clings to the cobblestones as you move deeper into the district.",
+    "A figure in a trench coat watches from the shadows of the Oracle atrium.",
+    "The sound of the River Kennet echoes against the concrete pillars.",
+    "You feel a sudden chill, reminiscent of the Gaol's iron gates."
+];
+
+// === GAME STATE & PERSISTENCE (localStorage) === -->
+const STORAGE_KEY = 'reading_rogue_meta_v1';
+
+let gameState = {
+    player: null,
+    map: [], // 2D array
+    entities: [], // NPCs on map
+    currentZoneId: null,
+    turnCount: 0,
+    log: []
+};
+
+const MetaProgression = {
+    data: {
+        run_count: 0,
+        unlocked_zones: ['oracle'],
+        passive_perks: {},
+        skill_tree: {} // { dom_node_1: true }
+    },
+
+    load() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            try {
+                this.data = JSON.parse(stored);
+                logToUI("Meta-progression loaded.", "ansi-cyan");
+            } catch (e) { console.error(e); }
+        } else {
+            logToUI("First run detected. Initializing meta-data.", "ansi-yellow");
+        }
+    },
+
+    save() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+        logToUI("Game saved to local storage.", "ansi-green");
+    },
+
+    recordDeath(districtId) {
+        this.data.run_count++;
+        if (!this.data.unlocked_zones.includes(districtId)) {
+            // Unlock next zone based on run count or specific logic (simplified here)
+            const allZones = Object.keys(ZONES);
+            const currentIdx = allZones.indexOf(districtId);
+            if (currentIdx < allZones.length - 1 && this.data.run_count >= 3) {
+                this.data.unlocked_zones.push(allZones[currentIdx + 1]);
+                logToUI(`NEW ZONE UNLOCKED: ${allZones[currentIdx + 1]}`, "ansi-magenta");
+            }
+        }
+    }
+};
+
+// === UTILITIES & HELPERS === -->
+const Utils = {
+    rng(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; },
+    
+    getDistance(x1, y1, x2, y2) {
+        return Math.abs(x1 - x2) + Math.abs(y1 - y2); // Manhattan distance for fog
+    },
+
+    clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
