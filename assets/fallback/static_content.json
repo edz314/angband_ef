@@ -1,0 +1,84 @@
+{
+    "npc_encounter": {
+        "narrative_text": "The mist swirls around your ankles as a figure emerges from the shadows of the Oracle's glass atrium. She wears a trench coat that looks too heavy for the season, her eyes darting nervously.",
+        "mechanical_tag": "[SUB]",
+        "dialogue_options": [
+            {"text": "Approach gently", "affinity_dom": 0, "affinity_sub
+
+
+
+
+            "duration_turns": 2
+        }
+    },
+    "event_description": {
+        "narrative_text": "A sudden gust of wind from the River Kennet knocks a loose pane of glass from the mall's facade.",
+        "outcome_effects": [
+            {"stat": "hp", "value": -5},
+            {"stat": "stamina", "value": -2}
+        ]
+    }
+}
+
+
+    def resolve_turn(self, player, npc) -> Dict:
+        """
+        Process one turn of combat/interaction.
+        Returns a result dictionary with narrative text and stat changes.
+        """
+        results = {
+            "narrative": [],
+            "player_hp_change": 0,
+            "npc_hp_change": 0,
+            "status_effects_applied": []
+        }
+
+        # 1. Player Action Resolution (Simplified for Phase 4)
+        if player.ap > 0:
+            attack_roll = random.random()
+            accuracy_bonus = 1.0 - npc.get("accuracy_penalty", 0)
+
+            if attack_roll <= accuracy_bonus:
+                damage = self._calculate_damage(player, npc)
+                npc.hp -= damage
+                results["npc_hp_change"] = -damage
+                results["narrative"].append(f"You strike the {npc['name']} for {damage} damage.")
+
+                # Check for Pleasure Yield (Sub mechanic)
+                if npc.role_tag == "[SUB]":
+                    pleasure_gain = random.randint(5, 15)
+                    player.gain_pleasure(pleasure_gain)
+                    results["narrative"].append(f"The impact sends a shiver through her. (+{pleasure_gain} Pleasure)")
+
+        # 2. NPC Counter-Attack (if alive)
+        if npc.hp > 0:
+            enemy_roll = random.random()
+            if enemy_roll <= 0.8: # 80% hit chance for enemies
+                enemy_dmg = max(1, npc.atk - player.get("def", 0))
+                player.apply_damage(enemy_dmg)
+                results["player_hp_change"] = -enemy_dmg
+                results["narrative"].append(f"The {npc['name']} fights back! You take {enemy_dmg} damage.")
+
+        # 3. Status Effect Application (e.g., Restraint)
+        if npc.get("is_restrained"):
+            player.ap -= self.status_effects["restrained"]["ap_penalty"]
+            results["status_effects_applied"].append(f"Restraint drains {self.status_effects['restrained']['ap_penalty']} AP.")
+
+        # 4. Pleasure Overload Check
+        if player.pleasure >= 90:
+            stamina_drain = self.status_effects["pleasure_overload"]["stamina_drain"]
+            player.stamina -= stamina_drain
+            results["status_effects_applied"].append(f"Pleasure overload drains {stamina_drain} Stamina.")
+
+        return results
+
+    def _calculate_damage(self, player, npc) -> int:
+        """Calculate damage based on stats and affinity."""
+        base_dmg = max(1, player.get("dominance_affinity", 0) // 5 + random.randint(5, 15))
+
+        # Affinity Bonus: Dom players hit Subs harder
+        if npc.role_tag == "[SUB]":
+            dom_bonus = player.dominance_affinity // 20
+            base_dmg += dom_bonus
+
+        return base_dmg

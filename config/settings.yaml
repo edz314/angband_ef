@@ -1,0 +1,47 @@
+# config/settings.yaml
+game:
+  title: "Reading Rogue"
+  version: "0.1.0"
+  meta_save_path: ".reading_rogue_meta.json"
+
+player:
+  base_hp: 100
+  max_stamina: 100
+  max_pleasure: 100
+  starting_ap: 5 # Action Points per turn
+  
+districts:
+  - id: "oracle"
+    name: "The Oracle Mall"
+    theme: "Glass & Steel Labyrinth"
+    difficulty: 1
+    hazards: ["glass_shards", "crowd_push"]
+    
+  - id: "kennet"
+    name: "River Kennet Path"
+    theme: "Misty Riverbanks"
+    difficulty: 2
+    hazards: ["slippery_moss", "cold_water"]
+
+  - id: "station"
+    name: "Reading Station & Car Park"
+    theme: "Industrial Transit Hub"
+    difficulty: 3
+    hazards: ["train_horn_deafening", "concrete_pillars"]
+
+  - id: "gaol"
+    name: "Reading Gaol Vicinity"
+    theme: "Victorian Stone & Iron"
+    difficulty: 4
+    hazards: ["iron_rust", "ghostly_whispers"]
+
+llm:
+  provider: "ollama" # or llama.cpp, vllm
+  endpoint: "http://localhost:11434/api/generate"
+  model: "llama3.1:8b"
+  timeout_seconds: 10
+  temperature: 0.9
+
+combat:
+  base_damage_variance: 0.2 # +/- 20% variance
+  pleasure_overload_threshold: 90 # Effect at >90 pleasure
