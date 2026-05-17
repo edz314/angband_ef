@@ -7,7 +7,6 @@ game:
 player:
   base_hp: 100
   max_stamina: 100
-  max_pleasure: 100
   starting_ap: 5 # Action Points per turn
   
 districts:
@@ -44,4 +43,3 @@ llm:
 
 combat:
   base_damage_variance: 0.2 # +/- 20% variance
-  pleasure_overload_threshold: 90 # Effect at >90 pleasure
