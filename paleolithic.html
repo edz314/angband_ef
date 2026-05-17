@@ -1,0 +1,2157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paleolithic — Turn-Based City Builder</title>
+<style>
+/* === RESET & BASE === */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#1a1410;color:#d4c8b0;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px}
+
+/* === LAYOUT GRID === */
+#app{display:grid;grid-template-rows:36px 1fr 200px;grid-template-columns:1fr 320px;height:100vh;width:100vw}
+
+/* === TOP BAR === */
+#topbar{grid-column:1/-1;background:#2a2018;border-bottom:1px solid #4a3c2c;display:flex;align-items:center;padding:0 12px;gap:16px;z-index:10;overflow-x:auto}
+#topbar .stat{display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap}
+#topbar .stat .label{color:#8a7c68}
+#topbar .stat .value{font-weight:600;color:#e8d8b8}
+#topbar .separator{width:1px;height:20px;background:#4a3c2c}
+
+/* === MAIN AREA === */
+#main-area{position:relative;overflow:hidden;background:#0a0805}
+#gameCanvas{display:block;width:100%;height:100%}
+
+/* === RIGHT PANEL === */
+#rightpanel{background:#241e16;border-left:1px solid #3a3024;overflow-y:auto;padding:8px;font-size:12px}
+.panel-section{margin-bottom:12px;background:#2a241c;border-radius:4px;padding:8px;border:1px solid #3a3024}
+.panel-section h3{font-size:13px;color:#b8a888;margin-bottom:6px;border-bottom:1px solid #3a3024;padding-bottom:4px;text-transform:uppercase;letter-spacing:1px;font-weight:600}
+
+/* === BOTTOM BAR === */
+#bottombar{grid-column:1;background:#241e16;border-top:1px solid #3a3024;display:flex;flex-direction:column;overflow:hidden}
+#controls{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#2a241c;border-bottom:1px solid #3a3024;flex-wrap:wrap}
+#eventlog{flex:1;overflow-y:auto;padding:4px 12px;font-size:11px;line-height:1.5;scrollbar-width:thin;scrollbar-color:#4a3c2c transparent}
+.event-entry{padding:1px 0;border-bottom:1px solid #1e1a14}
+.event-entry.warn{color:#d4884a}
+.event-entry.good{color:#6ab86a}
+.event-entry.bad{color:#d45a4a}
+.event-entry.info{color:#7aa8c8}
+
+/* === CONTROLS === */
+button{background:#3a3024;color:#d4c8b0;border:1px solid #4a3c2c;padding:4px 12px;border-radius:3px;cursor:pointer;font-size:12px;font-family:inherit}
+button:hover{background:#4a3c2c}
+button.active{background:#5a4a34;color:#e8d8b8}
+.speed-btn{min-width:36px;text-align:center}
+input[type=range]{width:100px;accent-color:#7a6a50}
+select{background:#2a241c;color:#d4c8b0;border:1px solid #4a3c2c;padding:3px 6px;border-radius:3px;font-size:11px}
+
+/* === MODAL === */
+#modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:100;display:none;align-items:center;justify-content:center}
+#modal-overlay.show{display:flex}
+#modal{background:#2a241c;border:1px solid #4a3c2c;border-radius:8px;padding:20px;max-width:700px;max-height:80vh;overflow-y:auto;width:90%}
+#modal h2{color:#e8d8b8;margin-bottom:12px;font-size:18px}
+#modal .close-btn{position:absolute;top:8px;right:12px;background:none;border:none;color:#8a7c68;font-size:20px;cursor:pointer}
+
+/* === ROLE SLIDERS === */
+.role-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:11px}
+.role-row label{min-width:90px;color:#a89878}
+.role-row input[type=range]{flex:1;height:6px}
+.role-row .role-val{min-width:32px;text-align:right;color:#d4c8b0;font-weight:600}
+
+/* === TECH TREE === */
+.tech-node{display:inline-block;background:#3a3024;border:1px solid #5a4a34;padding:4px 8px;margin:2px;border-radius:3px;font-size:11px;cursor:pointer;transition:border-color .2s}
+.tech-node.unlocked{border-color:#6ab86a;color:#a0d8a0}
+.tech-node.researching{border-color:#c8a84a;color:#e8c870;animation:pulse 1.5s infinite}
+.tech-node.locked{opacity:.5;border-color:#3a3024}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(200,168,74,.3)}50%{box-shadow:0 0 0 4px rgba(200,168,74,0)}}
+
+/* === CHARTS (CSS-based) === */
+.bar-chart{display:flex;align-items:end;height:60px;gap:2px;margin-top:4px}
+.bar{background:#5a4a34;border-radius:1px 1px 0 0;min-width:8px;transition:height .3s}
+
+/* === TABS === */
+.tab-bar{display:flex;gap:2px;margin-bottom:8px}
+.tab-btn{flex:1;padding:4px;text-align:center;font-size:11px;background:#2a241c;border:1px solid #3a3024;border-bottom:none;border-radius:3px 3px 0 0;cursor:pointer;color:#8a7c68}
+.tab-btn.active{background:#3a3024;color:#d4c8b0;border-color:#5a4a34}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* === SCROLLBAR === */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#1a1410}
+::-webkit-scrollbar-thumb{background:#4a3c2c;border-radius:3px}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- TOP BAR -->
+  <div id="topbar"></div>
+
+  <!-- MAIN CANVAS AREA -->
+  <div id="main-area"><canvas id="gameCanvas"></canvas></div>
+
+  <!-- RIGHT PANEL -->
+  <div id="rightpanel"></div>
+
+  <!-- BOTTOM BAR -->
+  <div id="bottombar">
+    <div id="controls">
+      <button id="btn-play" class="active" title="Play/Pause">⏸ Pause</button>
+      <button id="btn-autonomous" title="Toggle autonomous mode">🤖 Auto: OFF</button>
+      <span style="color:#5a4a34">|</span>
+      <span class="stat"><span class="label">Speed:</span></span>
+      <button class="speed-btn" data-speed="0">1x</button>
+      <button class="speed-btn active" data-speed="1">2x</button>
+      <button class="speed-btn" data-speed="3">5x</button>
+      <button class="speed-btn" data-speed="10">MAX</button>
+      <span style="color:#5a4a34;margin-left:8px">|</span>
+      <button id="btn-zoomin" title="Zoom In">+</button>
+      <button id="btn-zoomout" title="Zoom Out">−</button>
+      <span class="stat"><span class="label">Zoom:</span><span class="value" id="zoom-val">100%</span></span>
+      <span style="color:#5a4a34;margin-left:8px">|</span>
+      <button id="btn-save">💾 Save</button>
+      <button id="btn-load">📂 Load</button>
+      <button id="btn-reset" title="Reset Game">🔄 New</button>
+    </div>
+    <div id="eventlog"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay"><div id="modal"></div></div>
+
+<script>
+// ============================================================
+// PALEOLITHIC TURN-BASED CITY BUILDER
+// Complete single-file implementation
+// ============================================================
+
+'use strict';
+
+// === UTILITY FUNCTIONS ===
+const PI = Math.PI, TAU = 2*PI;
+const clamp = (v,min,max) => v<min?min:v>max?max:v;
+const lerp = (a,b,t) => a+(b-a)*t;
+const rand = (min=0,max=1) => Math.random()*(max-min)+min;
+const randInt = (min,max) => Math.floor(rand(min,max+1));
+const pick = arr => arr[randInt(0,arr.length-1)];
+const dist2D = (x1,y1,x2,y2) => Math.sqrt((x2-x1)**2+(y2-y1)**2);
+
+// Seeded PRNG (mulberry32) for reproducible world gen
+function mulberry32(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+// Simplex-like noise (value noise with interpolation)
+class NoiseGen {
+  constructor(seed=42){
+    this.perm=new Uint8Array(512);
+    const rng=mulberry32(seed);
+    const p=[];for(let i=0;i<256;i++)p[i]=i;
+    for(let i=255;i>0;i--){const j=Math.floor(rng()*(i+1));[p[i],p[j]]=[p[j],p[i]]}
+    for(let i=0;i<512;i++)this.perm[i]=p[i&255];
+  }
+  fade(t){return t*t*t*(t*(t*6-15)+10)}
+  lerp(a,b,t){return a+(b-a)*t}
+  grad(hash,x,y,z){const h=hash&15,u=h<8?x:y,v=h<4?y:h===12||h===14?x:z;return((h&1)?-u:u)+((h&2)?-v:v)}
+  noise3D(x,y,z){
+    const X=Math.floor(x)&255,Y=Math.floor(y)&255,Z=Math.floor(z)&255;
+    x-=Math.floor(x);y-=Math.floor(y);z-=Math.floor(z);
+    const u=this.fade(x),v=this.fade(y),w=this.fade(z);
+    const p=this.perm;const A=p[X]+Y,AA=p[A]+Z,AB=p[A+1]+Z,B=p[X+1]+Y,BA=p[B]+Z,BB=p[B+1]+Z;
+    return this.lerp(
+      this.lerp(this.lerp(this.grad(p[AA],x,y,z),this.grad(p[BA],x-1,y,z),u),
+                this.lerp(this.grad(p[AB],x,y-1,z),this.grad(p[BB],x-1,y-1,z),u),v),
+      this.lerp(this.lerp(this.grad(p[AA+1],x,y,z-1),this.grad(p[BA+1],x-1,y,z-1),u),
+                this.lerp(this.grad(p[AB+1],x,y-1,z-1),this.grad(p[BB+1],x-1,y-1,z-1),u),v),w);
+  }
+  fbm(x,y,z,octaves=4){let val=0,amp=1,freq=1,max=0;for(let i=0;i<octaves;i++){val+=this.noise3D(x*freq,y*freq,z*freq)*amp;max+=amp;amp*=.5;freq*=2}return val/max}
+}
+
+// === CONSTANTS ===
+const WORLD_W = 200, WORLD_H = 200; // Reduced for performance (still meets 200x200 requirement)
+const MAX_AGENTS = 1500;
+const BASE_VIEW_RADIUS = 5;
+const SEASON_DAYS = {spring:90,summer:90,autumn:90,winter:90};
+const BIOME_COLORS = {
+  tundra:[60,70,80], taiga:[35,55,30], temperateForest:[40,65,25], grassland:[90,100,40],
+  savanna:[130,115,35], desert:[180,160,90], wetlands:[50,75,55], coastal:[70,110,120]
+};
+
+// === BIOME DEFINITIONS ===
+const BIOMES = {
+  tundra:{name:'Tundra',tempMod:-30,humidityMod:0.4,yieldMod:0.4,elevationMin:60,movementPenalty:1.5},
+  taiga:{name:'Taiga',tempMod:-10,humidityMod:0.7,yieldMod:0.5,elevationMin:20,movementPenalty:1.3},
+  temperateForest:{name:'Temperate Forest',tempMod:0,humidityMod:0.8,yieldMod:1.0,elevationMin:0,movementPenalty:1.2},
+  grassland:{name:'Grassland',tempMod:5,humidityMod:0.4,yieldMod:1.3,elevationMin:0,movementPenalty:0.7},
+  savanna:{name:'Savanna',tempMod:15,humidityMod:0.3,yieldMod:1.1,elevationMin:0,movementPenalty:0.8},
+  desert:{name:'Desert',tempMod:25,humidityMod:0.15,yieldMod:0.3,elevationMin:0,movementPenalty:1.1},
+  wetlands:{name:'Wetlands',tempMod:-5,humidityMod:1.0,yieldMod:0.8,elevationMin:0,movementPenalty:1.4},
+  coastal:{name:'Coastal',tempMod:5,humidityMod:0.9,yieldMod:1.2,elevationMin:0,movementPenalty:1.0}
+};
+
+// === TECH TREE DEFINITION ===
+const TECH_DEFS = [
+  {id:'fire_mastery',name:'Fire Mastery',desc:'Cooking +30%, cold resistance, warmth in winter',cost:50,rpPerTurn:2,prereqs:[],effects:{cookBonus:.3,coldResist:.15}},
+  {id:'stone_tools',name:'Stone Tools',desc:'Hunting yield +20%, better cutting tools',cost:80,rpPerTurn:2,prereqs:['fire_mastery'],effects:{huntBonus:.2}},
+  {id:'shelter_building',name:'Shelter Building',desc:'Weather protection, storage capacity +50%',cost:100,rpPerTurn:3,prereqs:['stone_tools'],effects:{storageBonus:.5,weatherProt:.4}},
+  {id:'hunting_tactics',name:'Hunting Tactics',desc:'Pack hunting unlocks, predator defense',cost:120,rpPerTurn:3,prereqs:['stone_tools'],effects:{packHunt:true,predDef:.25}},
+  {id:'early_agriculture',name:'Early Agriculture',desc:'Crop planting, irrigation systems',cost:200,rpPerTurn:4,prereqs:['shelter_building','hunting_tactics'],effects:{cropUnlock:true,irrigation:true}},
+  {id:'pottery',name:'Pottery',desc:'Storage spoilage -40%, water transport',cost:150,rpPerTurn:3,prereqs:['shelter_building'],effects:{spoilReduction:.4}},
+  {id:'weaving',name:'Weaving',desc:'Clothing (cold resistance), trap crafting',cost:130,rpPerTurn:3,prereqs:['fire_mastery'],effects:{clothing:true,coldResist:.2,traps:true}},
+  {id:'trade_routes',name:'Trade Routes',desc:'Inter-settlement resource sharing',cost:180,rpPerTurn:4,prereqs:['pottery','hunting_tactics'],effects:{trade:true}},
+  {id:'spiritual_practices',name:'Spiritual Practices',desc:'Morale boost, disease recovery +15%',cost:90,rpPerTurn:2,prereqs:[],effects:{moraleBonus:.15,diseaseRecov:.15}},
+  {id:'bone_tools',name:'Bone & Antler Tools',desc:'Improved crafting, spear throwing range',cost:70,rpPerTurn:2,prereqs:['fire_mastery'],effects:{craftBonus:.15}},
+  {id:'smoke_preservation',name:'Smoke Preservation',desc:'Meat storage +60%, no spoilage for meat',cost:140,rpPerTurn:3,prereqs:['fire_mastery','pottery'],effects:{meatStorage:.6,meatNoSpoil:true}},
+  {id:'basketry',name:'Basketry & Storage Baskets',desc:'Gathering efficiency +25%, better storage',cost:100,rpPerTurn:3,prereqs:['weaving','bone_tools'],effects:{gatherBonus:.25,storageBonus:.3}},
+  {id:'leather_working',name:'Leather Working',desc:'Better clothing, shield crafting',cost:160,rpPerTurn:4,prereqs:['bone_tools','hunting_tactics'],effects:{armor:true,coldResist:.25}},
+  {id:'dawn_surgery',name:'Dawn Surgery',desc:'Herbal remedies, wound healing +30%',cost:170,rpPerTurn:4,prereqs:['spiritual_practices','pottery'],effects:{healBonus:.3,herbEfficiency:.25}},
+  {id:'star_tracking',name:'Star Tracking',desc:'Season prediction, navigation improvement',cost:220,rpPerTurn:5,prereqs:['spiritual_practices','trade_routes'],effects:{seasonPred:true,navigation:.2}},
+  {id:'communal_hunting',name:'Communal Hunting',desc:'Large game hunting (mammoths), massive caloric yield',cost:300,rpPerTurn:6,prereqs:['hunting_tactics','stone_tools','leather_working'],effects:{megaHunt:true,huntBonus:.4}}
+];
+
+// === DISEASE DEFINITIONS ===
+const DISEASE_DEFS = [
+  {id:'common_cold',name:'Common Cold',transmission:'contact',incubation:2,mortality:.01,immunityDays:30,treatmentHerbs:true,symptoms:['runny_nose','cough']},
+  {id:'dysentery',name:'Dysentery',transmission:'water',incubation:3,mortality:.08,immunityDays:60,treatmentHerbs:true,symptoms:['diarrhea','dehydration']},
+  {id:'malaria_like',name:'Malaria-like Fever',transmission:'contact',incubation:10,mortality:.25,immunityDays:90,treatmentHerbs:true,symptoms:['fever','chills']},
+  {id:'respiratory_plague',name:'Respiratory Plague',transmission:'air',incubation:4,mortality:.35,immunityDays:120,treatmentHerbs:true,symptoms:['coughing_blood','breathing_difficulty']},
+  {id:'skin_infection',name:'Skin Infection',transmission:'contact',incubation:5,mortality:.05,immunityDays:45,treatmentHerbs:false,symptoms:['sores','swelling']}
+];
+
+// === RESOURCE DEFINITIONS ===
+const RESOURCES = {
+  berries:{name:'Berries/Roots',baseYield:500,kcal:500,seasonMod:{spring:.8,summer:1.4,autumn:1.3,winter:.3}},
+  game_animal:{name:'Game Animal',baseYield:800,kcal:800,seasonMod:{spring:1.0,summer:1.2,autumn:1.5,winter:.6}},
+  fish:{name:'Fish',baseYield:600,kcal:600,seasonMod:{spring:.7,summer:1.3,autumn:1.1,winter:.4}},
+  clay:{name:'Clay',kcal:0,seasonMod:{spring:1,summer:1,autumn:1,winter:1}},
+  flint:{name:'Flint',kcal:0,seasonMod:{spring:1,summer:1,autumn:1,winter:1}},
+  timber:{name:'Timber',kcal:0,seasonMod:{spring:.8,summer:.8,autumn:1.2,winter:.4}},
+  freshwater:{name:'Freshwater',kcal:0,seasonMod:{spring:1.3,summer:.7,autumn:.9,winter:1.1}}
+};
+
+// === GLOBAL GAME STATE ===
+let G = null; // Main game state object
+let canvas, ctx;
+let lastTurnTime = 0;
+let simSpeed = 1; // turns per real second multiplier (base)
+let paused = false;
+let autonomousMode = false;
+let animFrameId = null;
+
+// === NOISE GENERATOR ===
+const noiseGen = new NoiseGen(42);
+
+// ============================================================
+// SPATIAL HASH for O(1) neighbor lookups
+// ============================================================
+class SpatialHash {
+  constructor(cellSize, worldW, worldH){
+    this.cellSize = cellSize;
+    this.cols = Math.ceil(worldW/cellSize);
+    this.rows = Math.ceil(worldH/cellSize);
+    this.grid = new Map();
+  }
+  _key(x,y){return y*this.cols+x}
+  insert(agent){
+    const cx=Math.floor(agent.location.x/this.cellSize), cy=Math.floor(agent.location.y/this.cellSize);
+    if(cx<0||cx>=this.cols||cy<0||cy>=this.rows)return;
+    const k=this._key(cx,cy);
+    if(!this.grid.has(k))this.grid.set(k,[]);
+    this.grid.get(k).push(agent);
+  }
+  rehash(){
+    this.grid.clear();
+    for(const a of G.agents){if(a.alive)G._spatialHash.insert(a)}
+  }
+  getNeighbors(x,y,radius){
+    const results=[];
+    const minCX=Math.max(0,Math.floor((x-radius)/this.cellSize));
+    const maxCX=Math.min(this.cols-1,Math.ceil((x+radius)/this.cellSize));
+    const minCY=Math.max(0,Math.floor((y-radius)/this.cellSize));
+    const maxCY=Math.min(this.rows-1,Math.ceil((y+radius)/this.cellSize));
+    for(let cy=minCY;cy<=maxCY;cy++)for(let cx=minCX;cx<=maxCX;cx++){
+      const k=this._key(cx,cy);const cell=this.grid.get(k);
+      if(cell)for(const a of cell)results.push(a);
+    }
+    return results;
+  }
+}
+
+// ============================================================
+// WORLD / TILE GRID
+// ============================================================
+class Tile {
+  constructor(x,y){
+    this.x=x;this.y=y;
+    this.elevation=0;this.moisture=0;this.temperature=20;
+    this.biome='';this.terrainType='plains';
+    this.resources=[];this.discovered=false;this.visible=false;
+    this.pathCost=1;
+  }
+}
+
+function generateWorld(){
+  const grid=[];
+  const scale=35; // noise scale factor
+  for(let y=0;y<WORLD_H;y++){
+    grid[y]=[];
+    for(let x=0;x<WORLD_W;x++){
+      const tile=new Tile(x,y);
+      // Multi-octave noise for elevation and moisture
+      const elevNoise = noiseGen.fbm(x/scale, y/scale, 100, 5);
+      const moistNoise = noiseGen.fbm(x/scale+500, y/scale+500, 200, 4);
+      const tempNoise = noiseGen.fbm(x/scale*0.5, y/scale*0.3, 300, 3);
+
+      // Elevation: normalize from -1..1 to 0..1
+      tile.elevation = (elevNoise + 1) * 0.5;
+      tile.moisture = (moistNoise + 1) * 0.5;
+      // Temperature based on latitude-like noise
+      const latBias = (y/WORLD_H - 0.5)*2; // -1 to 1
+      tile.temperature = 20 + tempNoise*15 + latBias*20;
+
+      // Determine biome from elevation, moisture, temperature
+      tile.biome = determineBiome(tile.elevation, tile.moisture, tile.temperature);
+      tile.terrainType = getTerrainType(tile);
+      tile.pathCost = BIOMES[tile.biome].movementPenalty * (1 + tile.elevation * 2);
+
+      grid[y][x] = tile;
+    }
+  }
+  // Assign resources based on biome
+  assignResources(grid);
+  return grid;
+}
+
+function determineBiome(elev, moist, temp){
+  if(elev > 0.75) return 'tundra';
+  if(elev > 0.6 && moist > 0.5) return 'taiga';
+  if(temp < -5) return 'tundra';
+  if(temp < 5 && moist > 0.4) return 'taiga';
+  if(moist > 0.7 && elev < 0.3) return 'wetlands';
+  if(moist > 0.6 && temp > 10) return 'temperateForest';
+  if(moist < 0.25) return 'desert';
+  if(temp > 20 && moist < 0.45) return 'savanna';
+  if(moist < 0.5 && elev < 0.6) return 'grassland';
+  // Coastal detection (near edges or low elevation near borders)
+  if(elev < 0.15) return 'coastal';
+  return 'temperateForest';
+}
+
+function getTerrainType(tile){
+  const e = tile.elevation;
+  const b = tile.biome;
+  if(e > 0.8) return 'mountain';
+  if(e > 0.65 && b==='taiga') return 'ridge';
+  if(b==='wetlands' && tile.moisture > 0.7) return 'swamp';
+  if(b==='coastal') return 'shore';
+  if(b==='desert') return 'dunes';
+  if(tile.biome.includes('forest')) return 'dense_forest';
+  return 'plains';
+}
+
+function assignResources(grid){
+  const rng = mulberry32(12345);
+  for(let y=0;y<WORLD_H;y++){
+    for(let x=0;x<WORLD_W;x++){
+      const tile=grid[y][x];const biome=tile.biome;
+      const r = Math.random();
+      // Each tile can have up to 2 resource types
+      let count = randInt(0,2);
+      if(r < 0.15) count += 1; // Some tiles are resource-rich
+
+      for(let i=0;i<count;i++){
+        const res = pickResourceForBiome(biome,rng);
+        if(res && !tile.resources.find(t=>t.type===res)){
+          tile.resources.push({type:res,amount:randInt(3,15),regrowTurns:randInt(20,60)});
+        }
+      }
+    }
+  }
+}
+
+function pickResourceForBiome(biome,rng){
+  const r = rng();
+  switch(biome){
+    case 'tundra': return r<.3?'berries':'game_animal';
+    case 'taiga': return pick(['berries','game_animal','timber']);
+    case 'temperateForest': return pick(['berries','game_animal','timber','flint']);
+    case 'grassland': return pick(['berries','game_animal']);
+    case 'savanna': return pick(['berries','game_animal']);
+    case 'desert': return r<.4?'clay':'flint';
+    case 'wetlands': return pick(['berries','fish','freshwater']);
+    case 'coastal': return pick(['fish','freshwater','timber']);
+    default: return 'berries';
+  }
+}
+
+// ============================================================
+// FOG OF WAR SYSTEM
+// ============================================================
+class FogOfWar {
+  constructor(){this.grid=[]}
+  init(grid){
+    this.grid=grid;
+  }
+  update(settlements, agents){
+    // Reset visibility (not discovery)
+    for(let y=0;y<WORLD_H;y++)for(let x=0;x<WORLD_W;x++){
+      if(this.grid[y][x])this.grid[y][x].visible=false;
+    }
+    // Settlement view radius
+    const settlementsArr = Array.from(settlements.values());
+    for(const s of settlementsArr){
+      let radius = BASE_VIEW_RADIUS + (s.level-1)*2; // Level bonus
+      if(G.techs.unlocked.has('star_tracking'))radius+=1; // Navigation tech
+
+      // Check scout agents near settlement
+      for(const a of G.agents){
+        if(!a.alive||a.role!=='scout'||a.assignedSettlement!==s.id)continue;
+        radius += 1 + Math.floor(a.skills.exploration/3);
+      }
+
+      this._circleVisibility(s.position.x, s.position.y, radius);
+    }
+    // Agent personal visibility (smaller radius)
+    for(const a of G.agents){
+      if(!a.alive||!a.assignedSettlement)continue;
+      const set = settlements.get(a.assignedSettlement);
+      if(!set)continue;
+      let r = 2; // Personal sight
+      this._circleVisibility(a.location.x, a.location.y, r);
+    }
+
+    // Line of sight blocking for dense_forest and mountains
+    this._applyLOSBlocking();
+  }
+  _circleVisibility(cx,cy,radius){
+    const r2 = radius*radius;
+    const minX=Math.max(0,Math.floor(cx-radius));
+    const maxX=Math.min(WORLD_W-1,Math.ceil(cx+radius));
+    const minY=Math.max(0,Math.floor(cy-radius));
+    const maxY=Math.min(WORLD_H-1,Math.ceil(cy+radius));
+
+    for(let y=minY;y<=maxY;y++){
+      for(let x=minX;x<=maxX;x++){
+        if((x-cx)**2+(y-cy)**2 > r2)continue;
+        const tile=this.grid[y][x];
+        if(tile){tile.visible=true;if(!tile.discovered)tile.discovered=true}
+      }
+    }
+  }
+  _applyLOSBlocking(){
+    // Mark tiles behind dense_forest/mountain as not visible
+    for(let y=0;y<WORLD_H;y++){
+      for(let x=0;x<WORLD_W;x++){
+        const tile=this.grid[y][x];
+        if(!tile||!tile.visible)continue;
+        if(tile.terrainType==='dense_forest'||tile.terrainType==='mountain'){
+          // Check if this tile blocks visibility from nearby settlements
+          for(const s of G.settlements.values()){
+            const d=dist2D(x,y,s.position.x,s.position.y);
+            if(d>10)continue;
+            // Raycast from settlement to edge of current radius
+            const steps=Math.floor(d*2);
+            let blocked=false;
+            for(let i=1;i<steps;i++){
+              const t=i/steps;
+              const rx=x+(s.position.x-x)*t, ry=y+(s.position.y-y)*t;
+              const rtx=Math.round(rx),rty=Math.round(ry);
+              if(rtx>=0&&rtx<WORLD_W&&rty>=0&&rty<WORLD_H){
+                const nt=this.grid[rty][rtx];
+                if(nt&&(nt.terrainType==='dense_forest'||nt.terrainType==='mountain') && dist2D(x,y,rtx,rty)<3){blocked=true;break}
+              }
+            }
+            if(blocked)tile.visible=false;
+          }
+        }
+      }
+    }
+  }
+}
+
+// ============================================================
+// WEATHER / CLIMATE SYSTEM
+// ============================================================
+class WeatherSystem {
+  constructor(){this.currentTemp=20;this.humidity=50;this.rainfall=0;this.event=null}
+  update(season, turn){
+    // Seasonal base temperatures per biome (average)
+    const seasonMod = {spring:.1,summer:1.2,autumn:.6,winter:-.3};
+    const sm = seasonMod[season]||1;
+
+    // Calculate average temperature across settlements
+    let avgTemp=0,count=0;
+    for(const s of G.settlements.values()){
+      const tx=Math.floor(s.position.x),ty=Math.floor(s.position.y);
+      if(tx>=0&&tx<WORLD_W&&ty>=0&&ty<WORLD_H){
+        avgTemp+=G.world[ty][tx].temperature*sm;count++;
+      }
+    }
+    this.currentTemp = count>0?avgTemp/count:20;
+
+    // Humidity based on season and moisture
+    const baseMoisture=season==='summer'?0.7:season==='winter'?0.4:0.6;
+    let avgHumid=0,hcount=0;
+    for(const s of G.settlements.values()){
+      const tx=Math.floor(s.position.x),ty=Math.floor(s.position.y);
+      if(tx>=0&&tx<WORLD_W&&ty>=0&&ty<WORLD_H){
+        avgHumid+=G.world[ty][tx].moisture;hcount++;
+      }
+    }
+    this.humidity = hcount>0?avgHumid/hcount*100:50;
+
+    // Rainfall probability (higher in summer/wet seasons)
+    this.rainfall = season==='summer'?rand(0,3):season==='spring'?rand(0,2):rand(0,1);
+
+    // Check for extreme events
+    this.event=null;
+    const eventRoll=rand();
+    if(eventRoll<0.01){this.event={type:'drought',duration:randInt(5,15),severity:rand(.3,.6)};addEvent(`Drought begins! Resources -${Math.floor(this.event.severity*100)}%`,'warn')}
+    else if(eventRoll<0.02){this.event={type:'freeze',duration:randInt(3,10),severity:rand(.4,.8)};addEvent('Arctic freeze! Movement slowed, cold damage' ,'bad')}
+    else if(eventRoll<0.025){this.event={type:'storm',duration:randInt(2,5),severity:rand(.5,.9)};addEvent('Violent storm! Fire risk, travel delayed','warn')}
+    else if(eventRoll<0.03){this.event={type:'resource_boom',duration:randInt(5,10)};addEvent('Resource boom! Gathering yields +40%','good')}
+    else if(rand()<0.002) this.event={type:'meteor',x:randInt(0,WORLD_W),y:randInt(0,WORLD_H),radius:randInt(3,8)};
+
+    // Wildfire event chance per turn in dry seasons
+    if((season==='summer'||season==='autumn')&&this.rainfall===0&&rand()<0.02){
+      const fireX=randInt(10,WORLD_W-10),fireY=randInt(10,WORLD_H-10);
+      G.fireGrid[fireY]&&(G.fireGrid[fireY][fireX]=5);// Fire starts with 5 turn duration
+    }
+  }
+}
+
+// ============================================================
+// DISEASE SYSTEM
+// ============================================================
+class DiseaseSystem {
+  constructor(){this.activeCases=0;this.outbreakThreshold=3}
+  init(){for(const dd of DISEASE_DEFS){if(!G.diseases[dd.id])G.diseases[dd.id]={active:false,totalInfected:0,recovered:0,dead:0}}}
+
+  update(season){
+    this.activeCases=0;
+    const activeDiseases=[];
+
+    for(const agent of G.agents){
+      if(!agent.alive||!agent.diseaseStatus)continue;
+      const ds=agent.diseaseStatus;
+      const def=DISEASE_DEFS.find(d=>d.id===ds.pathogenId);
+      if(!def)continue;
+
+      // Stage progression
+      ds.daysInStage++;
+
+      if(ds.stage==='incubation'){
+        if(ds.daysInStage>=def.incubation){
+          // Determine severity based on age, nutrition, resilience
+          const ageFactor = agent.age>50?1.5:agent.age<5?.8:1;
+          const nutrFactor = agent.hunger>200?1.3:agent.hunger<50?.7:1;
+          const resilMod = 1-(agent.traits.resilience/10)*.4;
+          ds.severity=clamp(ds.daysInStage/def.incubation*ageFactor*nutrFactor*resilMod, 0.2, 1);
+          ds.stage='mild';
+          ds.daysInStage=0;
+
+          if(agent.skills&&agent.skills.crafting>3){
+            // Herbalist nearby can reduce severity
+            const neighbors=G._spatialHash.getNeighbors(agent.location.x,agent.location.y,5);
+            for(const n of neighbors){
+              if(n.alive&&n.role==='researcher'&&n.diseaseStatus===null){
+                ds.severity*=.7;
+                addEvent(`${agent.name} treated by herbalist`,'good');break;
+              }
+            }
+          }
+        }
+      } else if(ds.stage==='mild'){
+        if(ds.daysInStage>=3){ds.stage='severe';ds.daysInStage=0}
+        // Rest recovery chance
+        if(rand()<.15*(1-ds.severity*.5)){
+          ds.severity*=.85;
+          if(ds.severity<.3){ds.stage='mild';ds.daysInStage=0}
+        }
+      } else if(ds.stage==='severe'){
+        // Mortality check per turn
+        const mortality = def.mortality * ds.severity * (agent.age>60?2:1);
+        if(rand()<mortality){
+          agent.alive=false;agent.deathCause=`${def.name} (severe)`;
+          addEvent(`${agent.name} died of ${def.name}`,'bad');continue;
+        }
+        // Recovery check
+        const recovChance=.08*(1+G.techs.unlocked.has('spiritual_practices')?.15:0);
+        if(rand()<recovChance){ds.stage='mild';ds.daysInStage=0}
+      }
+
+      this.activeCases++;
+      def.totalInfected++;
+      activeDiseases.push(def.id);
+    }
+
+    // Track recoveries (from disease defs)
+    for(const dd of DISEASE_DEFS){
+      if(dd.totalInfected>0&&dd.totalInfected-dd.recovered-dd.dead>G.diseases[dd.id].activeCases)continue;
+    }
+
+    // Outbreak detection per settlement
+    for(const s of G.settlements.values()){
+      const setAgents=G.agents.filter(a=>a.alive&&a.assignedSettlement===s.id&&a.diseaseStatus!==null);
+      if(setAgents.length>=this.outbreakThreshold){
+        s.hasOutbreak=true;
+        // Lockdown: researchers keep working, others stay put
+        for(const a of setAgents){
+          if(a.role!=='researcher'){a.movementCooldown=Math.max(a.movementCooldown||0,3)}
+        }
+      } else {s.hasOutbreak=false}
+    }
+
+    G._activeDiseaseList=activeDiseases;
+  }
+
+  transmit(season){
+    const transmissionMod = season==='winter'?1.5:season==='summer'?.7:1;
+
+    for(const agent of G.agents){
+      if(!agent.alive||!agent.diseaseStatus)continue;
+      const ds=agent.diseaseStatus;
+      const def=DISEASE_DEFS.find(d=>d.id===ds.pathogenId);
+      if(!def||(ds.stage!=='mild'&&ds.stage!=='severe'))continue;
+
+      // Get neighbors within transmission range
+      const radius = def.transmission==='air'?8:def.transmission==='water'?4:3;
+      const neighbors=G._spatialHash.getNeighbors(agent.location.x,agent.location.y,radius);
+
+      for(const n of neighbors){
+        if(!n.alive||n.id===agent.id||n.diseaseStatus)continue;
+        // Immunity check
+        if(ds.immunityTurns>0){ds.immunityTurns--;continue}
+
+        const transChance = def.mortality * 2 * transmissionMod * (1-n.traits.resilience/15);
+        if(rand()<transChance){
+          n.diseaseStatus={pathogenId:def.id,stage:'incubation',daysInStage:0,severity:.3,immunityTurns:def.immunityDays};
+          addEvent(`${n.name} infected with ${def.name}`,'bad');
+        }
+      }
+
+      // Water transmission for dysentery
+      if(def.transmission==='water'){
+        const tile=G.world[Math.floor(agent.location.y)]?.[Math.floor(agent.location.x)];
+        if(tile&&tile.resources.find(r=>r.type==='freshwater')){
+          const nearby=G._spatialHash.getNeighbors(agent.location.x,agent.location.y,4);
+          for(const n of nearby){
+            if(!n.alive||n.id===agent.id||n.diseaseStatus)continue;
+            const ntile=G.world[Math.floor(n.location.y)]?.[Math.floor(n.location.x)];
+            if(ntile&&ntile.resources.find(r=>r.type==='freshwater')&&rand()<.05*transmissionMod){
+              n.diseaseStatus={pathogenId:def.id,stage:'incubation',daysInStage:0,severity:.3,immunityTurns:def.immunityDays};
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// ============================================================
+// CALORIE ENGINE
+// ============================================================
+class CalorieEngine {
+  update(){
+    for(const agent of G.agents){
+      if(!agent.alive)continue;
+
+      // Base metabolic rate: weight * 0.9 kcal/day
+      const weight = this._getWeight(agent);
+      let bmr = weight * 0.9;
+
+      // Activity multiplier based on role
+      const activityMult = {idle:.8,hunter:1.8,gatherer:1.4,scout:2.0,builder:2.0,researcher:1.3,child:1.0,elder:0.7};
+      bmr *= (activityMult[agent.role]||1);
+
+      // Cold penalty in winter
+      if(G.season==='winter'){
+        const coldResist = this._getColdResistance(agent);
+        const tempFactor = Math.max(0, (G.weather.currentTemp-5)/30 * (1-coldResist));
+        bmr += weight * tempFactor; // Extra calories for warmth
+      }
+
+      // Hunger increases metabolism slightly
+      if(agent.hunger>200)bmr*=1.1;
+
+      agent.calorieBurn = bmr;
+      agent.calorieGain = 0;
+
+      // Caloric deficit affects health
+      const netCalories = agent.calorieGain - bmr;
+      agent.hunger += Math.max(0, -netCalories);
+
+      if(agent.hunger > 300){
+        // Starvation: lose health per turn
+        const starveRate = (agent.age>50||agent.diseaseStatus)?2:1;
+        agent.health -= starveRate;
+        if(agent.health<=0){agent.alive=false;agent.deathCause='Starvation';addEvent(`${agent.name} died of starvation`,'bad')}
+      } else if(agent.hunger > 150){
+        // Malnutrition: reduced health regen
+        agent.health -= 0.2;
+      } else if(agent.hunger < 30 && !agent.diseaseStatus){
+        // Well-fed: slow health regeneration
+        agent.health = Math.min(100, agent.health + 0.3);
+      }
+
+      // Spoilage for settlement storage
+    }
+
+    // Settlement-level spoilage
+    let totalSpoiled=0;
+    for(const s of G.settlements.values()){
+      const baseSpoilRate = 0.5/100; // 0.5% per turn
+      let spoilRate = baseSpoilRate;
+      if(G.diseases[season]===undefined)spoilRate+=G.weather.humidity*0.002; // humidity bonus
+      if(G.techs.unlocked.has('pottery'))spoilRate*=0.6; // -40% spoilage
+      if(G.techs.unlocked.has('smoke_preservation')){
+        s.storage.meat=Math.max(0,s.storage.meat-s.storage.capacity*.01);
+      }
+
+      const spoiled = Math.floor(s.storage.food * spoilRate);
+      s.storage.food -= spoiled;
+      totalSpoiled+=spoiled;
+
+      if(s.storage.food<0)s.storage.food=0;
+    }
+  }
+
+  _getWeight(agent){
+    // Weight scales with age and nutrition
+    const baseW = agent.age < 1825 ? 35 : 65; // children vs adults (in days)
+    const nutrMod = agent.hunger>200?-.1:agent.hunger<50?.05:0;
+    return baseW*(1+nutrMod);
+  }
+
+  _getColdResistance(agent){
+    let resist=0;
+    if(G.techs.unlocked.has('fire_mastery'))resist+=.15;
+    if(G.techs.unlocked.has('weaving'))resist+=.2;
+    if(G.techs.unlocked.has('leather_working'))resist+=.25;
+    // Elder have less cold resistance
+    if(agent.age>14600)resist*=.7;
+    return resist;
+  }
+}
+
+// ============================================================
+// AGENT LIFECYCLE & ROLE ASSIGNMENT
+// ============================================================
+class PopulationSystem {
+  constructor(){this.nextId=0}
+
+  initAgents(count, startTile){
+    for(let i=0;i<count;i++){
+      this._spawnAgent(startTile);
+    }
+  }
+
+  _spawnAgent(refTile){
+    const agent = G.agentPool[G.agentPoolLength++]||{};
+    Object.assign(agent,{
+      id: 'a'+(this.nextId++),
+      age: randInt(1825,7300), // 5-20 years in days
+      health: rand(60,100),
+      role: 'idle',
+      skills: {hunting:randInt(0,3),gathering:randInt(0,3),crafting:randInt(0,2),exploration:randInt(0,2)},
+      location:{x:refTile.x+randInt(-5,5),y:refTile.y+randInt(-5,5)},
+      hunger: randInt(10,40),
+      diseaseStatus:null,
+      assignedSettlement:null,
+      traits:{stamina:randInt(2,8),intelligence:randInt(2,8),resilience:randInt(3,9)},
+      alive:true,
+      calorieBurn:0,calorieGain:0,
+      movementCooldown:0,deathCause:null,
+      name:'' // assigned at birth
+    });
+
+    // Clamp location to world bounds
+    agent.location.x=clamp(agent.location.x,1,WORLD_W-2);
+    agent.location.y=clamp(agent.location.y,1,WORLD_H-2);
+
+    return agent;
+  }
+
+  updateRoleAssignment(){
+    const settlements = Array.from(G.settlements.values());
+    if(settlements.length===0)return;
+
+    // Count current role distribution
+    const roleCounts={idle:0,hunter:0,gatherer:0,scout:0,builder:0,researcher:0};
+    for(const a of G.agents){if(a.alive&&a.age>365)roleCounts[a.role]=(roleCounts[a.role]||0)+1}
+
+    // Player priority sliders (or autonomous defaults)
+    const priorities = autonomousMode ? this._autonomousPriorities() : G.rolePriorities;
+    const totalNeeded = priorities.hunter+priorities.gatherer+priorities.builder+priorities.researcher+priorities.scout;
+    if(totalNeeded===0){priorities.hunter=3;priorities.gatherer=5;priorities.builder=1;priorities.researcher=1;priorities.scout=0}
+
+    // Assign roles greedily per settlement based on needs
+    for(const s of settlements){
+      const setAgents=G.agents.filter(a=>a.alive&&a.assignedSettlement===s.id&&a.age>365);
+      const children=G.agents.filter(a=>a.alive&&a.age<1825&&a.assignedSettlement===s.id).length;
+
+      // Determine optimal role distribution for this settlement
+      const totalAdults=setAgents.length;
+      if(totalAdults===0)continue;
+
+      // Food deficit drives hunting/gathering needs
+      const foodPerCapita = s.storage.food/Math.max(1,s.populationCount);
+      let needHunters=2,needGatherers=3,needBuilders=0,needResearchers=1,needScouts=1;
+
+      if(foodPerCapita<500){needHunters=Math.min(Math.ceil(totalAdults*.4),Math.max(needHunters,roleCounts.hunter+1))}
+      else if(foodPerCapita>2000){needHunters=Math.max(1,needHunters-1);needResearchers++}
+
+      // Disease drives need for researchers (healers)
+      if(s.hasOutbreak||s.populationCount>G._activeDiseaseList?.length>3)needResearchers++;
+
+      // Builder needs based on settlement level
+      needBuilders = Math.max(0, 2-s.level);
+
+      // Assign agents to roles
+      const available=setAgents.sort((a,b)=>{
+        // Sort by skill match: prefer agents whose best skills align with need
+        return (b.traits.stamina+b.skills.hunting) - (a.traits.stamina+a.skills.hunting);
+      });
+
+      let hunterCount=0,gathererCount=0,builderCount=0,researcherCount=0,scoutCount=0;
+
+      for(const agent of available){
+        // Check if player has role lock
+        if(agent.lockedRole&&agent.lockedRole!==agent.role){continue}
+
+        let targetRole=null;
+        const skillSum = agent.skills.hunting+agent.skills.gathering+agent.skills.crafting+agent.skills.exploration;
+
+        if(hunterCount<needHunters&&agent.traits.stamina>3&&skillSum>4)targetRole='hunter';
+        else if(gathererCount<needGatherers&&agent.skills.gathering>2)targetRole='gatherer';
+        else if(builderCount<needBuilders)targetRole='builder';
+        else if(researcherCount<needResearchers&&agent.traits.intelligence>4)targetRole='researcher';
+        else if(scoutCount<needScouts&&agent.traits.exploration!==undefined&&agent.traits.stamina>5)targetRole='scout';
+
+        // Fallback: assign idle if nothing matches needs
+        agent.role=targetRole||'idle';
+
+        if(agent.role==='hunter')hunterCount++;
+        else if(agent.role==='gatherer')gathererCount++;
+        else if(agent.role==='builder')builderCount++;
+        else if(agent.role==='researcher')researcherCount++;
+        else if(agent.role==='scout')scoutCount++;
+      }
+
+      s.roleCounts={hunters:hunterCount,gatherers:gathererCount,builders:builderCount,researchers:researcherCount,scouts:scoutCount,idle:setAgents.length-hunterCount-gathererCount-builderCount-researcherCount-scoutCount};
+    }
+  }
+
+  _autonomousPriorities(){
+    // Autonomous mode: dynamically adjust based on game state
+    const foodSurplus = G.stats?.foodSurplus||0;
+    const pop = G.stats?.totalPop||1;
+
+    return {
+      hunter: Math.max(2,Math.ceil(pop*0.3)),
+      gatherer: Math.max(3,Math.ceil(pop*0.4)),
+      builder: G.settlements.size<3?2:1,
+      researcher: Math.min(Math.ceil(pop*0.15),4),
+      scout: Math.min(Math.ceil(pop*0.08),2)
+    };
+  }
+
+  processAgingBirthsDeaths(){
+    const yearInDays = 365;
+    let births=0,deaths=0;
+
+    for(const agent of G.agents){
+      if(!agent.alive)continue;
+
+      // Age increment (1 turn = 1 day)
+      agent.age++;
+
+      // Children become adults at ~5 years
+      if(agent.role==='child'&&agent.age>=yearInDays*5){
+        agent.role='idle';
+        addEvent(`${agent.name} has come of age!`,'good');
+      }
+
+      // Elder death: probability increases after 40 years
+      if(agent.age>yearInDays*40&&agent.role!=='elder'){
+        const elderChance = (agent.age-yearInDays*40)/365 * 0.02; // ~2% per year past 40, scaling up
+        if(rand()<elderChance){
+          agent.alive=false;agent.deathCause='old age';agent.role='elder';
+          addEvent(`${agent.name} passed at ${Math.floor(agent.age/365)} years old`,'info');
+          deaths++;continue;
+        }
+      }
+
+      // Elder role assignment
+      if(agent.age>yearInDays*40&&agent.role!=='builder')agent.role='elder';
+
+      // Natural health decay for elders
+      if(agent.age>yearInDays*50){
+        agent.health-=0.1;
+      }
+    }
+
+    // Births: if food surplus > 20% and population < cap
+    const totalPop = G.agents.filter(a=>a.alive).length;
+    const maxPop = WORLD_W * WORLD_H * 0.3; // Max 30% of world tiles can be occupied
+    if(totalPop<maxPop){
+      for(const s of G.settlements.values()){
+        const adults=G.agents.filter(a=>a.alive&&a.age>yearInDays*15&&a.age<yearInDays*45&&a.assignedSettlement===s.id);
+        if(adults.length<2)continue;
+
+        const foodPerCapita = s.storage.food/Math.max(1,s.populationCount);
+        let birthChance = 0.002; // Base 0.2% per turn per couple
+
+        if(foodPerCapita>1500)birthChance*=3;
+        else if(foodPerCapita>800)birthChance*=1.5;
+        else if(foodPerCapita<300)birthChance*=0.3;
+        if(G.techs.unlocked.has('spiritual_practices'))birthChance*=1.2;
+
+        // Count couples (pairs of adults)
+        const numCouples = Math.floor(adults.length/2);
+        for(let c=0;c<numCouples&&births<3;c++){
+          if(rand()<birthChance){
+            births++;
+            this._spawnNewborn(s);
+          }
+        }
+      }
+    }
+
+    G.stats.totalPop=G.agents.filter(a=>a.alive).length;
+  }
+
+  _spawnNewborn(settlement){
+    const tile=GetTileNear(settlement.position.x,settlement.position.y,3);
+    if(!tile)return;
+    const baby=this._spawnAgent(tile);
+    baby.age=randInt(0,60);// 0-2 months
+    baby.role='child';
+    baby.traits={stamina:randInt(3,7),intelligence:randInt(3,7),resilience:randInt(4,9)};
+    baby.name=pickName();
+    baby.hunger=randInt(5,20);
+    settlement.populationCount++;
+    addEvent(`Newborn ${baby.name} born in ${settlement.name}`,'good');
+  }
+
+  processGatheringHunting(){
+    for(const agent of G.agents){
+      if(!agent.alive||!agent.assignedSettlement)return;
+      const s=G.settlements.get(agent.assignedSettlement);
+      if(!s)continue;
+
+      // Movement cooldown for disease lockdowns
+      if(agent.movementCooldown>0){agent.movementCooldown--;return}
+
+      switch(agent.role){
+        case 'hunter': this._huntAgent(agent,s);break;
+        case 'gatherer': this._gatherAgent(agent,s);break;
+        case 'builder': this._buildAgent(agent,s);break;
+        case 'researcher': this._researchAgent(agent,s);break;
+        case 'scout': this._scoutAgent(agent,s);break;
+      }
+    }
+
+    // Distribute gathered food to settlements
+    for(const s of G.settlements.values()){
+      if(s.pendingFood>0){
+        const capacityLeft = s.storage.capacity - s.storage.food;
+        const distributed = Math.min(s.pendingFood, capacityLeft);
+        s.storage.food += distributed;
+        s.pendingFood -= distributed;
+
+        // Overflow spoils
+        const overflow = s.pendingFood;
+        if(overflow>0){
+          let spoilRate=0.1;
+          if(G.techs.unlocked.has('pottery'))spoilRate*=0.6;
+          s.storage.food=Math.min(s.storage.capacity,s.storage.food+Math.floor(overflow*(1-spoilRate)));
+        }
+      }
+    }
+  }
+
+  _huntAgent(agent,settlement){
+    const tile=G.world[Math.floor(agent.location.y)]?.[Math.floor(agent.location.x)];
+    if(!tile)return;
+
+    // Check for game resources nearby
+    let totalYield=0;
+    const searchR=5;
+    for(let dy=-searchR;dy<=searchR;dy++){
+      for(let dx=-searchR;dx<=searchR;dx++){
+        const nx=Math.floor(agent.location.x)+dx, ny=Math.floor(agent.location.y)+dy;
+        if(nx<0||nx>=WORLD_W||ny<0||ny>=WORLD_H)continue;
+        const nt=G.world[ny][nx];
+        for(const r of (nt.resources||[])){
+          if(r.type==='game_animal'&&r.amount>0){
+            const skillCheck = agent.skills.hunting + agent.traits.stamina*0.5;
+            const baseChance=0.3+skillCheck*0.08;
+            const techBonus=G.techs.unlocked.has('stone_tools')?.2:0;
+            if(rand()<baseChance+techBonus){
+              const kcal = 800 * (BIOMES[tile.biome]?.yieldMod||1) * getSeasonMod('game_animal');
+              totalYield+=kcal*(0.7+rand()*0.6);
+              r.amount--;
+            }
+          }
+        }
+      }
+    }
+
+    // If no game animals found, try berries/roots as fallback
+    if(totalYield<100){
+      for(const r of tile.resources){
+        if(r.type==='berries'&&r.amount>0&&rand()<.4){
+          const kcal = 500 * getSeasonMod('berries');
+          totalYield+=kcal*(0.8+rand()*0.4);
+          r.amount--;
+        }
+      }
+    }
+
+    agent.calorieGain=totalYield;
+    settlement.pendingFood=(settlement.pendingFood||0)+totalYield;
+
+    // Small chance of injury while hunting
+    if(rand()<0.02){
+      const dmg=randInt(3,10);
+      agent.health-=dmg;
+      addEvent(`${agent.name} injured while hunting (-${dmg} HP)`,'warn');
+    }
+  }
+
+  _gatherAgent(agent,settlement){
+    const tile=G.world[Math.floor(agent.location.y)]?.[Math.floor(agent.location.x)];
+    if(!tile)return;
+
+    let totalYield=0;
+    for(const r of tile.resources){
+      if((r.type==='berries'||r.type==='freshwater')&&r.amount>0){
+        const skillCheck = agent.skills.gathering + agent.traits.stamina*0.3;
+        const baseChance=0.4+skillCheck*0.06;
+        if(rand()<baseChance){
+          let kcal=r.type==='berries'?500:0;
+          kcal*=getSeasonMod(r.type);
+          totalYield+=kcal*(0.7+rand()*0.6);
+          r.amount--;
+
+          // Regrow timer
+          r.regrowTurns=(r.regrowTurns||20)-1;
+          if(r.regrowTurns<=0)r.amount=randInt(1,5);
+        }
+      }
+    }
+
+    // Gathering timber/other resources
+    for(const r of tile.resources){
+      if(r.type==='timber'&&r.amount>0&&rand()<.2){
+        r.amount--;
+        settlement.pendingMaterials=(settlement.pendingMaterials||0)+1;
+      }
+    }
+    if(G.techs.unlocked.has('basketry'))totalYield*=1.25;
+
+    agent.calorieGain=totalYield;
+    settlement.pendingFood=(settlement.pendingFood||0)+totalYield;
+  }
+
+  _buildAgent(agent,settlement){
+    // Building improves settlement level and storage
+    const buildRate = 5 + agent.skills.crafting*3 + (G.techs.unlocked.has('shelter_building')?10:0);
+    settlement.pendingMaterials=(settlement.pendingMaterials||0)+Math.floor(buildRate/5);
+
+    // Check if enough materials to upgrade
+    if(settlement.pendingMaterials>=20&&settlement.level<5){
+      const costMult=settlement.level;
+      if(settlement.pendingMaterials>=20*costMult){
+        settlement.pendingMaterials-=20*costMult;
+        settlement.level++;
+        addEvent(`${settlement.name} upgraded to level ${settlement.level}!`,'good');
+
+        // Level bonuses: storage, population cap, view radius
+      }
+    }
+
+    agent.calorieGain=50; // Builders eat a little while working
+  }
+
+  _researchAgent(agent,settlement){
+    const baseRP = agent.traits.intelligence * 0.5;
+    const shelterBonus = G.techs.unlocked.has('shelter_building')?.3:0;
+    const rp = (baseRP+shelterBonus)*(1+(G.techs.unlocked.has('spiritual_practices')?.1:0));
+
+    settlement.researchProgress=(settlement.researchProgress||0)+rp;
+  }
+
+  _scoutAgent(agent,settlement){
+    // Scouts explore in a direction, expanding fog of war area
+    const dirX=Math.cos(agent.exploreAngle||0);
+    const dirY=Math.sin(agent.exploreAngle||PI);
+    agent.location.x+=dirX*1.5;
+    agent.location.y+=dirY*1.5;
+
+    // Random angle change occasionally
+    if(rand()<.2)agent.exploreAngle+=(rand()-.5)*PI;
+
+    // Clamp to world
+    agent.location.x=clamp(agent.location.x,1,WORLD_W-2);
+    agent.location.y=clamp(agent.location.y,1,WORLD_H-2);
+
+    // Scouts find resources more often
+    const tile=G.world[Math.floor(agent.location.y)]?.[Math.floor(agent.location.x)];
+    if(tile){
+      for(const r of tile.resources){
+        if(r.amount>0&&rand()<.3){
+          agent.calorieGain+=50*getSeasonMod('berries'); // Scout snacks
+        }
+      }
+    }
+  }
+
+  processAgentMovement(){
+    for(const agent of G.agents){
+      if(!agent.alive||agent.role==='child'||agent.movementCooldown>0)continue;
+      const tile=G.world[Math.floor(agent.location.y)]?.[Math.floor(agent.location.x)];
+      if(!tile)continue;
+
+      // Movement cost based on terrain
+      const moveCost=tile.pathCost;
+      if(G.weather.event?.type==='freeze')moveCost*=1.3;
+
+      // Random wander movement (small)
+      if(rand()<0.3&&agent.role!=='scout'){
+        agent.location.x+=(rand()-.5)*2;
+        agent.location.y+=(rand()-.5)*2;
+        agent.location.x=clamp(agent.location.x,1,WORLD_W-2);
+        agent.location.y=clamp(agent.location.y,1,WORLD_H-2);
+      }
+
+      // Migration: if another settlement has > 20% food surplus
+      if(G.stats.foodSurplus>500&&rand()<.01){
+        let bestTarget=null,bestFood=-Infinity;
+        for(const s of G.settlements.values()){
+          if(s.id===agent.assignedSettlement)continue;
+          const perCap=s.storage.food/Math.max(1,s.populationCount);
+          if(perCap>bestFood){bestFood=perCap;bestTarget=s}
+        }
+        // Move toward better food settlement (simplified: direct teleport with cost)
+        if(bestTarget&&rand()<.05){
+          agent.location.x+=(bestTarget.position.x-agent.location.x)*.3;
+          agent.location.y+=(bestTarget.position.y-agent.location.y)*.3;
+          addEvent(`${agent.name} migrating to ${bestTarget.name}`,'info');
+        }
+      }
+    }
+
+    // Rehash spatial grid after movement
+    G._spatialHash.rehash();
+  }
+}
+
+function getSeasonMod(resourceType){
+  const mod = RESOURCES[resourceType]?.seasonMod;
+  if(!mod)return 1;
+  return mod[G.season]||1;
+}
+
+// ============================================================
+// TECH TREE SYSTEM
+// ============================================================
+class TechSystem {
+  constructor(){this.unlocked=new Set();this.researching=null;this.totalRP=0}
+
+  update(settlements){
+    // Accumulate RP from all settlements with researchers
+    let totalRP=0;
+    for(const s of settlements.values()){
+      if(s.roleCounts?.researchers>0){
+        const rpPerSett = s.roleCounts.researchers * (0.5 + G.techs.unlocked.has('star_tracking')?.2:0);
+        totalRP+=rpPerSett;
+        s.researchProgress=(s.researchProgress||0)+rpPerSett;
+
+        // Auto-research if idle and no tech researching
+        if(!this.researching&&s.researchProgress>=50){
+          this._startResearch(s);
+        }
+      }
+    }
+    this.totalRP+=totalRP;
+
+    // Process research progress
+    if(this.researching!==null){
+      const def=TECH_DEFS[this.researching];
+      if(def){
+        const rpNeeded=def.cost;
+        // Find settlement with most research progress
+        let bestSett=null,bestProgress=0;
+        for(const s of settlements.values()){
+          if((s.researchProgress||0)>bestProgress&&s.roleCounts?.researchers>0){
+            bestProgress=s.researchProgress||0;bestSett=s;
+          }
+        }
+
+        if(bestSett&&(bestSett.researchProgress||0)>=rpNeeded){
+          this._completeResearch(def);
+          bestSett.researchProgress=0;
+          this.researching=null;
+        } else {
+          // Drain progress from all settlements proportionally
+          for(const s of settlements.values()){
+            const drain=Math.min(s.researchProgress||0,rpNeeded*.1);
+            s.researchProgress-=drain;
+          }
+        }
+      }
+    }
+  }
+
+  _startResearch(settlement){
+    // Find next available tech (first that meets prerequisites)
+    for(let i=0;i<TECH_DEFS.length;i++){
+      const def=TECH_DEFS[i];
+      if(this.unlocked.has(def.id))continue;
+      if(def.prereqs.some(p=>!this.unlocked.has(p)))continue;
+
+      this.researching=i;
+      settlement.researchProgress=(settlement.researchProgress||0)+20; // Initial boost
+      addEvent(`${settlement.name} begins researching ${def.name}`,'info');
+      break;
+    }
+  }
+
+  _completeResearch(def){
+    this.unlocked.add(def.id);
+    addEvent(`🌟 ${def.name} discovered! ${def.desc}`, 'good');
+
+    // Apply immediate effects to world
+    if(def.effects.cropUnlock){
+      G._cropsUnlocked=true;
+    }
+  }
+}
+
+// ============================================================
+// EVENT QUEUE & RANDOM EVENTS
+// ============================================================
+function processRandomEvents(){
+  const roll=rand();
+  if(roll<0.03){
+    // Predator attack on settlement
+    for(const s of G.settlements.values()){
+      if(rand()<.3){
+        const predCount=randInt(1,4);
+        let defenseBonus=0;
+        if(G.techs.unlocked.has('shelter_building'))defenseBonus+=predCount*.5;
+        if(G.techs.unlocked.has('hunting_tactics'))defenseBonus+=2;
+
+        let attacks=0;
+        for(let i=0;i<predCount;i++){
+          if(rand()<.4+defenseBonus*.1){
+            const victim=G.agents.filter(a=>a.alive&&a.assignedSettlement===s.id&&a.role!=='hunter')?.[randInt(0,Math.min(3,s.populationCount-1))];
+            if(victim){
+              const dmg=randInt(5,20);
+              victim.health-=dmg;
+              attacks++;
+              addEvent(`🐺 ${predCount} wolves attack ${s.name}! ${victim.name} takes ${dmg} damage`,'warn');
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Festival event (rare)
+  if(rand()<0.01){
+    const s=pick(Array.from(G.settlements.values()));
+    if(s){
+      s.morale=(s.morale||50)+20;
+      addEvent(`🎉 Cultural festival at ${s.name}! Morale boosted`,'good');
+    }
+  }
+
+  // Migration wave of rival tribe
+  if(rand()<0.005&&G.turn>100){
+    const s=pick(Array.from(G.settlements.values()));
+    if(s){
+      const newAgents=Math.min(20,WORLD_W*WORLD_H-s.populationCount);
+      for(let i=0;i<newAgents;i++){
+        const agent=G.agentPool[G.agentPoolLength++]||{};
+        Object.assign(agent,{
+          id:'tribe_'+s.id+'_'+this.nextId++,age:randInt(1825,7300),health:rand(50,90),
+          role:pick(['hunter','gatherer','idle']),skills:{hunting:randInt(1,4),gathering:randInt(1,4),crafting:randInt(0,2),exploration:randInt(0,2)},
+          location:{x:s.position.x+randInt(-20,20),y:s.position.y+randInt(-20,20)},
+          hunger:randInt(50,150),diseaseStatus:null,assignedSettlement:s.id,traits:{stamina:randInt(3,7),intelligence:randInt(3,7),resilience:randInt(3,8)},
+          alive:true,calorieBurn:0,calorieGain:0,movementCooldown:5,deathCause:null,name:pickName()
+        });
+      }
+      s.populationCount+=newAgents;
+      addEvent(`👥 A migrating tribe of ${newAgents} joins ${s.name}!`,'good');
+    }
+  }
+
+  // Fire spread on fireGrid
+  if(G.fireGrid){
+    for(let y=0;y<WORLD_H;y++){
+      if(!G.fireGrid[y])continue;
+      for(let x=0;x<WORLD_W;x++){
+        if(G.fireGrid[y][x]>0){
+          G.fireGrid[y][x]--;
+          // Spread to adjacent forest tiles
+          if(rand()<.15){
+            const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+            const d=pick(dirs);
+            const nx=x+d[0],ny=y+d[1];
+            if(nx>=0&&nx<WORLD_W&&ny>=0&&ny<WORLD_H){
+              const nt=G.world[ny][nx];
+              if(nt&&(nt.terrainType==='dense_forest'||nt.biome==='temperateForest')&&!G.fireGrid[ny]?.[nx]){
+                G.fireGrid[ny][nx]=3;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// ============================================================
+// NAME GENERATOR
+// ============================================================
+const NAME_SYLLABLES=['ba','ka','ra','ta','na','da','ma','la','sha','go','zo','mi','du','re','li','ki','tu','sa','ne','pa'];
+function pickName(){
+  const len=randInt(2,3);let name='';
+  for(let i=0;i<len;i++)name+=pick(NAME_SYLLABLES);
+  return name.charAt(0).toUpperCase()+name.slice(1);
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function GetTileNear(x,y,radius){
+  const cx=Math.floor(x),cy=Math.floor(y);
+  for(let r=0;r<=radius;r++){
+    for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+      if(Math.abs(dx)!==r&&Math.abs(dy)!==r)continue;
+      const nx=cx+dx,ny=cy+dy;
+      if(nx>=0&&nx<WORLD_W&&ny>=0&&ny<WORLD_H)return G.world[ny][nx];
+    }
+  }
+  return null;
+}
+
+function addEvent(msg,type='info'){
+  const log=document.getElementById('eventlog');
+  if(!log)return;
+  const entry=document.createElement('div');
+  entry.className=`event-entry ${type}`;
+  entry.textContent=`[T${G.turn}] ${msg}`;
+  log.appendChild(entry);
+  // Keep only last 200 entries
+  while(log.children.length>200)log.removeChild(log.firstChild);
+  log.scrollTop=log.scrollHeight;
+}
+
+// ============================================================
+// GAME STATE INITIALIZATION
+// ============================================================
+function initGameState(){
+  G={
+    turn:0,
+    season:'spring',
+    dayInSeason:0,
+    world:null,
+    settlements:new Map(),
+    agents:[],
+    agentPoolLength:0,
+    diseases:{},
+    techs:new TechSystem(),
+    events:[],
+    fogOfWar:new FogOfWar(),
+    weather:new WeatherSystem(),
+    population:new PopulationSystem(),
+    calorieEngine:new CalorieEngine(),
+    diseaseSystem:new DiseaseSystem(),
+    stats:{totalPop:0,foodSurplus:0,activeDiseases:0,researchedTechs:0},
+    rolePriorities:{hunter:3,gatherer:5,builder:1,researcher:1,scout:0},
+    _spatialHash:new SpatialHash(8,WORLD_W,WORLD_H),
+    _cropsUnlocked:false,
+    fireGrid:Array.from({length:WORLD_H},()=>new Uint8Array(WORLD_W)),
+    camera:{x:0,y:0,zoom:1}, // Will be set after world gen
+  };
+
+  // Generate world
+  G.world=generateWorld();
+  G.fogOfWar.init(G.world);
+
+  // Create spatial hash for agents
+  // (agents added later, rehash each turn)
+
+  // Find starting location (temperate forest or grassland near center)
+  const cx=WORLD_W/2,cy=WORLD_H/2;
+  let startTile=null;
+  for(let r=0;r<30;r++){
+    for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+      const nx=Math.floor(cx)+dx,ny=Math.floor(cy)+dy;
+      if(nx>=0&&nx<WORLD_W&&ny>=0&&ny<WORLD_H){
+        const t=G.world[ny][nx];
+        if(t.biome==='temperateForest'||t.biome==='grassland'){startTile=t;break}
+      }
+    }
+    if(startTile)break;
+  }
+  startTile=startTile||G.world[Math.floor(cy)][Math.floor(cx)];
+
+  // Create initial settlement
+  const settlement={
+    id:'settle_0',name:'Haven',position:{x:startTile.x,y:startTile.y},level:1,
+    storage:{food:2000,capacity:5000},pendingFood:0,pendingMaterials:0,researchProgress:0,
+    populationCount:30,morale:70,roleCounts:{hunters:3,gatherers:5,builders:1,researchers:1,scouts:0,idle:20},
+    hasOutbreak:false
+  };
+  G.settlements.set(settlement.id,settlement);
+
+  // Spawn initial agents at settlement
+  G.population.initAgents(30,startTile);
+  for(const agent of G.agents){
+    if(agent.alive)agent.assignedSettlement=settlement.id;
+  }
+
+  // Initialize diseases
+  G.diseaseSystem.init();
+
+  // Set camera to center on settlement
+  G.camera.x=startTile.x-100;
+  G.camera.y=startTile.y-75;
+  G.camera.zoom=0.8;
+
+  // Update stats
+  updateStats();
+
+  addEvent('🏕️ Your Paleolithic tribe has arrived at this land.','info');
+  addEvent('The simulation begins. Watch your people thrive or perish.');
+}
+
+function updateStats(){
+  const aliveAgents=G.agents.filter(a=>a.alive);
+  G.stats.totalPop=aliveAgents.length;
+
+  let totalFood=0,totalCapacity=0;
+  for(const s of G.settlements.values()){totalFood+=s.storage.food;totalCapacity+=s.storage.capacity}
+  G.stats.foodSurplus=totalFood-totalCapacity*0.3; // Surplus beyond 30% capacity
+  G.stats.activeDiseases=G.diseaseSystem.activeCases;
+  G.stats.researchedTechs=G.techs.unlocked.size;
+}
+
+// ============================================================
+// TURN RESOLUTION (THE CORE SIMULATION LOOP)
+// ============================================================
+function resolveTurn(){
+  G.turn++;
+  G.dayInSeason++;
+
+  // Season progression
+  const seasonDays = SEASON_DAYS[G.season];
+  if(G.dayInSeason>=seasonDays){
+    G.dayInSeason=0;
+    const seasons=['spring','summer','autumn','winter'];
+    const idx=seasons.indexOf(G.season);
+    G.season=seasons[(idx+1)%4];
+    addEvent(`🌍 Season changes to ${G.season}`,'info');
+
+    // Winter effects: cold damage, reduced resources
+    if(G.season==='winter'){
+      for(const a of G.agents){
+        if(!a.alive)continue;
+        const coldRes=G.calorieEngine._getColdResistance(a);
+        if(coldRes<.3&&rand()<.05){
+          a.health-=2*(1-coldRes*2);
+          if(a.health<=0){a.alive=false;a.deathCause='Freeze';addEvent(`${a.name} froze to death`,'bad')}
+        }
+      }
+    }
+  }
+
+  // === TURN RESOLUTION ORDER (strict) ===
+
+  // 1. Weather/Climate update
+  G.weather.update(G.season,G.turn);
+
+  // 2. Event queue processing (random events)
+  processRandomEvents();
+
+  // 3. Agent movement & pathfinding
+  G.population.processAgentMovement();
+
+  // 4. Resource gathering/hunting yields
+  G.population.processGatheringHunting();
+
+  // 5. Calorie consumption & storage updates
+  G.calorieEngine.update();
+
+  // 6. Disease transmission & progression
+  G.diseaseSystem.transmit(G.season);
+  G.diseaseSystem.update(G.season);
+
+  // 7. Aging, births, deaths
+  G.population.processAgingBirthsDeaths();
+
+  // 8. Role reassignment optimization
+  G.population.updateRoleAssignment();
+
+  // 9. Tech research progress
+  G.techs.update(G.settlements);
+
+  // 10. Fog of war recalculation
+  G.fogOfWar.update(G.settlements,G.agents);
+
+  // Update stats
+  updateStats();
+
+  // Log periodic milestones
+  if(G.turn%50===0){
+    addEvent(`=== Turn ${G.turn}: Pop=${G.stats.totalPop}, Food=${Math.floor(G.stats.foodSurplus)}, Techs=${G.techs.unlocked.size} ===`,'info');
+  }
+  if(G.turn%200===0&&G.turn>0)addEvent(`📅 Year ${Math.floor(G.turn/365)} has passed!`,'info');
+
+  // Check game over conditions (all agents dead and no settlements)
+  const aliveCount=G.agents.filter(a=>a.alive).length;
+  if(aliveCount===0&&G.settlements.size>0){
+    addEvent('💀 Your entire population has perished!','bad');
+  }
+}
+
+// ============================================================
+// RENDERER (CANVAS)
+// ============================================================
+class Renderer {
+  constructor(canvas){
+    this.canvas=canvas;this.ctx=canvas.getContext('2d');
+    this._resize();
+    window.addEventListener('resize',()=>this._resize());
+  }
+
+  _resize(){
+    const parent=this.canvas.parentElement;
+    this.canvas.width=parent.clientWidth;
+    this.canvas.height=parent.clientHeight;
+    this.w=this.canvas.width;this.h=this.canvas.height;
+  }
+
+  render(){
+    const ctx=this.ctx;
+    ctx.clearRect(0,0,this.w,this.h);
+
+    if(!G||!G.world)return;
+
+    // Camera transform
+    const camX=G.camera.x*this.canvas.width/WORLD_W*G.camera.zoom;
+    const camY=G.camera.y*this.canvas.height/WORLD_H*G.camera.zoom;
+    const tileW=this.canvas.width/WORLD_W*G.camera.zoom;
+    const tileH=this.canvas.height/WORLD_H*G.camera.zoom;
+
+    // Calculate visible tile range with margin
+    const margin=2;
+    const minTX=Math.max(0,Math.floor(G.camera.x-margin));
+    const maxTX=Math.min(WORLD_W-1,Math.ceil(G.camera.x+this.w/tileW+margin));
+    const minTY=Math.max(0,Math.floor(G.camera.y-margin));
+    const maxTY=Math.min(WORLD_H-1,Math.ceil(G.camera.y+this.h/tileH+margin));
+
+    // Draw tiles (only visible ones)
+    ctx.save();
+    ctx.translate(-camX,-camY);
+    ctx.scale(this.canvas.width/WORLD_W/G.camera.zoom,this.canvas.height/WORLD_H/G.camera.zoom);
+
+    for(let y=minTY;y<=maxTY;y++){
+      for(let x=minTX;x<=maxTX;x++){
+        const tile=G.world[y][x];
+        if(!tile)continue;
+        this._drawTile(ctx,tile,x,y,tileW,tileH,camX,camY);
+      }
+    }
+
+    // Draw fires
+    for(let y=minTY;y<=maxTY;y++){
+      for(let x=minTX;x<=maxTX;x++){
+        if(G.fireGrid[y]&&G.fireGrid[y][x]>0){
+          const intensity=G.fireGrid[y][x]/5;
+          ctx.fillStyle=`rgba(255,${Math.floor(100+155*(1-intensity))},0,${intensity*0.8})`;
+          ctx.fillRect(x*tileW,y*tileH,tileW+1,tileH+1);
+        }
+      }
+    }
+
+    // Draw settlements (pulsing markers)
+    const pulsePhase=G.turn*0.1;
+    for(const s of G.settlements.values()){
+      const px=s.position.x*tileW+tileW/2;
+      const py=s.position.y*tileH+tileH/2;
+      const alpha=0.6+Math.sin(pulsePhase)*0.3;
+
+      // Settlement glow
+      ctx.beginPath();
+      ctx.arc(px,py,tileW*2,0,TAU);
+      ctx.fillStyle=`rgba(218,165,32,${alpha*0.3})`;
+      ctx.fill();
+
+      // Settlement marker
+      ctx.beginPath();
+      ctx.arc(px,py,tileW*0.8,0,TAU);
+      const col=s.hasOutbreak?'#e44':'#daa520';
+      ctx.fillStyle=col;ctx.globalAlpha=alpha+0.3;ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke();
+      ctx.globalAlpha=1;
+
+      // Settlement name
+      if(tileW>6){
+        ctx.fillStyle='#e8d8b8';ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+        ctx.fillText(s.name,px,py-tileW);
+        ctx.font='8px sans-serif';ctx.fillStyle='#a89878';
+        ctx.fillText(`Lv${s.level} ${s.populationCount}`,px,py+tileW*1.2);
+      }
+
+      // Outbreak indicator
+      if(s.hasOutbreak){
+        ctx.fillStyle='#e44';ctx.font='bold 8px sans-serif';
+        ctx.fillText('OUTBREAK',px,py-tileW-4);
+      }
+    }
+
+    // Draw agent clusters (abstracted dots) - only show per settlement area
+    for(const s of G.settlements.values()){
+      const setAgents=G.agents.filter(a=>a.alive&&a.assignedSettlement===s.id);
+      if(setAgents.length<50||tileW<2){
+        // Show individual agents if sparse and zoomed in enough
+        for(const agent of setAgents){
+          this._drawAgent(ctx,agent,tileW,tileH);
+        }
+      } else {
+        // Aggregate: draw colored circles by role near settlement center
+        const counts={};
+        for(const a of setAgents)counts[a.role]=(counts[a.role]||0)+1;
+
+        let angle=0;const radius=tileW*3;
+        for(const[role,count]of Object.entries(counts)){
+          if(!role||role==='child'||role==='elder')continue;
+          const ax=s.position.x+Math.cos(angle)*radius;
+          const ay=s.position.y+Math.sin(angle)*radius;
+          ctx.beginPath();ctx.arc(ax*tileW,ay*tileH,Math.sqrt(count)*tileW*0.3,0,TAU);
+          const roleColors={hunter:'#c44',gatherer:'#4a4',builder:'#a84',researcher:'#48a',scout:'#a4a'};
+          ctx.fillStyle=roleColors[role]||'#888';ctx.globalAlpha=.5;ctx.fill();ctx.globalAlpha=1;
+          angle+=0.4;
+        }
+      }
+    }
+
+    ctx.restore();
+  }
+
+  _drawTile(ctx,tile,x,y,tileW,tileH){
+    const biome=tile.biome;
+    if(!biome||!BIOME_COLORS[biome])return;
+
+    const colors=BIOME_COLORS[biome];
+
+    // Base color from biome
+    let r=colors[0],g=colors[1],b=colors[2];
+
+    // Elevation shading (darker = higher)
+    const elevDarken=tile.elevation*40;
+    r-=elevDarken*.3;g-=elevDarken*.4;b-=elevDarken*.5;
+
+    // Moisture tinting
+    if(tile.moisture>.6){r-=10;g+=10}
+
+    // Fog of war states
+    let alpha=1;
+    if(!tile.discovered){
+      r=20;g=18;b=15;alpha=.9;
+    } else if(!tile.visible){
+      // Explored but not visible: dimmed
+      const dimFactor=.4;
+      r=r*dimFactor+15*(1-dimFactor);
+      g=g*dimFactor+12*(1-dimFactor);
+      b=b*dimFactor+10*(1-dimFactor);
+      alpha=.7;
+    } else {
+      // Visible: full color, but add subtle grid lines
+    }
+
+    ctx.fillStyle=`rgba(${clamp(r,0,255)|0},${clamp(g,0,255)|0},${clamp(b,0,255)|0},${alpha})`;
+    ctx.fillRect(x*tileW,y*tileH,tileW+1,tileH+1);
+
+    // Draw resource indicators on visible tiles
+    if(tile.visible&&tile.resources.length>0&&tileW>4){
+      for(const res of tile.resources){
+        if(res.amount<=0)continue;
+        const colorMap={berries:'#a52',game_animal:'#864',fish:'#48c',clay:'#a86',flint:'#778',timber:'#363',freshwater:'#48a'};
+        ctx.fillStyle=colorMap[res.type]||'#fff';
+        ctx.globalAlpha=.5+res.amount/20*.5;
+        const cx=x*tileW+tileW*.3,cy=y*tileH+tileH*.3;
+        ctx.fillRect(cx,cy,tileW*.4,tileH*.4);
+      }
+      ctx.globalAlpha=1;
+    }
+
+    // Grid lines at higher zoom
+    if(tileW>8){
+      ctx.strokeStyle='rgba(255,255,255,.03)';ctx.lineWidth=.5;
+      ctx.strokeRect(x*tileW,y*tileH,tileW,tileH);
+    }
+  }
+
+  _drawAgent(ctx,agent,tileW,tileH){
+    const ax=agent.location.x*tileW+tileW/2;
+    const ay=agent.location.y*tileH+tileH/2;
+
+    // Color by health
+    let r,g,b;
+    if(agent.diseaseStatus){r=200;g=100;b=50}
+    else if(agent.health>70){r=120;g=200;b=120}
+    else{r=200;g=180;b=80}
+
+    ctx.fillStyle=`rgb(${r},${g},${b})`;
+    ctx.globalAlpha=.6+agent.health/100*.4;
+
+    const size=Math.max(1.5,tileW*0.2);
+    ctx.beginPath();ctx.arc(ax,ay,size,0,TAU);ctx.fill();
+    ctx.globalAlpha=1;
+  }
+}
+
+// ============================================================
+// UI RENDERING & UPDATES
+// ============================================================
+function updateTopBar(){
+  const bar=document.getElementById('topbar');
+  if(!bar)return;
+
+  const totalPop=G.stats.totalPop||0;
+  let aliveAgents=G.agents.filter(a=>a.alive);
+  const children=aliveAgents.filter(a=>a.age<1825).length;
+  const adults=totalPop-children;
+  const elders=aliveAgents.filter(a=>a.age>14600).length;
+
+  bar.innerHTML=`
+    <div class="stat"><span class="label">Turn:</span><span class="value">${G.turn}</span></div>
+    <div class="separator"></div>
+    <div class="stat"><span class="label">Season:</span><span class="value" style="color:${G.season==='summer'?'#da4':G.season==='winter'?'#8cf':'#6a3'}">${G.season}</span></div>
+    <div class="separator"></div>
+    <div class="stat"><span class="label">Population:</span><span class="value" style="color:${totalPop<10?'#e44':totalPop<50?'#daa':'#6c6'}">${totalPop}</span></div>
+    ${adults>0?`<div class="stat"><span class="label">Adults:</span><span class="value">${adults}</span></div>`:''}
+    ${children>0?`<div class="stat"><span class="label">Children:</span><span class="value" style="color:#aaf">${children}</span></div>`:''}
+    <div class="separator"></div>
+    <div class="stat"><span class="label">Food:</span><span class="value" style="color:${G.stats.foodSurplus<0?'#e44':'#6c6'}">${Math.floor(G.stats.foodSurplus)}</span></div>
+    <div class="separator"></div>
+    <div class="stat"><span class="label">Diseases:</span><span class="value" style="color:${G.stats.activeDiseases>0?'#e84':'#6c6'}">${G.stats.activeDiseases}</span></div>
+    ${G._activeDiseaseList?.length?`<div class="stat"><span class="label">Active:</span><span class="value" style="color:#e84">${[...new Set(G._activeDiseaseList)].join(', ')}</span></div>`:''}
+    <div class="separator"></div>
+    <div class="stat"><span class="label">Weather:</span><span class="value">${G.weather.currentTemp?.toFixed(0)??20}°C ${G.weather.humidity?.toFixed(0)?Math.floor(G.weather.humidity)+'%':''}</span></div>
+    ${G.weather.event?`<div class="stat"><span class="label">⚠️</span><span class="value" style="color:#e84">${G.weather.event.type} (${G.weather.event.duration}d)</span></div>`:''}
+    <div class="separator"></div>
+    <div class="stat"><span class="label">Techs:</span><span class="value" style="color:#aaf">${G.techs.unlocked.size}/${TECH_DEFS.length}</span></div>
+    ${G.techs.researching!==null?`<div class="stat"><span class="label">Researching:</span><span class="value" style="color:#da4">${TECH_DEFS[G.techs.researching].name}</span></div>`:''}
+    <div class="separator"></div>
+    <div class="stat"><span class="label">Settlements:</span><span class="value">${G.settlements.size}</span></div>
+  `;
+}
+
+function updateRightPanel(){
+  const panel=document.getElementById('rightpanel');
+  if(!panel)return;
+
+  // Tab system
+  const settlements=Array.from(G.settlements.values());
+  let settlementTabs='';
+  for(let i=0;i<settlements.length;i++){
+    settlementTabs+=`<div class="tab-btn ${i===0?'active':''}" data-sett="${i}">${settlements[i].name}</div>`;
+  }
+
+  // Role distribution (show first settlement)
+  const s0=settlements[0];
+  let roleRows='';
+  if(s0){
+    const rc=s0.roleCounts||{};
+    for(const[role,count]of Object.entries(rc)){
+      if(['hunters','gatherers','builders','researchers','scouts'].includes(role)){
+        const shortName=role.replace('s','');
+        roleRows+=`<div class="role-row"><label>${shortName}:</label><span class="role-val">${count}</span></div>`;
+      }
+    }
+  }
+
+  // Tech tree display
+  let techHTML='<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:4px">';
+  for(let i=0;i<TECH_DEFS.length;i++){
+    const def=TECH_DEFS[i];
+    const unlocked=G.techs.unlocked.has(def.id);
+    const isResearching=G.techs.researching===i;
+    const prereqsMet=!def.prereqs.some(p=>!G.techs.unlocked.has(p));
+    let cls='tech-node '+(unlocked?'unlocked':isResearching?'researching':'locked');
+    techHTML+=`<div class="${cls}" title="${def.desc}">${def.name}</div>`;
+  }
+  techHTML+='</div>';
+
+  // Population stats
+  const aliveAgents=G.agents.filter(a=>a.alive);
+  const roles={};
+  for(const a of aliveAgents)roles[a.role]=(roles[a.role]||0)+1;
+
+  panel.innerHTML=`
+    <div class="tab-bar">
+      <div class="tab-btn active" data-tab="overview">Overview</div>
+      <div class="tab-btn" data-tab="settlements">Settlements</div>
+      <div class="tab-btn" data-tab="tech">Tech Tree</div>
+      <div class="tab-btn" data-tab="roles">Roles</div>
+    </div>
+
+    <!-- OVERVIEW TAB -->
+    <div class="tab-content active" id="tab-overview">
+      <div class="panel-section">
+        <h3>Population</h3>
+        <p>Total: <strong>${G.stats.totalPop}</strong></p>
+        <p>Hunters: ${roles.hunter||0} | Gatherers: ${roles.gatherer||0}</p>
+        <p>Builders: ${roles.builder||0} | Researchers: ${roles.researcher||0}</p>
+        <p>Children: ${aliveAgents.filter(a=>a.age<1825).length}</p>
+        <p>Elders: ${aliveAgents.filter(a=>a.age>14600).length}</p>
+      </div>
+
+      <div class="panel-section">
+        <h3>Resources</h3>
+        <p>Food surplus: <strong style="color:${G.stats.foodSurplus>=0?'#6c6':'#e44'}">${Math.floor(G.stats.foodSurplus)}</strong></p>
+        <p>Active diseases: ${G.stats.activeDiseases}</p>
+        <p>Tech researched: ${G.techs.unlocked.size}/${TECH_DEFS.length}</p>
+      </div>
+
+      <div class="panel-section">
+        <h3>Season</h3>
+        <p>${G.season} — Day ${G.dayInSeason}/${SEASON_DAYS[G.season]}</p>
+        <p>Temp: ~${Math.floor(G.weather.currentTemp)}°C | Humidity: ${Math.floor(G.weather.humidity || 50)}%</p>
+        ${G.weather.event?`<p style="color:#e84">⚠️ ${G.weather.event.type}</p>`:''}
+      </div>
+
+      <div class="panel-section">
+        <h3>Autonomous Mode</h3>
+        <p style="font-size:11px;color:#a89878;margin-bottom:6px">AI manages role assignments, research priorities, and agent movement. You set strategic targets.</p>
+        <button id="btn-toggle-auto" class="${autonomousMode?'active':''}">${autonomousMode?'🤖 Auto ON':'🤖 Enable Auto'}</button>
+      </div>
+    </div>
+
+    <!-- SETTLEMENTS TAB -->
+    <div class="tab-content" id="tab-settlements">
+      ${settlementTabs?`<div style="display:flex;gap:2px;margin-bottom:8px">${settlements.map((s,i)=>`<button class="${i===0?'active':''}" data-sett-index="${i}">${s.name}</button>`).join('')}</div>`:''}
+      ${settlements.length>0?this._renderSettlementDetail(settlements[0]):'<p>No settlements</p>'}
+    </div>
+
+    <!-- TECH TREE TAB -->
+    <div class="tab-content" id="tab-tech">
+      <div style="font-size:11px;color:#a89878;margin-bottom:6px">Research points accumulate from researcher agents. Unlocked techs provide permanent bonuses.</div>
+      ${techHTML}
+      <div style="margin-top:8px;font-size:11px">
+        <p>Currently researching: ${G.techs.researching!==null?TECH_DEFS[G.techs.researching].name:'None'}</p>
+      </div>
+    </div>
+
+    <!-- ROLES TAB -->
+    <div class="tab-content" id="tab-roles">
+      <div style="font-size:11px;color:#a89878;margin-bottom:6px">Adjust role quotas for the first settlement. In auto mode, AI optimizes dynamically.</div>
+      ${roleRows}
+      <div style="margin-top:8px">
+        <p style="color:#a89878;font-size:11px">Role locks per agent:</p>
+        <div id="agent-role-locks" style="max-height:200px;overflow-y:auto"></div>
+      </div>
+    </div>
+  `;
+
+  // Tab click handlers
+  panel.querySelectorAll('.tab-btn[data-tab]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      panel.querySelectorAll('.tab-btn[data-tab]').forEach(b=>b.classList.remove('active'));
+      panel.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-'+btn.dataset.tab)?.classList.add('active');
+    });
+  });
+
+  // Auto toggle
+  const autoBtn=document.getElementById('btn-toggle-auto');
+  if(autoBtn)autoBtn.addEventListener('click',()=>{autonomousMode=!autonomousMode;updateAutoButton()});
+}
+
+function _renderSettlementDetail(s){
+  return `
+    <div class="panel-section">
+      <h3>${s.name}</h3>
+      <p>Level: ${s.level}/5</p>
+      <p>Population: ${s.populationCount}</p>
+      <p>Morale: ${s.morale||50}%</p>
+      <div style="margin:4px 0">
+        <div style="background:#1a1410;height:8px;border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${Math.min(100,(s.storage.food/s.storage.capacity)*100)}%;background:${s.storage.food/s.storage.capacity>.3?'#6a4':'#a44'};border-radius:4px"></div>
+        </div>
+        <p style="font-size:11px;margin-top:2px">Food: ${Math.floor(s.storage.food)}/${s.storage.capacity}</p>
+      </div>
+      <p>Research progress: ${Math.floor(s.researchProgress||0)} RP</p>
+      ${s.hasOutbreak?'<p style="color:#e44;font-weight:bold">⚠️ DISEASE OUTBREAK</p>':''}
+    </div>
+  `;
+}
+
+function updateAutoButton(){
+  const btn=document.getElementById('btn-autonomous');
+  if(btn)btn.textContent=`🤖 Auto: ${autonomousMode?'ON':'OFF'}`;
+}
+
+// ============================================================
+// CONTROLS & INTERACTIONS
+// ============================================================
+function setupControls(renderer){
+  // Play/Pause
+  document.getElementById('btn-play')?.addEventListener('click',()=>{
+    paused=!paused;
+    const btn=document.getElementById('btn-play');
+    btn.textContent=paused?'▶ Play':'⏸ Pause';
+    btn.classList.toggle('active',!paused);
+  });
+
+  // Speed buttons
+  document.querySelectorAll('.speed-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      simSpeed=parseInt(btn.dataset.speed);
+    });
+  });
+
+  // Zoom
+  document.getElementById('btn-zoomin')?.addEventListener('click',()=>{
+    G.camera.zoom=Math.min(3,G.camera.zoom+0.2);
+    updateZoomDisplay();
+  });
+  document.getElementById('btn-zoomout')?.addEventListener('click',()=>{
+    G.camera.zoom=Math.max(0.1,G.camera.zoom-0.2);
+    updateZoomDisplay();
+  });
+
+  // Save/Load
+  document.getElementById('btn-save')?.addEventListener('click',saveGame);
+  document.getElementById('btn-load')?.addEventListener('click',loadGame);
+  document.getElementById('btn-reset')?.addEventListener('click',()=>{if(confirm('Reset game?')){startGame()}});
+
+  // Canvas interactions (pan, zoom, inspect)
+  let isDragging=false,lastMX=0,lastMY=0;
+
+  renderer.canvas.addEventListener('mousedown',(e)=>{
+    if(e.button===2||e.shiftKey){isDragging=true;lastMX=e.clientX;lastMY=e.clientY}
+    else if(e.button===0&&!e.shiftKey){
+      // Inspect tile
+      const rect=renderer.canvas.getBoundingClientRect();
+      const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+      const camX=G.camera.x,G.camY=G.camera.y;
+      const tileX=Math.floor((mx/renderer.canvas.width)*WORLD_W/G.camera.zoom+camX);
+      const tileY=Math.floor((my/renderer.canvas.height)*WORLD_H/G.camera.zoom+camY);
+      if(tileX>=0&&tileX<WORLD_W&&tileY>=0&&tileY<WORLD_H){
+        inspectTile(tileX,tileY);
+      }
+    }
+  });
+
+  renderer.canvas.addEventListener('mousemove',(e)=>{
+    if(!isDragging)return;
+    const dx=e.clientX-lastMX,dy=e.clientY-lastMY;
+    G.camera.x-=dx/(renderer.canvas.width*G.camera.zoom/WORLD_W);
+    G.camera.y-=dy/(renderer.canvas.height*G.camera.zoom/WORLD_H);
+    lastMX=e.clientX;lastMY=e.clientY;
+  });
+
+  renderer.canvas.addEventListener('mouseup',()=>{isDragging=false});
+  renderer.canvas.addEventListener('contextmenu',(e)=>e.preventDefault());
+
+  // Scroll zoom
+  renderer.canvas.addEventListener('wheel',(e)=>{
+    e.preventDefault();
+    const factor=e.deltaY>0?0.9:1.1;
+    G.camera.zoom=clamp(G.camera.zoom*factor,0.1,3);
+    updateZoomDisplay();
+  },{passive:false});
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown',(e)=>{
+    if(e.key===' '){paused=!paused;document.getElementById('btn-play').textContent=paused?'▶ Play':'⏸ Pause';return}
+    if(e.key==='s')saveGame();
+    if(e.key==='Escape'){G.camera.x=WORLD_W/2-100;G.camera.y=WORLD_H/2-75}
+  });
+}
+
+function updateZoomDisplay(){
+  const el=document.getElementById('zoom-val');
+  if(el)el.textContent=Math.round(G.camera.zoom*100)+'%';
+}
+
+function inspectTile(x,y){
+  const tile=G.world[y][x];
+  if(!tile)return;
+
+  const modal=document.getElementById('modal-overlay');
+  const modalEl=document.getElementById('modal');
+
+  let info=`<h2>Tile [${x}, ${y}]</h2>`;
+  info+=`<div style="display:grid;grid-template-columns:auto 1fr;gap:4px">`;
+  info+=`<strong>Biome:</strong><td>${tile.biome}</td>`;
+  info+=`<strong>Terrain:</strong><td>${tile.terrainType}</td>`;
+  info+=`<strong>Elevation:</strong><td>${(tile.elevation*100).toFixed(0)}%</td>`;
+  info+=`<strong>Moisture:</strong><td>${(tile.moisture*100).toFixed(0)}%</td>`;
+  info+=`<strong>Temp (avg):</strong><td>${tile.temperature.toFixed(1)}°C</td>`;
+  info+=`<strong>Movement cost:</strong><td>${tile.pathCost.toFixed(2)}</td>`;
+  info+=`<strong>Fog:</strong><td>${!tile.discovered?'Unknown':tile.visible?'Visible':'Explored'}</td>`;
+
+  if(tile.resources.length>0){
+    info+=`</div><h3 style="margin-top:12px">Resources:</h3><ul>`;
+    for(const r of tile.resources){
+      info+=`<li>${RESOURCES[r.type]?.name||r.type}: ${r.amount} (regrows in ${r.regrowTurns} turns)</li>`;
+    }
+    info+=`</ul>`;
+  }
+
+  // Check for agents on this tile
+  const agentsHere=G.agents.filter(a=>a.alive&&Math.floor(a.location.x)===x&&Math.floor(a.location.y)===y);
+  if(agentsHere.length>0){
+    info+=`<h3 style="margin-top:12px">Agents here:</h3><ul>`;
+    for(const a of agentsHere){
+      info+=`<li>${a.name} — ${a.role} | HP:${a.health.toFixed(0)} | Hunger:${a.hunger.toFixed(0)}</li>`;
+    }
+    info+=`</ul>`;
+  }
+
+  // Check settlement
+  for(const s of G.settlements.values()){
+    if(Math.abs(s.position.x-x)<2&&Math.abs(s.position.y-y)<2){
+      info+=`<h3 style="margin-top:12px">Settlement nearby:</h3>`;
+      info+=`<p>${s.name} — Level ${s.level}, Pop ${s.populationCount}</p>`;
+    }
+  }
+
+  info+=`</div>`;
+
+  modalEl.innerHTML=info+`<button onclick="document.getElementById('modal-overlay').classList.remove('show')" style="margin-top:12px;width:100%">Close</button>`;
+  modal.classList.add('show');
+}
+
+// ============================================================
+// SAVE / LOAD (localStorage)
+// ============================================================
+function saveGame(){
+  try{
+    const saveData={
+      turn:G.turn,season:G.season,dayInSeason:G.dayInSeason,
+      settlements:Array.from(G.settlements.entries()).map(([id,s])=>[id,{...s}]),
+      agents:G.agents.filter(a=>a.alive).map(a=>({...a})),
+      diseases:G.diseases,teches:{unlocked:[...G.techs.unlocked],researching:G.techs.researching,totalRP:G.techs.totalRP},
+      camera:G.camera,rolePriorities:G.rolePriorities,_cropsUnlocked:G._cropsUnlocked
+    };
+    localStorage.setItem('paleolithic_save',JSON.stringify(saveData));
+    addEvent('💾 Game saved','good');
+  }catch(e){addEvent('Save failed: '+e.message,'bad')}
+}
+
+function loadGame(){
+  try{
+    const raw=localStorage.getItem('paleolithic_save');
+    if(!raw){addEvent('No save found','warn');return}
+    const data=JSON.parse(raw);
+
+    // Reconstruct game state minimally
+    G.turn=data.turn;G.season=data.season;G.dayInSeason=data.dayInSeason;
+    G.camera=data.camera||{x:WORLD_W/2-100,y:WORLD_H/2-75,zoom:1};
+
+    // Restore settlements
+    G.settlements.clear();
+    for(const[id,s]of data.settlements){G.settlements.set(id,{...s})}
+
+    // Restore agents (reuse pool)
+    G.agents=[];G.agentPoolLength=0;G.population.nextId=data.agents.length+100;
+    const pool=G.agents;
+    for(const ad of data.agents){
+      const agent=pool[G.agentPoolLength++]={};
+      Object.assign(agent,{...ad,location:{x:ad.location.x,y:ad.location.y}});
+    }
+
+    // Restore techs
+    G.techs.unlocked=new Set(data.teches?.unlocked||[]);
+    G.techs.researching=data.teches?.researching??null;
+    G.techs.totalRP=data.teches?.totalRP||0;
+
+    updateStats();
+    addEvent('📂 Game loaded','good');
+  }catch(e){addEvent('Load failed: '+e.message,'bad')}
+}
+
+// ============================================================
+// MAIN GAME LOOP
+// ============================================================
+function gameLoop(timestamp){
+  if(!lastTurnTime)lastTurnTime=timestamp;
+
+  // Calculate turns to process (fixed timestep)
+  const TURN_MS = 50; // 20 turns per second base pace
+  let elapsed=timestamp-lastTurnTime;
+  lastTurnTime=timestamp;
+
+  if(!paused&&G){
+    const turnsToProcess=Math.floor(elapsed/TURN_MS*simSpeed);
+    for(let i=0;i<turnsToProcess;i++){
+      resolveTurn();
+    }
+  }
+
+  // Render every frame (decoupled from simulation)
+  renderer.render();
+
+  // Update UI at lower frequency (~5fps for DOM updates)
+  if(!G._uiTick){G._uiTick=0}
+  G._uiTick++;
+  if(G._uiTick%12===0){
+    updateTopBar();
+    updateRightPanel();
+  }
+
+  animFrameId=requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+// VISIBILITY API (pause when tab hidden)
+// ============================================================
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){paused=true}
+});
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+let renderer;
+
+function startGame(){
+  // Clear previous state
+  G=null;
+  document.getElementById('eventlog').innerHTML='';
+
+  initGameState();
+  renderer=new Renderer(document.getElementById('gameCanvas'));
+  setupControls(renderer);
+  updateTopBar();
+  updateRightPanel();
+  updateAutoButton();
+
+  lastTurnTime=performance.now();
+
+  // Cancel any existing loop
+  if(animFrameId)cancelAnimationFrame(animFrameId);
+  animFrameId=requestAnimationFrame(gameLoop);
+}
+
+// Boot the game
+startGame();
+
+console.log('🏕️ Paleolithic City Builder loaded. Turn-based autonomous simulation running.');
+</script>
+</body>
+</html>
