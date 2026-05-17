@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dawn of Civilization</title>
+<style>
+:root {
+  --bg: #100c06; --panel: #1e1508; --panel2: #261d0a;
+  --earth: #7a5a18; --text: #c8a86a; --hi: #f0c050;
+  --grass: #2d4a1e; --forest: #162c10; --water: #0d2535;
+  --rock: #252520; --sand: #3a3320;
+  --food: #c17f24; --wood: #6b4226; --stone: #7a7060;
+  --watercol: #3a8ab0; --pop: #a08030;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: Georgia, serif;
+       display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* HEADER */
+#header { background: var(--panel); border-bottom: 2px solid var(--earth);
+          padding: 7px 14px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+#title { font-size: 1.15em; color: var(--hi); letter-spacing: 2px;
+         text-shadow: 0 0 12px rgba(240,192,80,.5); white-space: nowrap; }
+.res-bar { display: flex; gap: 14px; flex: 1; flex-wrap: wrap; }
+.res { display: flex; align-items: center; gap: 5px; font-size: .82em; }
+.res span:first-child { font-size: 1.1em; }
+.res-val { color: var(--hi); min-width: 55px; }
+.res-cap { color: #806040; font-size: .85em; }
+#era-tag { color: #c09050; font-style: italic; font-size: .82em; white-space: nowrap; }
+#season-tag { color: #a07838; font-size: .78em; }
+
+/* MAIN */
+#main { display: flex; flex: 1; overflow: hidden; }
+
+/* SIDEBAR */
+#sidebar { width: 210px; background: var(--panel); border-right: 2px solid var(--earth);
+           overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 10px; }
+.sb-section h3 { color: var(--hi); font-size: .75em; text-transform: uppercase;
+                 letter-spacing: 1px; border-bottom: 1px solid var(--earth); padding-bottom: 3px; margin-bottom: 6px; }
+.bld-btn { width: 100%; background: var(--bg); border: 1px solid #4a3010; color: var(--text);
+           padding: 5px 7px; margin-bottom: 3px; cursor: pointer; text-align: left;
+           font-family: Georgia, serif; font-size: .76em; border-radius: 2px;
+           display: flex; align-items: center; gap: 7px; transition: background .15s; }
+.bld-btn:hover:not(.locked) { background: var(--panel2); border-color: var(--hi); }
+.bld-btn.selected { background: #2e2008; border-color: var(--hi); box-shadow: 0 0 6px rgba(240,192,80,.35); }
+.bld-btn.locked { opacity: .38; cursor: not-allowed; }
+.bld-icon { font-size: 1.2em; width: 22px; text-align: center; flex-shrink: 0; }
+.bld-meta { flex: 1; }
+.bld-name { font-weight: bold; color: var(--hi); line-height: 1.2; }
+.bld-cost { color: #907040; font-size: .8em; }
+.bld-effect { color: #7a8060; font-size: .75em; }
+#remove-btn { width: 100%; background: #2a0e0e; border: 1px solid #7a3030;
+              color: #d06060; padding: 6px; cursor: pointer; font-family: Georgia, serif;
+              font-size: .8em; border-radius: 2px; margin-top: 4px; }
+#remove-btn:hover { background: #3a1818; }
+#remove-btn.active { background: #4a1010; border-color: #c04040; }
+
+/* MAP */
+#map-wrap { flex: 1; overflow: auto; display: flex; align-items: flex-start;
+            justify-content: flex-start; padding: 14px; }
+#grid { display: grid; grid-template-columns: repeat(20, 38px);
+        grid-template-rows: repeat(16, 38px); gap: 1px;
+        background: #050402; border: 2px solid var(--earth); }
+.tile { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+        font-size: 1.25em; cursor: pointer; position: relative; user-select: none;
+        transition: filter .1s; }
+.tile:hover { filter: brightness(1.35); z-index: 2; }
+.tile.t-grass { background: var(--grass); }
+.tile.t-forest { background: var(--forest); }
+.tile.t-water { background: var(--water); }
+.tile.t-rock { background: var(--rock); }
+.tile.t-sand { background: var(--sand); }
+.tile.can-build:hover { outline: 2px solid rgba(240,192,80,.7); }
+.tile.no-build:hover  { outline: 2px solid rgba(200,60,60,.6); }
+
+/* INFO PANEL */
+#info { width: 195px; background: var(--panel); border-left: 2px solid var(--earth);
+        padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+#info h3 { color: var(--hi); font-size: .75em; text-transform: uppercase;
+           letter-spacing: 1px; border-bottom: 1px solid var(--earth); padding-bottom: 3px; }
+#tile-info { background: var(--bg); border: 1px solid var(--earth); padding: 8px;
+             border-radius: 2px; min-height: 70px; font-size: .8em; line-height: 1.5; }
+#tile-info .ti-name { color: var(--hi); font-weight: bold; margin-bottom: 4px; }
+#tile-info .ti-desc { color: #9a8050; }
+#tile-info .ti-prod { color: #6a9a40; font-size: .9em; }
+
+/* TECH */
+.tech-row { display: flex; align-items: center; gap: 6px; padding: 4px 6px;
+            border: 1px solid #2a1e08; border-radius: 2px; font-size: .75em;
+            margin-bottom: 3px; line-height: 1.3; }
+.tech-row.tech-done { border-color: #3a5a20; color: #7ab050; }
+.tech-row.tech-avail { border-color: var(--earth); cursor: pointer; }
+.tech-row.tech-avail:hover { background: var(--panel2); border-color: var(--hi); }
+.tech-row.tech-locked { opacity: .35; }
+.tech-icon { font-size: 1.1em; flex-shrink: 0; }
+.tech-name { flex: 1; font-weight: bold; }
+.tech-cost { color: #907040; font-size: .85em; }
+
+/* LOG */
+#log { flex: 1; overflow-y: auto; }
+.log-line { padding: 3px 0; border-bottom: 1px solid #1e1508; font-size: .78em;
+            color: #907040; line-height: 1.35; }
+.log-line.log-imp { color: var(--hi); }
+.log-line.log-warn { color: #c07030; }
+.log-line.log-era  { color: #b090e0; font-style: italic; }
+
+/* FOOTER */
+#footer { background: var(--panel); border-top: 2px solid var(--earth);
+          padding: 5px 14px; font-size: .72em; color: #6a5030; display: flex; gap: 16px; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div id="title">⛰ DAWN OF CIVILIZATION</div>
+  <div class="res-bar" id="res-bar">
+    <div class="res"><span>🍖</span><span>Food</span><span class="res-val" id="r-food">50</span><span class="res-cap" id="rc-food">/200</span></div>
+    <div class="res"><span>🪵</span><span>Wood</span><span class="res-val" id="r-wood">30</span><span class="res-cap" id="rc-wood">/200</span></div>
+    <div class="res"><span>🪨</span><span>Stone</span><span class="res-val" id="r-stone">20</span><span class="res-cap" id="rc-stone">/150</span></div>
+    <div class="res"><span>💧</span><span>Water</span><span class="res-val" id="r-water">30</span><span class="res-cap" id="rc-water">/150</span></div>
+    <div class="res"><span>👥</span><span>People</span><span class="res-val" id="r-pop">3</span><span class="res-cap" id="rc-pop">/5</span></div>
+  </div>
+  <div id="era-tag">Era: Nomadic Band</div>
+  <div id="season-tag">Spring · Year 1</div>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+    <div class="sb-section">
+      <h3>Build</h3>
+      <div id="bld-list"></div>
+      <button id="remove-btn" onclick="toggleRemove()">🪓 Remove Structure</button>
+    </div>
+    <div class="sb-section">
+      <h3>Technologies</h3>
+      <div id="tech-list"></div>
+    </div>
+  </div>
+
+  <div id="map-wrap">
+    <div id="grid"></div>
+  </div>
+
+  <div id="info">
+    <div>
+      <h3>Selected Tile</h3>
+      <div id="tile-info"><div class="ti-desc">Click a tile to inspect it.</div></div>
+    </div>
+    <div>
+      <h3>Event Log</h3>
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+
+<div id="footer">
+  <span>Click a building then click a tile to place it.</span>
+  <span id="footer-hint">Start with a Fire Pit and Lean-to to grow your band.</span>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+
+const BUILDINGS = {
+  firePit:      { name:'Fire Pit',       icon:'🔥', cost:{wood:8,stone:4},    popCap:0, prod:{food:.3},               effect:'Warmth & cooking. Boosts nearby morale.',       req:[], era:0 },
+  leanTo:       { name:'Lean-to',        icon:'🏕️', cost:{wood:12},           popCap:3, prod:{},                       effect:'+3 population capacity.',                        req:[], era:0 },
+  huntingCamp:  { name:'Hunting Camp',   icon:'🏹', cost:{wood:15,stone:5},   popCap:0, prod:{food:.8},               effect:'Sends hunters out. +food per tick.',             req:[], era:0 },
+  foragingPatch:{ name:'Foraging Patch', icon:'🌿', cost:{wood:5},            popCap:0, prod:{food:.4,water:.2},       effect:'Marks wild edibles nearby.',                    req:[], era:0 },
+  waterHole:    { name:'Water Hole',     icon:'🪣', cost:{stone:8},           popCap:0, prod:{water:.6},              effect:'Digs for water. Must be near river.',            req:[], era:0, nearWater:true },
+  flintKnapping:{ name:'Knapping Site',  icon:'⚒️', cost:{stone:10},          popCap:0, prod:{stone:.3},              effect:'Tools improve all production +15%.',             req:[], era:0 },
+  storagePit:   { name:'Storage Pit',    icon:'🏺', cost:{wood:18,stone:12},  popCap:0, prod:{},                      effect:'+100 to food, wood & stone caps.',              req:[], era:1 },
+  earthLodge:   { name:'Earthen Lodge',  icon:'🛖', cost:{wood:30,stone:15},  popCap:6, prod:{},                      effect:'+6 population capacity. Better shelter.',        req:[], era:1 },
+  field:        { name:'Cultivated Field',icon:'🌾',cost:{wood:8,stone:5},    popCap:0, prod:{food:1.1},              effect:'Grown crops. High food yield.',                  req:['agriculture'], era:2 },
+  shrine:       { name:'Sacred Shrine',  icon:'🗿', cost:{stone:35},          popCap:0, prod:{},                      effect:'+20% all production. Spiritual focus.',          req:[], era:1 },
+  longhouse:    { name:'Longhouse',      icon:'🏠', cost:{wood:50,stone:25},  popCap:10,prod:{},                      effect:'+10 population capacity.',                       req:['toolMaking'], era:2 },
+  granary:      { name:'Granary',        icon:'🌽', cost:{wood:35,stone:20},  popCap:0, prod:{},                      effect:'+200 food cap. Reduces spoilage.',               req:['agriculture'], era:2 },
+  potteryKiln:  { name:'Pottery Kiln',   icon:'🫙', cost:{wood:20,stone:25},  popCap:0, prod:{water:.4,food:.2},      effect:'Pottery for storage & trade.',                  req:['pottery'], era:2 },
+  watchPost:    { name:'Watch Post',     icon:'🏔️', cost:{wood:25,stone:30},  popCap:0, prod:{},                      effect:'Protects from raids. Guards the band.',         req:['toolMaking'], era:2 },
+  pasture:      { name:'Animal Pasture', icon:'🐂', cost:{wood:20,stone:10},  popCap:0, prod:{food:1.4,water:-.1},   effect:'Domesticated animals. Best food source.',        req:['animalHusbandry'], era:3 },
+  wellShaft:    { name:'Deep Well',      icon:'💧', cost:{stone:40,wood:15},  popCap:0, prod:{water:1.0},             effect:'Reliable clean water for all seasons.',         req:['pottery'], era:3 },
+};
+
+const TECHS = {
+  toolMaking:     { name:'Tool Making',      icon:'🔧', cost:{stone:20},                 req:[],                   desc:'Stone tools improve efficiency +15%.' },
+  agriculture:    { name:'Agriculture',      icon:'🌾', cost:{food:35,stone:15},         req:['toolMaking'],       desc:'Unlock crop fields. Food security.' },
+  pottery:        { name:'Pottery',          icon:'🏺', cost:{stone:25},                 req:['toolMaking'],       desc:'Clay vessels for storage and trade.' },
+  animalHusbandry:{ name:'Animal Husbandry', icon:'🐄', cost:{food:50,stone:10},         req:['agriculture'],      desc:'Domesticate animals for food & labor.' },
+  ritualKnowledge:{ name:'Ritual Knowledge', icon:'🌀', cost:{stone:30,food:20},         req:['toolMaking'],       desc:'Unlock Shrine. +10% all yields.' },
+  architecture:   { name:'Early Architecture',icon:'🏛️',cost:{stone:50,wood:30},         req:['toolMaking','pottery'], desc:'Unlock Longhouse & advanced structures.' },
+};
+
+const ERAS = [
+  { name:'Nomadic Band',           pop:0,  desc:'A small wandering group, surviving day to day.' },
+  { name:'Encampment',             pop:5,  desc:'A seasonal camp. Your people are putting down roots.' },
+  { name:'Hunter-Gatherer Village',pop:12, desc:'A true village. Traditions begin to form.' },
+  { name:'Early Settlement',       pop:25, desc:'Agriculture and crafts emerge. A new way of life.' },
+  { name:'Proto-Town',             pop:45, desc:'Your settlement is the largest for many days walk.' },
+  { name:'Ancient Town',           pop:70, desc:'Civilization is born. The deep past gives way to history.' },
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+
+const G = 20, R = 16;
+
+let state = {
+  res:    { food:50, wood:30, stone:20, water:30, pop:3 },
+  cap:    { food:200, wood:200, stone:150, water:150, pop:5 },
+  techs:  { toolMaking:false, agriculture:false, pottery:false,
+            animalHusbandry:false, ritualKnowledge:false, architecture:false },
+  grid:   [],   // {type, building, id}
+  era:    0,
+  tick:   0,
+  year:   1,
+  season: 0,    // 0=spring,1=summer,2=autumn,3=winter
+  selected: null,
+  removing: false,
+  events: [],
+};
+
+const SEASONS = ['Spring','Summer','Autumn','Winter'];
+
+// ── MAP GENERATION ────────────────────────────────────────────────────────────
+
+function rng(seed) {
+  let s = seed;
+  return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+}
+
+function generateMap() {
+  const rand = rng(Date.now() & 0xffff);
+  const grid = [];
+
+  // base grass
+  for (let i = 0; i < G*R; i++) grid.push({ type:'grass', building:null, id:i });
+
+  // river (wiggly vertical)
+  let rx = Math.floor(G * (.35 + rand() * .25));
+  for (let y = 0; y < R; y++) {
+    rx = Math.max(1, Math.min(G-2, rx + Math.floor(rand()*3)-1));
+    for (let dx = -1; dx <= 1; dx++) {
+      if (rx+dx >= 0 && rx+dx < G) grid[y*G+(rx+dx)].type = 'water';
+    }
+    // sand shore
+    if (rx-2 >= 0) grid[y*G+(rx-2)].type = 'sand';
+    if (rx+2 < G)  grid[y*G+(rx+2)].type = 'sand';
+  }
+
+  // forest clusters
+  const fCenters = Array.from({length:6}, () => ({
+    cx: Math.floor(rand()*G), cy: Math.floor(rand()*R), r: 1+Math.floor(rand()*3)
+  }));
+  for (let y = 0; y < R; y++) for (let x = 0; x < G; x++) {
+    const t = grid[y*G+x];
+    if (t.type !== 'grass') continue;
+    for (const f of fCenters) {
+      const d = Math.abs(x-f.cx)+Math.abs(y-f.cy);
+      if (d <= f.r && rand() > .3) { t.type = 'forest'; break; }
+    }
+  }
+
+  // rock outcrops
+  const rCenters = Array.from({length:4}, () => ({
+    cx: Math.floor(rand()*G), cy: Math.floor(rand()*R)
+  }));
+  for (let y = 0; y < R; y++) for (let x = 0; x < G; x++) {
+    const t = grid[y*G+x];
+    if (t.type !== 'grass') continue;
+    for (const c of rCenters) {
+      const d = Math.abs(x-c.cx)+Math.abs(y-c.cy);
+      if (d <= 2 && rand() > .4) { t.type = 'rock'; break; }
+    }
+  }
+
+  return grid;
+}
+
+// ── TILE VISUALS ──────────────────────────────────────────────────────────────
+
+const TYPE_EMOJI = { grass:'', forest:'🌲', water:'〰️', rock:'🪨', sand:'' };
+const BUILD_EMOJI = {};
+Object.entries(BUILDINGS).forEach(([k,v]) => BUILD_EMOJI[k] = v.icon);
+
+function tileEmoji(tile) {
+  if (tile.building) return BUILDINGS[tile.building].icon;
+  return TYPE_EMOJI[tile.type] || '';
+}
+
+function tileClass(tile) {
+  return `tile t-${tile.type}` + (canBuildHere(tile) ? ' can-build' : ' no-build');
+}
+
+function canBuildHere(tile) {
+  if (tile.building) return false;
+  if (tile.type === 'water') return false;
+  return true;
+}
+
+// ── PRODUCTION ────────────────────────────────────────────────────────────────
+
+function productionMultiplier() {
+  let m = 1.0;
+  if (state.techs.toolMaking)      m += .15;
+  if (state.techs.ritualKnowledge) m += .10;
+  // fire pits boost morale
+  const fires = state.grid.filter(t => t.building === 'firePit').length;
+  m += fires * .05;
+  // shrines
+  const shrines = state.grid.filter(t => t.building === 'shrine').length;
+  m += shrines * .20;
+  // winter penalty
+  if (state.season === 3) m -= .25;
+  // summer bonus
+  if (state.season === 1) m += .10;
+  return Math.max(.3, m);
+}
+
+function computeProduction() {
+  const delta = { food:0, wood:0, stone:0, water:0 };
+  const mult = productionMultiplier();
+  for (const tile of state.grid) {
+    if (!tile.building) continue;
+    const b = BUILDINGS[tile.building];
+    for (const [res, val] of Object.entries(b.prod || {})) {
+      delta[res] = (delta[res]||0) + val * mult;
+    }
+  }
+  // base survival gathering (always some food/water if pop > 0)
+  if (state.res.pop > 0) {
+    delta.food  += state.res.pop * .08;
+    delta.water += state.res.pop * .06;
+    delta.wood  += .05;
+    delta.stone += .03;
+  }
+  // wood harvest from forests nearby (passive)
+  const forests = state.grid.filter(t => t.type==='forest' && !t.building).length;
+  delta.wood += forests * .02;
+  return delta;
+}
+
+function computePopCap() {
+  let cap = 5; // base
+  for (const tile of state.grid) {
+    if (tile.building) cap += BUILDINGS[tile.building].popCap || 0;
+  }
+  return cap;
+}
+
+function computeStorageCaps() {
+  let food=200, wood=200, stone=150, water=150;
+  const pits    = state.grid.filter(t => t.building === 'storagePit').length;
+  const granary = state.grid.filter(t => t.building === 'granary').length;
+  const wells   = state.grid.filter(t => t.building === 'wellShaft').length;
+  food  += pits*100 + granary*200;
+  wood  += pits*100;
+  stone += pits*75;
+  water += pits*75 + wells*100;
+  return { food, wood, stone, water };
+}
+
+// ── TICK ──────────────────────────────────────────────────────────────────────
+
+function gameTick() {
+  state.tick++;
+
+  const delta = computeProduction();
+  state.cap = { ...computeStorageCaps(), pop: computePopCap() };
+
+  for (const r of ['food','wood','stone','water']) {
+    state.res[r] = Math.min(state.cap[r], Math.max(0, state.res[r] + delta[r]));
+  }
+
+  // population growth
+  if (state.tick % 8 === 0) {
+    const hungry = state.res.food < state.res.pop * 3;
+    const thirsty = state.res.water < state.res.pop * 2;
+    if (!hungry && !thirsty && state.res.pop < state.cap.pop) {
+      state.res.pop++;
+      if (state.res.pop % 5 === 0) addLog(`Your band grows to ${state.res.pop} people.`, 'imp');
+    } else if (hungry && state.res.pop > 1 && state.tick % 24 === 0) {
+      state.res.pop--;
+      addLog('Hunger claims a life. Gather more food!', 'warn');
+    }
+  }
+
+  // season & year
+  if (state.tick % 40 === 0) {
+    state.season = (state.season + 1) % 4;
+    if (state.season === 0) {
+      state.year++;
+      addLog(`Year ${state.year} begins.`);
+    }
+    if (state.season === 3) addLog('Winter descends. Production falls.', 'warn');
+    if (state.season === 1) addLog('Summer — the land is generous.');
+    document.getElementById('season-tag').textContent = `${SEASONS[state.season]} · Year ${state.year}`;
+  }
+
+  // random events
+  if (state.tick % 60 === 0 && Math.random() < .4) randomEvent();
+
+  // era check
+  checkEra();
+
+  renderResources();
+}
+
+function randomEvent() {
+  const pop = state.res.pop;
+  const events = [
+    { w:3, msg:'A hunter returns with a large catch!',    fn:()=>{ state.res.food = Math.min(state.cap.food, state.res.food+20); } },
+    { w:3, msg:'Children find a flint-rich outcrop.',      fn:()=>{ state.res.stone = Math.min(state.cap.stone, state.res.stone+15); } },
+    { w:2, msg:'Heavy rains fill the water holes.',        fn:()=>{ state.res.water = Math.min(state.cap.water, state.res.water+25); } },
+    { w:2, msg:'Fallen trees provide timber.',             fn:()=>{ state.res.wood = Math.min(state.cap.wood, state.res.wood+18); } },
+    { w:1, msg:'A harsh cold snap spoils stored food!',   fn:()=>{ state.res.food = Math.max(0, state.res.food-15); } },
+    { w:pop>8?2:0, msg:'Strangers join your band!',        fn:()=>{ if(state.res.pop < state.cap.pop) state.res.pop++; } },
+    { w:1, msg:'A wildfire destroys some wood stores!',    fn:()=>{ state.res.wood = Math.max(0, state.res.wood-12); } },
+  ];
+  const pool = events.filter(e=>e.w>0);
+  const total = pool.reduce((s,e)=>s+e.w,0);
+  let r = Math.random()*total;
+  for (const e of pool) { r -= e.w; if (r <= 0) { e.fn(); addLog(e.msg, e.msg.includes('!')&&e.msg.includes('spoil')?'warn':'imp'); return; } }
+}
+
+function checkEra() {
+  let newEra = 0;
+  for (let i = ERAS.length-1; i >= 0; i--) {
+    if (state.res.pop >= ERAS[i].pop) { newEra = i; break; }
+  }
+  if (newEra > state.era) {
+    state.era = newEra;
+    addLog(`✦ Era: ${ERAS[newEra].name} — ${ERAS[newEra].desc}`, 'era');
+    document.getElementById('era-tag').textContent = `Era: ${ERAS[newEra].name}`;
+    renderSidebar();
+  }
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+
+function renderResources() {
+  const r = state.res, c = state.cap;
+  const fmt = v => Math.floor(v);
+  document.getElementById('r-food').textContent  = fmt(r.food);
+  document.getElementById('r-wood').textContent  = fmt(r.wood);
+  document.getElementById('r-stone').textContent = fmt(r.stone);
+  document.getElementById('r-water').textContent = fmt(r.water);
+  document.getElementById('r-pop').textContent   = fmt(r.pop);
+  document.getElementById('rc-food').textContent  = '/'+c.food;
+  document.getElementById('rc-wood').textContent  = '/'+c.wood;
+  document.getElementById('rc-stone').textContent = '/'+c.stone;
+  document.getElementById('rc-water').textContent = '/'+c.water;
+  document.getElementById('rc-pop').textContent   = '/'+c.pop;
+}
+
+function renderSidebar() {
+  const list = document.getElementById('bld-list');
+  list.innerHTML = '';
+  for (const [key, b] of Object.entries(BUILDINGS)) {
+    if (b.era > state.era + 1) continue; // hide far-future
+    const locked = !canAfford(b.cost, true) || !meetsReqs(b.req);
+    const btn = document.createElement('button');
+    btn.className = 'bld-btn' + (state.selected===key?' selected':'') + (locked?' locked':'');
+    btn.dataset.key = key;
+    btn.innerHTML = `<span class="bld-icon">${b.icon}</span><span class="bld-meta"><span class="bld-name">${b.name}</span><br><span class="bld-cost">${costStr(b.cost)}</span><br><span class="bld-effect">${b.effect}</span></span>`;
+    btn.onclick = () => { if (!locked) selectBuilding(key); };
+    list.appendChild(btn);
+  }
+
+  // techs
+  const tl = document.getElementById('tech-list');
+  tl.innerHTML = '';
+  for (const [key, t] of Object.entries(TECHS)) {
+    const done = state.techs[key];
+    const avail = !done && t.req.every(r => state.techs[r]) && canAfford(t.cost, true);
+    const locked = !done && !avail;
+    const row = document.createElement('div');
+    row.className = 'tech-row ' + (done?'tech-done':avail?'tech-avail':'tech-locked');
+    row.innerHTML = `<span class="tech-icon">${t.icon}</span><span class="tech-name">${t.name}</span><span class="tech-cost">${done?'✓':costStr(t.cost)}</span>`;
+    row.title = t.desc;
+    if (avail) row.onclick = () => researchTech(key);
+    tl.appendChild(row);
+  }
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  for (const tile of state.grid) {
+    const el = document.createElement('div');
+    el.className = tileClass(tile);
+    el.textContent = tileEmoji(tile);
+    el.dataset.id = tile.id;
+    el.title = tileTitleStr(tile);
+    el.addEventListener('click', () => onTileClick(tile, el));
+    el.addEventListener('mouseenter', () => showTileInfo(tile));
+    grid.appendChild(el);
+  }
+}
+
+function updateTile(tile) {
+  const el = document.querySelector(`[data-id="${tile.id}"]`);
+  if (!el) return;
+  el.className = tileClass(tile);
+  el.textContent = tileEmoji(tile);
+  el.title = tileTitleStr(tile);
+}
+
+function tileTitleStr(tile) {
+  if (tile.building) return BUILDINGS[tile.building].name;
+  return tile.type.charAt(0).toUpperCase()+tile.type.slice(1);
+}
+
+function showTileInfo(tile) {
+  const el = document.getElementById('tile-info');
+  if (tile.building) {
+    const b = BUILDINGS[tile.building];
+    const prod = Object.entries(b.prod||{}).map(([k,v])=>`+${v.toFixed(1)} ${k}/tick`).join(', ');
+    el.innerHTML = `<div class="ti-name">${b.icon} ${b.name}</div>
+      <div class="ti-desc">${b.effect}</div>
+      ${prod ? `<div class="ti-prod">${prod}</div>` : ''}`;
+  } else {
+    const labels = { grass:'Open grassland. Buildable.',
+      forest:'Dense forest. Provides wood passively.',
+      water:'River or pool. Place Water Hole nearby.',
+      rock:'Rocky ground. Good for Knapping Sites.',
+      sand:'Sandy shore.' };
+    el.innerHTML = `<div class="ti-name">${TYPE_EMOJI[tile.type]||'·'} ${tile.type.charAt(0).toUpperCase()+tile.type.slice(1)}</div>
+      <div class="ti-desc">${labels[tile.type]||''}</div>`;
+  }
+}
+
+// ── INTERACTION ───────────────────────────────────────────────────────────────
+
+function selectBuilding(key) {
+  state.selected = (state.selected === key) ? null : key;
+  state.removing = false;
+  document.getElementById('remove-btn').classList.remove('active');
+  renderSidebar();
+  document.getElementById('footer-hint').textContent =
+    state.selected ? `Placing: ${BUILDINGS[key].name} · Cost: ${costStr(BUILDINGS[key].cost)}` : '';
+}
+
+function toggleRemove() {
+  state.removing = !state.removing;
+  state.selected = null;
+  document.getElementById('remove-btn').classList.toggle('active', state.removing);
+  renderSidebar();
+  document.getElementById('footer-hint').textContent = state.removing ? 'Click a structure to remove it (refunds 50%).' : '';
+}
+
+function onTileClick(tile, el) {
+  if (state.removing) {
+    if (tile.building) {
+      const b = BUILDINGS[tile.building];
+      for (const [res, val] of Object.entries(b.cost)) {
+        state.res[res] = Math.min(state.cap[res], state.res[res] + Math.floor(val*.5));
+      }
+      addLog(`Dismantled ${b.name}.`);
+      tile.building = null;
+      updateTile(tile);
+      renderSidebar();
+    }
+    return;
+  }
+  if (!state.selected) return;
+  if (!canBuildHere(tile)) { addLog('Cannot build there.', 'warn'); return; }
+
+  const b = BUILDINGS[state.selected];
+
+  // near-water check
+  if (b.nearWater) {
+    const x = tile.id % G, y = Math.floor(tile.id / G);
+    const hasWater = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]].some(([dx,dy]) => {
+      const nx=x+dx, ny=y+dy;
+      if (nx<0||nx>=G||ny<0||ny>=R) return false;
+      return state.grid[ny*G+nx].type === 'water';
+    });
+    if (!hasWater) { addLog(`${b.name} must be placed near water.`, 'warn'); return; }
+  }
+
+  if (!canAfford(b.cost)) return;
+  if (!meetsReqs(b.req)) { addLog('Tech requirement not met.', 'warn'); return; }
+
+  for (const [res, val] of Object.entries(b.cost)) state.res[res] -= val;
+
+  tile.building = state.selected;
+  updateTile(tile);
+  addLog(`Built ${b.name}.`);
+  state.cap.pop = computePopCap();
+  renderResources();
+  renderSidebar();
+}
+
+function researchTech(key) {
+  const t = TECHS[key];
+  if (!canAfford(t.cost)) return;
+  if (!t.req.every(r => state.techs[r])) return;
+  for (const [res, val] of Object.entries(t.cost)) state.res[res] -= val;
+  state.techs[key] = true;
+  addLog(`✦ Discovered: ${t.name}. ${t.desc}`, 'imp');
+  renderSidebar();
+  renderResources();
+}
+
+function canAfford(cost, checkOnly=false) {
+  for (const [res, val] of Object.entries(cost)) {
+    if ((state.res[res]||0) < val) {
+      if (!checkOnly) addLog(`Not enough ${res}.`, 'warn');
+      return false;
+    }
+  }
+  return true;
+}
+
+function meetsReqs(reqs) {
+  return reqs.every(r => state.techs[r]);
+}
+
+function costStr(cost) {
+  return Object.entries(cost).map(([k,v])=>`${v} ${k}`).join(', ');
+}
+
+function addLog(msg, cls='') {
+  state.events.unshift({ msg, cls });
+  if (state.events.length > 60) state.events.pop();
+  const log = document.getElementById('log');
+  log.innerHTML = '';
+  for (const e of state.events.slice(0,25)) {
+    const d = document.createElement('div');
+    d.className = 'log-line' + (e.cls ? ' log-'+e.cls : '');
+    d.textContent = e.msg;
+    log.appendChild(d);
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+
+function init() {
+  state.grid = generateMap();
+
+  // place initial fire pit near center
+  const cx = Math.floor(G/2), cy = Math.floor(R/2);
+  for (let r = 0; r <= 3; r++) {
+    let placed = false;
+    for (let dy=-r; dy<=r && !placed; dy++) for (let dx=-r; dx<=r && !placed; dx++) {
+      const nx=cx+dx, ny=cy+dy;
+      if (nx<0||nx>=G||ny<0||ny>=R) continue;
+      const t = state.grid[ny*G+nx];
+      if (t.type==='grass' && !t.building) { t.building='firePit'; placed=true; }
+    }
+  }
+
+  renderGrid();
+  renderSidebar();
+  renderResources();
+  addLog('Your band wanders into a new valley. Build a Fire Pit and shelters to survive.', 'era');
+  document.getElementById('era-tag').textContent = `Era: ${ERAS[0].name}`;
+
+  setInterval(gameTick, 1200);
+  setInterval(renderSidebar, 5000);
+}
+
+init();
+</script>
+</body>
+</html>
