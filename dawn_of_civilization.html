@@ -123,6 +123,21 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
 .bi-res{color:#9a8050;display:flex;gap:6px;flex-wrap:wrap;}
 .bi-res span{color:#c0a060;}
 #footer{background:var(--panel);border-top:2px solid var(--earth);padding:4px 12px;font-size:.7em;color:#6a5030;display:flex;gap:12px;align-items:center;}
+.trait-tag{display:inline-block;border-radius:2px;padding:1px 4px;font-size:.78em;border:1px solid #3a2808;margin:1px;}
+.cond-ok{color:#7ab050;}.cond-warn{color:#c07030;}.cond-bad{color:#c04040;}
+.disc-card{background:var(--bg);border:1px solid #3a4a10;border-radius:2px;padding:4px 6px;font-size:.72em;margin-bottom:3px;}
+.disc-icon{font-size:1.1em;margin-right:4px;}
+.disc-name{color:var(--hi);font-weight:bold;}
+.disc-desc{color:#9a8050;font-size:.9em;}
+.wl-card{background:var(--bg);border:1px solid #3a2808;border-radius:2px;padding:4px 6px;font-size:.72em;margin-bottom:3px;}
+.wl-pop{color:#7ab050;}.wl-extinct{color:#c04040;opacity:.6;}
+.tech-prog-row{display:flex;align-items:center;gap:4px;margin-bottom:3px;font-size:.7em;}
+.tech-prog-bg{flex:1;background:#1a1208;height:4px;border-radius:2px;overflow:hidden;border:1px solid #2a1e08;}
+.tech-prog-fill{height:100%;background:#6a8030;border-radius:2px;}
+.maint-btn{background:#2a1e08;border:1px solid #5a4010;color:var(--hi);font-size:.7em;padding:2px 6px;cursor:pointer;border-radius:2px;font-family:Georgia,serif;margin-top:2px;}
+.maint-btn:hover{background:#3a2e18;}
+.pin-btn{background:#1a2a1a;border:1px solid #3a5a20;color:#7ab050;font-size:.7em;padding:2px 6px;cursor:pointer;border-radius:2px;font-family:Georgia,serif;margin-top:2px;}
+.abandon-warn{color:#c07030;font-size:.8em;}
 </style>
 </head>
 <body>
@@ -166,6 +181,7 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
       <button class="itab active" id="tab-btn-world" onclick="setInfoTab('world')">World</button>
       <button class="itab" id="tab-btn-people" onclick="setInfoTab('people')">People</button>
       <button class="itab" id="tab-btn-build" onclick="setInfoTab('build')">Build</button>
+      <button class="itab" id="tab-btn-hist" onclick="setInfoTab('hist')">History</button>
     </div>
     <div class="tab-content" id="tab-world">
       <div><h3>Selected</h3><div id="tile-info"><div class="ti-desc">Click a tile to inspect it.</div></div></div>
@@ -189,6 +205,11 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
       <div><h3>Construction</h3><div id="construction-list"></div></div>
       <div><h3>Priorities</h3><div id="priority-panel"></div></div>
       <div><h3>Inventories</h3><div id="inv-list"></div></div>
+    </div>
+    <div class="tab-content hidden" id="tab-hist">
+      <div><h3>Discoveries</h3><div id="disc-list"></div></div>
+      <div><h3>Wildlife</h3><div id="wildlife-list"></div></div>
+      <div><h3>Tech Progress</h3><div id="tech-prog-list"></div></div>
     </div>
   </div>
 </div>
@@ -261,7 +282,40 @@ const ACTOR_NAMES=['Og','Mara','Keth','Thorn','Ash','Bryn','Flin','Grit','Rook',
 const APT_KEYS=['hunter','builder','forager','shaman','crafter','carrier','generalist'];
 const ROLE_COLOR={hunter:'#e08040',builder:'#c0a060',forager:'#50b060',shaman:'#b060e0',crafter:'#4090e0',carrier:'#e0b030',generalist:'#909090'};
 const ROLE_ICON={hunter:'🏹',builder:'🔨',forager:'🌿',shaman:'🌀',crafter:'⚒️',carrier:'🎒',generalist:'👤'};
-const STATE_LBL={idle:'idle',moving_to_resource:'→ node',gathering:'gathering',moving_to_storage:'→ storage',depositing:'depositing',moving_to_construction:'→ site',delivering_to_construction:'delivering',building:'building',resting:'resting'};
+const STATE_LBL={idle:'idle',moving_to_resource:'→ node',gathering:'gathering',moving_to_storage:'→ storage',depositing:'depositing',moving_to_construction:'→ site',delivering_to_construction:'delivering',building:'building',resting:'resting',exploring:'→ explore',surveying:'surveying',hunting:'→ hunt',performing_hunt:'hunting!',fishing:'fishing',maintaining:'→ repair',performing_maintenance:'repairing',demolishing:'demolishing'};
+
+const RARE_RES={
+  obsidian:     {name:'Obsidian',          icon:'🔮',rarity:.012,effect:{techKey:'toolMaking',   techBonus:25,moraleBonus:5},   desc:'Volcanic glass. Superb cutting edges.'},
+  copperNugget: {name:'Copper Nugget',     icon:'🟠',rarity:.010,effect:{techKey:'ironWorking',   techBonus:15},                desc:'Green-tinged metal. Dawn of metallurgy.'},
+  medicinalHerb:{name:'Medicinal Herbs',   icon:'🌿',rarity:.018,effect:{medicineBonus:true,      moraleBonus:8},               desc:'Potent healing plants. Reduces sickness.'},
+  saltDeposit:  {name:'Salt Deposit',      icon:'⬜',rarity:.010,effect:{foodPres:true,           moraleBonus:5},               desc:'Mineral seam. Preserves food longer.'},
+  ochre:        {name:'Ochre',             icon:'🟤',rarity:.015,effect:{techKey:'ritualKnowledge',techBonus:10,moraleBonus:15},desc:'Red pigment. Used in ritual and art.'},
+  fertileSeed:  {name:'Fertile Seeds',     icon:'🌾',rarity:.013,effect:{techKey:'agriculture',   techBonus:20},                desc:'Unusually productive wild grain.'},
+  highFlint:    {name:'High-Quality Flint',icon:'⚡',rarity:.018,effect:{techKey:'toolMaking',    techBonus:15,yieldBonus:.10}, desc:'Exceptional flint. Sharper tools.'},
+  sacredGrove:  {name:'Sacred Grove',      icon:'🌳',rarity:.008,effect:{techKey:'ritualKnowledge',techBonus:25,moraleBonus:12},desc:'A place of power. Shamans feel it.'},
+  wildHoney:    {name:'Wild Honey',        icon:'🍯',rarity:.018,effect:{foodBonus:30,            moraleBonus:8},               desc:'Rich honeycomb. A sweet treat.'},
+  ancientBones: {name:'Ancient Bones',     icon:'🦴',rarity:.010,effect:{techKey:'ritualKnowledge',techBonus:10,moraleBonus:10},desc:'Old bones of great beasts.'},
+};
+
+const WILDLIFE_TYPES={
+  deerHerd: {name:'Deer Herd',  icon:'🦌',initPop:20,maxPop:35,terrain:['forest','plains'],yields:{food:3,hides:1},regen:.003,aquatic:false},
+  aurochs:  {name:'Aurochs',   icon:'🐂',initPop:10,maxPop:18,terrain:['plains','grass'], yields:{food:5,hides:2},regen:.002,aquatic:false},
+  boarGroup:{name:'Boar Group',icon:'🐗',initPop:8, maxPop:14,terrain:['forest'],         yields:{food:4,hides:1},regen:.003,aquatic:false},
+  birdFlock:{name:'Bird Flock',icon:'🐦',initPop:30,maxPop:50,terrain:['grass','plains'], yields:{food:1},        regen:.008,aquatic:false},
+  fishShoal:{name:'Fish Shoal',icon:'🐟',initPop:60,maxPop:80,terrain:['water'],           yields:{food:2},        regen:.005,aquatic:true},
+};
+
+const ALL_TRAITS=['curious','cautious','industrious','spiritual','practical','restless','careful'];
+const TRAIT_COLOR={curious:'#60b0e0',cautious:'#a07050',industrious:'#c09030',spiritual:'#b060e0',practical:'#50a050',restless:'#e07040',careful:'#70c0a0'};
+const TRAIT_FX={
+  curious:    {exploreScore:.4, exploreRange:1.3},
+  cautious:   {exploreScore:-.3,nearScore:.15},
+  industrious:{buildScore:.25,  maintainScore:.25},
+  spiritual:  {ritualScore:.35, rareChance:.5},
+  practical:  {foodPrio:.2},
+  restless:   {taskSwitch:1.5},
+  careful:    {recoveryBonus:.3},
+};
 const RES_ICON={food:'🍖',wood:'🪵',stone:'🪨',water:'💧'};
 
 // ── GAME STATE ─────────────────────────────────────────────────────────────────
@@ -272,9 +326,13 @@ let state={
   grid:[],era:0,turn:0,year:1,season:0,morale:50,starveTurns:0,
   selected:null,removing:false,events:[],
   priorities:{food:3,wood:2,stone:2,build:2,culture:1},
+  techProgress:{toolMaking:0,agriculture:0,pottery:0,animalHusbandry:0,ritualKnowledge:0,architecture:0,ironWorking:0},
+  discoveries:[],
+  autoDemolish:true,autoMaintain:true,
+  foodPresBonus:false,yieldBonus:0,medicineBonus:false,
 };
 
-let sim={actors:[],nodes:[],sites:[],bldInv:{},nextId:0};
+let sim={actors:[],nodes:[],wildlife:[],sites:[],bldInv:{},bldMeta:{},nextId:0,gameTime:0};
 let tileEls=[];
 let selectedActor=null;
 let infoTab='world';
@@ -287,7 +345,7 @@ function rng(seed){let s=seed;return()=>{s=(s*1664525+1013904223)&0xffffffff;ret
 function generateMap(){
   const rand=rng(Date.now()&0xffff);
   const grid=[];
-  for(let i=0;i<COLS*ROWS;i++) grid.push({type:rand()<0.35?'plains':'grass',building:null,constrSiteId:null,id:i,explored:false});
+  for(let i=0;i<COLS*ROWS;i++) grid.push({type:rand()<0.35?'plains':'grass',building:null,constrSiteId:null,id:i,explored:false,surveyed:false,nodeId:null});
   for(let x=0;x<COLS;x++){
     const h=1+Math.floor(rand()*2);for(let y=0;y<h;y++) grid[y*COLS+x].type='mountain';
     const hS=1+Math.floor(rand()*2);for(let y=ROWS-hS;y<ROWS;y++) grid[y*COLS+x].type='mountain';
@@ -362,14 +420,11 @@ function placeResourceNodes(){
     const tile=state.grid[tileId];
     if(tile.type==='mountain') continue;
     usedTiles.add(tileId);
-    tile.explored=true;
+    tile.explored=true;tile.surveyed=true;
     const amt=slot.type==='water'?250:slot.type==='food'?130:180;
-    sim.nodes.push({
-      id:sim.nextId++,tileId,type:slot.type,
-      tileX:nx,tileY:ny,px:nx*TP+TP/2,py:ny*TP+TP/2,
-      amount:amt,maxAmount:amt,gatherRate:1,
-      maxWorkers:slot.type==='water'?3:4,assignedActors:[],depleted:false
-    });
+    const regen={wood:.008,food:.025,water:.015,stone:0}[slot.type]||0;
+    const node={id:sim.nextId++,tileId,type:slot.type,tileX:nx,tileY:ny,px:nx*TP+TP/2,py:ny*TP+TP/2,amount:amt,maxAmount:amt,gatherRate:1,maxWorkers:slot.type==='water'?3:4,assignedActors:[],depleted:false,regenRate:regen,overHarvestCount:0,harvestApt:{wood:'forager',stone:'forager',food:'forager',water:'forager'}[slot.type]||'forager',discovered:true,harvestDifficulty:1};
+    sim.nodes.push(node);tile.nodeId=node.id;
   }
 
   // Scatter additional nodes across explored region
@@ -392,13 +447,38 @@ function placeResourceNodes(){
     if(close||usedTiles.has(c.tileId)) continue;
     usedTiles.add(c.tileId);
     const amt=c.type==='water'?250:c.type==='food'?130:180;
-    sim.nodes.push({
-      id:sim.nextId++,tileId:c.tileId,type:c.type,
-      tileX:c.x,tileY:c.y,px:c.x*TP+TP/2,py:c.y*TP+TP/2,
-      amount:amt,maxAmount:amt,gatherRate:1,
-      maxWorkers:c.type==='water'?3:4,assignedActors:[],depleted:false
-    });
+    const regen={wood:.008,food:.025,water:.015,stone:0}[c.type]||0;
+    const node={id:sim.nextId++,tileId:c.tileId,type:c.type,tileX:c.x,tileY:c.y,px:c.x*TP+TP/2,py:c.y*TP+TP/2,amount:amt,maxAmount:amt,gatherRate:1,maxWorkers:c.type==='water'?3:4,assignedActors:[],depleted:false,regenRate:regen,overHarvestCount:0,harvestApt:'forager',discovered:true,harvestDifficulty:1};
+    sim.nodes.push(node);state.grid[c.tileId].nodeId=node.id;
     types[c.type]=(types[c.type]||0)+1;
+  }
+}
+
+function placeWildlife(){
+  sim.wildlife=[];
+  const rand=rng((Date.now()*53)&0xffff);
+  const startTile=state.grid.find(t=>t.building==='firePit');
+  if(!startTile) return;
+  const sx=startTile.id%COLS,sy=Math.floor(startTile.id/COLS);
+  const placed=[];
+  const wKeys=Object.keys(WILDLIFE_TYPES);
+  // Place 6-8 wildlife groups spread across the map
+  const targets=[
+    {wk:'deerHerd', dx:8,  dy:-5},{wk:'fishShoal',dx:-6, dy:6},
+    {wk:'boarGroup',dx:-9, dy:-4},{wk:'birdFlock',dx:10, dy:3},
+    {wk:'aurochs',  dx:7,  dy:8}, {wk:'deerHerd', dx:-12,dy:2},
+    {wk:'fishShoal',dx:5,  dy:-9},{wk:'birdFlock',dx:-7, dy:-8},
+  ];
+  for(const t of targets){
+    const nx=Math.max(2,Math.min(COLS-3,sx+t.dx)),ny=Math.max(2,Math.min(ROWS-3,sy+t.dy));
+    const tile=state.grid[ny*COLS+nx];
+    if(tile.type==='mountain') continue;
+    const wt=WILDLIFE_TYPES[t.wk];
+    if(wt.aquatic&&tile.type!=='water') continue;
+    if(!wt.aquatic&&tile.type==='water') continue;
+    const pop=Math.floor(wt.initPop*(0.7+rand()*0.6));
+    const wg={id:sim.nextId++,typeKey:t.wk,name:wt.name,icon:wt.icon,population:pop,maxPopulation:wt.maxPop,tileX:nx,tileY:ny,px:nx*TP+TP/2,py:ny*TP+TP/2,regenRate:wt.regen,fear:0,discovered:false,yields:{...wt.yields},aquatic:wt.aquatic,assignedHunters:[],lastHuntedAt:0,moveTimer:20+rand()*40,extinct:false};
+    sim.wildlife.push(wg);placed.push({nx,ny});
   }
 }
 
@@ -423,7 +503,13 @@ class Actor{
     this.timer=0;this.restTimer=0;
     this.color=ROLE_COLOR[this.dominant];
     this.idleX=px;this.idleY=py;
+    // Assign 1-2 traits
+    const shuffled=[...ALL_TRAITS].sort(()=>Math.random()-.5);
+    this.traits=shuffled.slice(0,1+Math.floor(Math.random()*2));
+    this.exploreTarget=null;
   }
+  hasTrait(t){return this.traits.includes(t);}
+  traitFx(field,def=0){let v=def;for(const t of this.traits){const f=TRAIT_FX[t];if(f&&f[field]!==undefined) v+=f[field];}return v;}
   get stateLabel(){return STATE_LBL[this.state]||this.state;}
   get carrying(){return this.inv.amount>0?`${this.inv.type}×${this.inv.amount.toFixed(1)}`:'—';}
   aptB(role){return(this.apt[role]||0)/100;}
@@ -491,6 +577,69 @@ function consumeRes(res,amt){
     if(rem<=0) break;
     const t=Math.min(sim.bldInv[tid][res]||0,rem);
     sim.bldInv[tid][res]-=t;rem-=t;
+  }
+}
+
+// ── BUILDING CONDITION ─────────────────────────────────────────────────────────
+function initBldMeta(tileId,bldKey){
+  sim.bldMeta[tileId]={condition:100,age:0,lastUsedTurn:state.turn,usageCount:0,autoMaintain:true,pinned:false,abandoned:false,abandonedSince:0,demolitionQueued:false};
+}
+
+function bldMaintenanceCost(bldKey){
+  const b=BUILDINGS[bldKey];const cost={};
+  for(const [k,v] of Object.entries(b.cost)) cost[k]=Math.max(1,Math.floor(v*.07));
+  return cost;
+}
+
+function condClass(c){return c>70?'cond-ok':c>35?'cond-warn':'cond-bad';}
+function condLabel(c){return c>70?'Good':c>50?'Fair':c>25?'Poor':'Critical';}
+
+function touchBuilding(tileId){
+  const m=sim.bldMeta[tileId];if(!m) return;
+  m.lastUsedTurn=state.turn;m.usageCount=Math.min(50,m.usageCount+1);
+  m.abandoned=false;m.demolitionQueued=false;
+}
+
+function bldEfficiency(tileId){
+  const m=sim.bldMeta[tileId];if(!m) return 1;
+  if(m.condition>70) return 1;
+  if(m.condition>40) return 0.8;
+  if(m.condition>15) return 0.5;
+  return 0; // disabled
+}
+
+function updateBuildingCondition(){
+  // Called from endTurn
+  for(const [tileId,meta] of Object.entries(sim.bldMeta)){
+    const tile=state.grid[+tileId];
+    if(!tile?.building){delete sim.bldMeta[tileId];continue;}
+    const bk=tile.building;
+    const useFactor=Math.min(1,meta.usageCount/20);
+    meta.condition=Math.max(0,meta.condition-(0.4+useFactor*0.3));
+    meta.age++;
+    meta.usageCount=Math.max(0,meta.usageCount-1);
+
+    if(meta.condition<=8&&!meta.collapsed){
+      // Collapse: remove building, recover ~20% of cost
+      meta.collapsed=true;
+      const b=BUILDINGS[bk];
+      const stor=nearestStorage(0,0,null);
+      if(stor) for(const [r,v] of Object.entries(b.cost)) deposit(+stor.tileId,r,Math.max(1,Math.floor(v*.2)));
+      tile.building=null;delete sim.bldInv[+tileId];delete sim.bldMeta[+tileId];
+      updateTile(tile);
+      addLog(`${b.name} collapsed from neglect!`,'warn');
+      return;
+    }
+
+    // Mark abandoned if unused for 20+ turns and condition < 50
+    if(!meta.pinned&&!meta.abandoned&&meta.usageCount===0&&meta.age>15&&meta.condition<50){
+      meta.abandoned=true;meta.abandonedSince=state.turn;
+      addLog(`${BUILDINGS[bk].name} has been abandoned.`,'warn');
+    }
+    // Queue demolition after 10 turns abandoned
+    if(meta.abandoned&&state.autoDemolish&&!meta.demolitionQueued&&(state.turn-meta.abandonedSince)>10){
+      meta.demolitionQueued=true;
+    }
   }
 }
 
@@ -571,9 +720,54 @@ function assignTasks(){
     }
     if(assigned) continue;
 
-    // 3. Gather from node
+    // 3. Maintain critical building (<25% condition)
+    const foodLow=totalRes('food')<state.res.pop*6;
+    if(!foodLow&&state.autoMaintain){
+      for(const [tid,meta] of Object.entries(sim.bldMeta)){
+        const tile=state.grid[+tid];
+        if(!tile?.building||meta.condition>40) continue;
+        if(meta.abandoned||!meta.autoMaintain) continue;
+        const cost=bldMaintenanceCost(tile.building);
+        const stor=nearestStorage(actor.px,actor.py,null);
+        if(!stor) continue;
+        let hasRes=true;
+        for(const [r,v] of Object.entries(cost)) if((sim.bldInv[stor.tileId]?.[r]||0)<v){hasRes=false;break;}
+        if(!hasRes) continue;
+        const maintScore=(actor.apt.builder/100)*30+(actor.traitFx('maintainScore'))*20+(meta.condition<25?50:20);
+        if(maintScore>10){
+          actor.task={type:'maintain',maintainTileId:+tid};
+          actor.state='maintaining';actor.tx=(+tid%COLS)*TP+TP/2;actor.ty=Math.floor(+tid/COLS)*TP+TP/2;
+          assigned=true;break;
+        }
+      }
+    }
+    if(assigned) continue;
+
+    // 4. Hunt wildlife if food low
+    if(actor.apt.hunter>30||actor.apt.forager>40){
+      const foodUrgent=urgency('food');
+      for(const wg of sim.wildlife){
+        if(!wg.discovered||wg.extinct||wg.assignedHunters.length>=2) continue;
+        const dist=actor.dist(wg.px,wg.py);
+        const isAquatic=wg.aquatic;
+        const aptScore=isAquatic?actor.apt.forager:actor.apt.hunter;
+        const sc=aptScore*0.25+foodUrgent*15-dist*0.01+(wg.population/wg.maxPopulation)*10;
+        if(sc>20){
+          wg.assignedHunters.push(actor.id);
+          actor.task={type:isAquatic?'fish':'hunt',wildlifeId:wg.id};
+          actor.state=isAquatic?'fishing':'hunting';
+          actor.tx=wg.px;actor.ty=wg.py;
+          if(isAquatic){actor.timer=2.5-actor.apt.forager*0.01;}
+          assigned=true;break;
+        }
+      }
+    }
+    if(assigned) continue;
+
+    // 5. Gather from node
     let bestNode=null,bestScore=-999;
     for(const node of sim.nodes){
+      if(!node.discovered) continue;
       const s=nodeScore(actor,node);
       if(s>bestScore){bestScore=s;bestNode=node;}
     }
@@ -582,8 +776,81 @@ function assignTasks(){
       actor.task={type:'gather',nodeId:bestNode.id,resType:bestNode.type};
       actor.state='moving_to_resource';
       actor.tx=bestNode.px;actor.ty=bestNode.py;
+      assigned=true;
+    }
+    if(assigned) continue;
+
+    // 6. Demolish abandoned building
+    if(state.autoDemolish&&actor.apt.builder>15){
+      for(const [tid,meta] of Object.entries(sim.bldMeta)){
+        if(!meta.demolitionQueued||meta.pinned) continue;
+        const tile=state.grid[+tid];if(!tile?.building) continue;
+        actor.task={type:'demolish',demolishTileId:+tid,progress:0};
+        actor.state='demolishing';actor.timer=2+Math.random();
+        actor.tx=(+tid%COLS)*TP+TP/2;actor.ty=Math.floor(+tid/COLS)*TP+TP/2;
+        assigned=true;break;
+      }
+    }
+    if(assigned) continue;
+
+    // 7. Explore unknown tiles
+    const exploreScore=computeExploreScore(actor);
+    if(exploreScore>0){
+      const target=findExploreTarget(actor);
+      if(target!=null){
+        actor.task={type:'explore',exploreTileId:target};
+        actor.state='exploring';
+        actor.tx=(target%COLS)*TP+TP/2;actor.ty=Math.floor(target/COLS)*TP+TP/2;
+        assigned=true;
+      }
+    }
+
+    // 8. Non-critical maintenance (condition 40-70)
+    if(!assigned&&state.autoMaintain&&!foodLow){
+      for(const [tid,meta] of Object.entries(sim.bldMeta)){
+        const tile=state.grid[+tid];
+        if(!tile?.building||meta.condition>70||meta.condition<=40) continue;
+        if(meta.abandoned||!meta.autoMaintain) continue;
+        const cost=bldMaintenanceCost(tile.building);
+        const stor=nearestStorage(actor.px,actor.py,null);
+        if(!stor) continue;
+        let hasRes=true;
+        for(const [r,v] of Object.entries(cost)) if((sim.bldInv[stor.tileId]?.[r]||0)<v){hasRes=false;break;}
+        if(!hasRes||Math.random()>0.3) continue;
+        actor.task={type:'maintain',maintainTileId:+tid};
+        actor.state='maintaining';actor.tx=(+tid%COLS)*TP+TP/2;actor.ty=Math.floor(+tid/COLS)*TP+TP/2;
+        break;
+      }
     }
   }
+}
+
+function computeExploreScore(actor){
+  const base=0.3+(actor.apt.generalist/100)*0.5;
+  const traitBonus=actor.traitFx('exploreScore');
+  const foodOk=totalRes('food')>state.res.pop*4;
+  const hasWork=sim.nodes.some(n=>!n.depleted&&n.discovered&&n.assignedActors.length<n.maxWorkers);
+  if(!foodOk&&!actor.hasTrait('restless')) return -1;
+  if(hasWork&&Math.random()<0.7) return -1;
+  return base+traitBonus;
+}
+
+function findExploreTarget(actor){
+  const rangeMulti=actor.traitFx('exploreRange',1);
+  const baseRange=Math.floor(12*rangeMulti);
+  // Find nearest unexplored tile within range
+  const ax=Math.round(actor.px/TP),ay=Math.round(actor.py/TP);
+  let best=null,bestDist=9999;
+  for(let dy=-baseRange;dy<=baseRange;dy++) for(let dx=-baseRange;dx<=baseRange;dx++){
+    const nx=ax+dx,ny=ay+dy;
+    if(nx<1||nx>=COLS-1||ny<1||ny>=ROWS-1) continue;
+    const tile=state.grid[ny*COLS+nx];
+    if(tile.explored&&tile.surveyed) continue;
+    if(tile.type==='mountain') continue;
+    const d=Math.abs(dx)+Math.abs(dy);
+    if(d<bestDist){bestDist=d;best=tile.id;}
+  }
+  return best;
 }
 
 // ── SIMULATION UPDATE ──────────────────────────────────────────────────────────
@@ -597,6 +864,7 @@ function clearTask(actor){
       if(s){s.assignedBuilders=s.assignedBuilders.filter(i=>i!==actor.id);s.assignedCarriers=s.assignedCarriers.filter(i=>i!==actor.id);}
     }
   }
+  if(actor.task?.wildlifeId!=null){const wg=sim.wildlife.find(w=>w.id===actor.task.wildlifeId);if(wg) wg.assignedHunters=wg.assignedHunters.filter(i=>i!==actor.id);}
   actor.task=null;actor.state='idle';actor.restTimer=0.4+Math.random()*0.6;
 }
 
@@ -637,7 +905,7 @@ function updateActors(dt){
             node.amount=Math.max(0,node.amount-g);
             actor.inv.type=node.type;actor.inv.amount+=g;
           }
-          if(node.amount<=0) node.depleted=true;
+          if(node.amount<=0){node.depleted=true;node.overHarvestCount++;if(node.overHarvestCount>1) addLog(`${node.type} node depleted (${node.overHarvestCount}x over-harvested).`,'warn');}
           if(actor.inv.amount>=actor.inv.capacity*0.88||node.depleted){
             node.assignedActors=node.assignedActors.filter(i=>i!==actor.id);
             const stor=nearestStorage(actor.px,actor.py,actor.inv.type);
@@ -664,7 +932,7 @@ function updateActors(dt){
         if(actor.timer<=0){
           const stid=actor.task?.storageTileId;
           if(stid!=null&&actor.inv.type&&actor.inv.amount>0){
-            const dep=deposit(stid,actor.inv.type,actor.inv.amount);
+            const dep=deposit(stid,actor.inv.type,actor.inv.amount);touchBuilding(stid);
             actor.inv.amount=Math.max(0,actor.inv.amount-dep);
             if(actor.inv.amount<=0) actor.inv.type=null;
           }
@@ -675,7 +943,7 @@ function updateActors(dt){
             const avail=sim.bldInv[stid2]?.[res]||0;
             const take=Math.min(actor.task.amount,actor.inv.capacity,avail);
             if(take>0){
-              withdraw(stid2,res,take);
+              withdraw(stid2,res,take);touchBuilding(stid2);
               actor.inv.type=res;actor.inv.amount=take;
               const site=sim.sites.find(s=>s.id===actor.task.siteId);
               if(site){actor.state='moving_to_construction';actor.tx=site.px;actor.ty=site.py;}
@@ -723,9 +991,155 @@ function updateActors(dt){
       case 'building':{
         const site=sim.sites.find(s=>s.id===actor.task?.siteId);
         if(!site||!siteMet(site)){if(site) site.assignedBuilders=site.assignedBuilders.filter(i=>i!==actor.id);clearTask(actor);break;}
-        const rate=(5+actor.apt.builder*0.04)*dt;
+        const bldMult=1+(actor.hasTrait('industrious')?.15:0);
+        const rate=(5+actor.apt.builder*0.04)*dt*bldMult;
         site.progress=Math.min(100,site.progress+rate);
         if(site.progress>=100) completeSite(site);
+        break;
+      }
+
+      case 'exploring':{
+        const tid=actor.task?.exploreTileId;
+        if(tid==null){clearTask(actor);break;}
+        const tx=(tid%COLS)*TP+TP/2,ty=Math.floor(tid/COLS)*TP+TP/2;
+        if(actor.move(tx,ty,dt)){actor.state='surveying';actor.timer=1.2;}
+        break;
+      }
+
+      case 'surveying':{
+        actor.timer-=dt;
+        if(actor.timer<=0){
+          const tid=actor.task?.exploreTileId;
+          if(tid!=null){
+            const tile=state.grid[tid];
+            tile.explored=true;
+            discoverContent(actor,tile);
+            updateTile(tile);
+          }
+          clearTask(actor);
+        }
+        break;
+      }
+
+      case 'hunting':{
+        const wg=sim.wildlife.find(w=>w.id===actor.task?.wildlifeId);
+        if(!wg||wg.extinct){clearTask(actor);break;}
+        if(actor.move(wg.px,wg.py,dt)){actor.state='performing_hunt';actor.timer=2+Math.random();}
+        break;
+      }
+
+      case 'performing_hunt':{
+        actor.timer-=dt;
+        if(actor.timer<=0){
+          const wg=sim.wildlife.find(w=>w.id===actor.task?.wildlifeId);
+          if(!wg||wg.extinct){clearTask(actor);break;}
+          const successChance=0.4+actor.apt.hunter*0.005+(state.yieldBonus||0);
+          if(Math.random()<successChance){
+            const kills=Math.max(1,Math.floor(1+actor.apt.hunter*.03));
+            const actualKills=Math.min(kills,Math.floor(wg.population));
+            wg.population=Math.max(0,wg.population-actualKills);
+            wg.fear=Math.min(100,wg.fear+actualKills*10);
+            if(wg.population<1){wg.extinct=true;wg.population=0;addLog(`The ${wg.name} has been hunted out!`,'warn');}
+            const foodYield=(wg.yields.food||0)*actualKills*(1+state.yieldBonus);
+            const space=actor.inv.capacity-actor.inv.amount;
+            actor.inv.type='food';actor.inv.amount+=Math.min(space,foodYield);
+            wg.lastHuntedAt=sim.gameTime;
+            // Hides to a separate carry (simplified: fold into food yield)
+          }
+          wg.assignedHunters=wg.assignedHunters.filter(i=>i!==actor.id);
+          if(actor.inv.amount>0){
+            const stor=nearestStorage(actor.px,actor.py,actor.inv.type);
+            if(stor){actor.state='moving_to_storage';actor.tx=(+stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(+stor.tileId/COLS)*TP+TP/2;actor.task={...actor.task,storageTileId:stor.tileId};}
+            else clearTask(actor);
+          } else clearTask(actor);
+        }
+        break;
+      }
+
+      case 'fishing':{
+        // Fishing at a shoal (aquatic wildlife)
+        const wg=sim.wildlife.find(w=>w.id===actor.task?.wildlifeId);
+        if(!wg||wg.extinct){clearTask(actor);break;}
+        actor.timer-=dt;
+        if(actor.timer<=0){
+          actor.timer=2.5-actor.apt.forager*0.01;
+          if(wg.population>2){
+            const catch_=Math.min(3,Math.floor(1+actor.apt.forager*0.03));
+            wg.population=Math.max(0,wg.population-catch_);
+            if(wg.population<1){wg.extinct=true;addLog(`The ${wg.name} has been overfished!`,'warn');}
+            actor.inv.type='food';actor.inv.amount+=Math.min(actor.inv.capacity-actor.inv.amount,catch_*(wg.yields.food||1));
+          }
+          if(actor.inv.amount>=actor.inv.capacity*0.88||wg.extinct){
+            wg.assignedHunters=wg.assignedHunters.filter(i=>i!==actor.id);
+            const stor=nearestStorage(actor.px,actor.py,'food');
+            if(stor&&actor.inv.amount>0){actor.state='moving_to_storage';actor.tx=(+stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(+stor.tileId/COLS)*TP+TP/2;actor.task={...actor.task,storageTileId:stor.tileId};}
+            else clearTask(actor);
+          }
+        }
+        break;
+      }
+
+      case 'maintaining':{
+        const tid=actor.task?.maintainTileId;
+        if(tid==null){clearTask(actor);break;}
+        const sx=(tid%COLS)*TP+TP/2,sy=Math.floor(tid/COLS)*TP+TP/2;
+        if(actor.move(sx,sy,dt)){actor.state='performing_maintenance';actor.timer=3+Math.random()*2;}
+        break;
+      }
+
+      case 'performing_maintenance':{
+        actor.timer-=dt;
+        if(actor.timer<=0){
+          const tid=actor.task?.maintainTileId;
+          const meta=tid!=null?sim.bldMeta[tid]:null;
+          if(meta){
+            // Consume maintenance cost from nearby storage
+            const bk=state.grid[+tid]?.building;
+            const cost=bk?bldMaintenanceCost(bk):{};
+            const stor=nearestStorage(actor.px,actor.py,null);
+            let canDo=true;
+            if(stor) for(const [r,v] of Object.entries(cost)){if((sim.bldInv[stor.tileId]?.[r]||0)<v){canDo=false;break;}}
+            if(canDo){
+              if(stor) for(const [r,v] of Object.entries(cost)) withdraw(stor.tileId,r,v);
+              const restoreAmt=25+(actor.apt.builder*0.15)*(actor.hasTrait('industrious')?1.2:1);
+              meta.condition=Math.min(100,meta.condition+restoreAmt);
+              meta.lastMaintainedTurn=state.turn;
+              meta.abandoned=false;meta.demolitionQueued=false;
+              addLog(`${actor.name} repaired ${BUILDINGS[bk]?.name||'building'}.`);
+            }
+          }
+          clearTask(actor);
+        }
+        break;
+      }
+
+      case 'demolishing':{
+        actor.timer-=dt;
+        if(actor.timer<=0){
+          actor.timer=2+Math.random();
+          const tid=actor.task?.demolishTileId;
+          const meta=tid!=null?sim.bldMeta[tid]:null;
+          const tile=tid!=null?state.grid[+tid]:null;
+          if(!meta||!tile?.building){clearTask(actor);break;}
+          actor.task.progress=(actor.task.progress||0)+1;
+          if(actor.task.progress>=3){
+            // Demolition complete
+            const bk=tile.building;
+            const b=BUILDINGS[bk];
+            const carefulBonus=actor.traitFx('recoveryBonus');
+            const condFactor=Math.max(0.1,(meta.condition||10)/100);
+            const stor=nearestStorage(actor.px,actor.py,null);
+            if(stor) for(const [r,v] of Object.entries(b.cost)){
+              deposit(+stor.tileId,r,Math.max(1,Math.floor(v*(0.3+carefulBonus)*condFactor)));
+            }
+            tile.building=null;tile.constrSiteId=null;
+            delete sim.bldInv[+tid];delete sim.bldMeta[+tid];
+            updateTile(tile);state.cap={...computeStorageCaps(),pop:computePopCap()};
+            addLog(`Unused ${b.name} demolished. Materials recovered.`,'warn');
+            renderSidebar();
+            clearTask(actor);
+          }
+        }
         break;
       }
     }
@@ -735,10 +1149,93 @@ function updateActors(dt){
 function updateNodes(dt){
   for(const node of sim.nodes){
     if(node.depleted){
-      node.amount=Math.min(node.maxAmount,node.amount+dt*0.4);
-      if(node.amount>node.maxAmount*0.15) node.depleted=false;
+      const penFactor=Math.max(0.1,1-node.overHarvestCount*0.12);
+      const cap=node.maxAmount*penFactor;
+      node.amount=Math.min(cap,node.amount+dt*(node.regenRate||0.4)*penFactor);
+      if(node.amount>cap*0.15) node.depleted=false;
+    } else if((node.regenRate||0)>0&&node.amount<node.maxAmount){
+      node.amount=Math.min(node.maxAmount,node.amount+dt*node.regenRate*0.5);
     }
   }
+}
+
+function updateWildlife(dt){
+  sim.gameTime+=dt;
+  for(const wg of sim.wildlife){
+    if(wg.extinct) continue;
+    if(wg.population<wg.maxPopulation){
+      wg.population=Math.min(wg.maxPopulation,wg.population+dt*wg.regenRate*wg.population);
+    }
+    if(wg.fear>0) wg.fear=Math.max(0,wg.fear-dt*0.4);
+    wg.moveTimer-=dt;
+    if(wg.moveTimer<=0){
+      wg.moveTimer=25+Math.random()*50;
+      // Move if fearful or randomly
+      const moveDist=wg.fear>50?2:Math.random()<0.25?1:0;
+      if(moveDist>0){
+        const startTile=state.grid.find(t=>t.building==='firePit');
+        const sx=startTile?startTile.id%COLS:COLS/2,sy=startTile?Math.floor(startTile.id/COLS):ROWS/2;
+        const dirX=wg.fear>50?Math.sign(wg.tileX-sx):Math.floor(Math.random()*3)-1;
+        const dirY=wg.fear>50?Math.sign(wg.tileY-sy):Math.floor(Math.random()*3)-1;
+        const nx=Math.max(1,Math.min(COLS-2,wg.tileX+dirX*moveDist));
+        const ny=Math.max(1,Math.min(ROWS-2,wg.tileY+dirY*moveDist));
+        const target=state.grid[ny*COLS+nx];
+        const wt=WILDLIFE_TYPES[wg.typeKey];
+        const ok=wg.aquatic?(target.type==='water'):wt.terrain.includes(target.type);
+        if(ok){wg.tileX=nx;wg.tileY=ny;wg.px=nx*TP+TP/2;wg.py=ny*TP+TP/2;}
+      }
+    }
+  }
+}
+
+function discoverContent(actor,tile){
+  // Called when actor surveys a tile
+  tile.surveyed=true;
+  const apt=actor.apt;
+  const rareChance=0.015*(1+actor.traitFx('rareChance'));
+  // Check for undiscovered resource node
+  const node=tile.nodeId!=null?sim.nodes.find(n=>n.id===tile.nodeId):null;
+  if(node&&!node.discovered){
+    node.discovered=true;
+    addLog(`${actor.name} found a ${node.type} source.`,'imp');
+  }
+  // Check nearby wildlife
+  for(const wg of sim.wildlife){
+    if(wg.discovered) continue;
+    const dist=Math.abs(wg.tileX-tile.id%COLS)+Math.abs(wg.tileY-Math.floor(tile.id/COLS));
+    const senseRange=wg.aquatic?2:3;
+    if(dist<=senseRange){
+      wg.discovered=true;
+      addLog(`${actor.name} found signs of a ${wg.name} nearby.`,'imp');
+    }
+  }
+  // Check for rare resource
+  if(Math.random()<rareChance){
+    const keys=Object.keys(RARE_RES);
+    const key=keys[Math.floor(Math.random()*keys.length)];
+    const alreadyFound=state.discoveries.some(d=>d.key===key);
+    if(!alreadyFound) applyRareDiscovery(actor,key,tile);
+  }
+}
+
+function applyRareDiscovery(actor,key,tile){
+  const rr=RARE_RES[key];
+  const disc={key,name:rr.name,icon:rr.icon,finder:actor.name,tileId:tile.id,turn:state.turn};
+  state.discoveries.push(disc);
+  addLog(`${actor.name} discovered ${rr.name}! ${rr.desc}`,'era');
+  const fx=rr.effect;
+  if(fx.techKey) state.techProgress[fx.techKey]=Math.min(100,(state.techProgress[fx.techKey]||0)+fx.techBonus);
+  if(fx.moraleBonus) state.morale=Math.min(100,state.morale+fx.moraleBonus);
+  if(fx.foodBonus){const stor=nearestStorage(0,0,'food');if(stor) deposit(+stor.tileId,'food',fx.foodBonus);}
+  if(fx.foodPres) state.foodPresBonus=true;
+  if(fx.medicineBonus) state.medicineBonus=true;
+  if(fx.yieldBonus) state.yieldBonus=(state.yieldBonus||0)+fx.yieldBonus;
+  // Auto-apply tech if progress reaches 100
+  if(fx.techKey&&(state.techProgress[fx.techKey]||0)>=100&&!state.techs[fx.techKey]){
+    state.techs[fx.techKey]=true;
+    addLog(`✦ ${TECHS[fx.techKey].name} unlocked by discovery!`,'imp');
+  }
+  renderSidebar();
 }
 
 function completeSite(site){
@@ -746,7 +1243,7 @@ function completeSite(site){
   tile.building=site.bldKey;tile.constrSiteId=null;
   for(const a of sim.actors) if(a.task?.siteId===site.id) clearTask(a);
   sim.sites=sim.sites.filter(s=>s.id!==site.id);
-  initInv(site.tileId,site.bldKey,{});
+  initInv(site.tileId,site.bldKey,{});initBldMeta(site.tileId,site.bldKey);
   updateVisibility();updateAllTiles();
   state.cap={...computeStorageCaps(),pop:computePopCap()};
   addLog(`✦ ${BUILDINGS[site.bldKey].name} complete!`,'imp');
@@ -816,19 +1313,61 @@ function renderSim(){
       ctx.fillStyle=cc;ctx.beginPath();ctx.arc(actor.px+6,actor.py-6,3.5,0,Math.PI*2);ctx.fill();
       ctx.strokeStyle='rgba(0,0,0,0.4)';ctx.lineWidth=1;ctx.stroke();
     }
+    // Explore path indicator
+    if(actor.state==='exploring'&&actor.task?.exploreTileId!=null){
+      const etx=(actor.task.exploreTileId%COLS)*TP+TP/2,ety=Math.floor(actor.task.exploreTileId/COLS)*TP+TP/2;
+      ctx.strokeStyle='rgba(150,200,255,0.3)';ctx.lineWidth=1;ctx.setLineDash([3,4]);
+      ctx.beginPath();ctx.moveTo(actor.px,actor.py);ctx.lineTo(etx,ety);ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // Wildlife groups
+  for(const wg of sim.wildlife){
+    if(wg.extinct||!wg.discovered) continue;
+    const tx=wg.tileX,ty=wg.tileY;
+    const tile=state.grid[ty*COLS+tx];if(!tile.explored) continue;
+    ctx.globalAlpha=0.85;
+    ctx.fillStyle=wg.aquatic?'#2060c0':'#806030';
+    ctx.beginPath();ctx.arc(wg.px,wg.py,5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1;ctx.stroke();
+    ctx.globalAlpha=1;
+    ctx.font='9px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#fff';ctx.fillText(wg.icon,wg.px,wg.py);
+    // Pop indicator
+    const popFrac=wg.population/wg.maxPopulation;
+    ctx.fillStyle=popFrac>0.5?'#7ab050':popFrac>0.2?'#c07030':'#c04040';
+    ctx.fillRect(wg.px-7,wg.py+7,Math.round(14*popFrac),2);
+  }
+
+  // Building condition bars
+  for(const [tileId,meta] of Object.entries(sim.bldMeta)){
+    const tile=state.grid[+tileId];if(!tile?.building||!tile.explored) continue;
+    const tx=(tile.id%COLS)*TP,ty=Math.floor(tile.id/COLS)*TP;
+    const c=meta.condition/100;
+    ctx.globalAlpha=0.7;
+    ctx.fillStyle=c>0.7?'#4a9030':c>0.4?'#a08030':'#c04030';
+    ctx.fillRect(tx,ty+TP-3,Math.round(TP*c),3);
+    ctx.globalAlpha=1;
+    if(meta.abandoned){
+      ctx.globalAlpha=0.6;ctx.fillStyle='#c04040';
+      ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.textBaseline='top';
+      ctx.fillText('✕',tx+TP/2,ty+1);ctx.globalAlpha=1;
+    }
   }
 }
 
 // ── GAME LOOP ──────────────────────────────────────────────────────────────────
 function gameLoop(ts){
   const dt=Math.min((ts-lastTime)/1000,0.1);lastTime=ts;
-  updateActors(dt);updateNodes(dt);
+  updateActors(dt);updateNodes(dt);updateWildlife(dt);
   taskTimer-=dt;if(taskTimer<=0){taskTimer=0.65;assignTasks();}
   uiTimer-=dt;if(uiTimer<=0){
     uiTimer=0.28;
     renderResources();
     if(infoTab==='people') renderActorPanel();
     if(infoTab==='build') renderBuildPanel();
+    if(infoTab==='hist') renderHistoryPanel();
   }
   renderSim();
   requestAnimationFrame(gameLoop);
@@ -930,7 +1469,15 @@ function endTurn(){
   }
 
   if(Math.random()<0.28){const ev=randomEvent();if(ev) summary.events.push(ev);}
-  checkEra();updateVisibility();
+  checkEra();updateVisibility();updateBuildingCondition();
+  // Passive tech progress from activity
+  const bldTypes=new Set(state.grid.filter(t=>t.building).map(t=>t.building));
+  if(bldTypes.has('huntingCamp')||bldTypes.has('flintKnapping')) boostTech('toolMaking',0.8);
+  if(bldTypes.has('field')||bldTypes.has('foragingPatch')) boostTech('agriculture',0.6);
+  if(bldTypes.has('potteryKiln')) boostTech('pottery',0.8);
+  if(bldTypes.has('shrine')) boostTech('ritualKnowledge',0.5);
+  if(sim.actors.some(a=>a.dominant==='shaman')) boostTech('ritualKnowledge',0.3);
+  if(infoTab==='hist') renderHistoryPanel();
   document.getElementById('turn-display').textContent=`Turn ${state.turn}`;
   renderResources();renderSidebar();updateAllTiles();showTurnSummary(summary,prod);
   for(const ev of summary.events) addLog(ev.msg,ev.cls);
@@ -955,6 +1502,12 @@ function randomEvent(){
   let r=Math.random()*total;
   for(const e of pool){r-=e.w;if(r<=0){e.fn();return{msg:e.msg,cls:e.cls};}}
   return null;
+}
+
+function boostTech(key,amount){
+  if(state.techs[key]) return;
+  state.techProgress[key]=Math.min(100,(state.techProgress[key]||0)+amount);
+  if(state.techProgress[key]>=100){state.techs[key]=true;addLog(`✦ ${TECHS[key].name} now researchable (0 cost)!`,'imp');}
 }
 
 function checkEra(){
@@ -1058,7 +1611,8 @@ function renderActorPanel(){
     const card=document.createElement('div');
     card.className='actor-card'+(selectedActor===actor?' sel':'');
     const aptStr=APT_KEYS.map(k=>`<span class="apt-tag" style="color:${ROLE_COLOR[k]}">${k[0].toUpperCase()} ${actor.apt[k]}</span>`).join('');
-    card.innerHTML=`<div class="ac-header"><div class="ac-dot" style="background:${actor.color}"></div><span class="ac-name">${actor.name}</span><span class="ac-role">${ROLE_ICON[actor.dominant]} ${actor.dominant}-leaning</span></div><div class="ac-state">⚡ ${actor.stateLabel}</div><div class="ac-inv">🎒 ${actor.carrying}</div><div class="ac-apt">${aptStr}</div>`;
+    const traitStr=(actor.traits||[]).map(t=>`<span class="trait-tag" style="background:${TRAIT_COLOR[t]}22;color:${TRAIT_COLOR[t]};border:1px solid ${TRAIT_COLOR[t]}44;border-radius:3px;padding:0 3px;font-size:.78em;margin-right:2px">${t}</span>`).join('');
+    card.innerHTML=`<div class="ac-header"><div class="ac-dot" style="background:${actor.color}"></div><span class="ac-name">${actor.name}</span><span class="ac-role">${ROLE_ICON[actor.dominant]} ${actor.dominant}-leaning</span></div><div class="ac-state">⚡ ${actor.stateLabel}</div><div class="ac-inv">🎒 ${actor.carrying}</div><div class="ac-apt">${aptStr}</div>${traitStr?`<div class="ac-traits" style="margin-top:3px">${traitStr}</div>`:''}`;
     card.onclick=()=>{selectedActor=selectedActor===actor?null:actor;renderActorPanel();};
     el.appendChild(card);
   }
@@ -1095,8 +1649,17 @@ function renderBuildPanel(){
     const tile=state.grid[+tid];if(!tile?.building) continue;
     const b=BUILDINGS[tile.building];
     const resStr=['food','wood','stone','water'].filter(r=>(inv.cap[r]||0)>0).map(r=>`<span>${RES_ICON[r]}${Math.floor(inv[r]||0)}/${inv.cap[r]}</span>`).join(' ');
+    const meta=sim.bldMeta[+tid];
+    let condHtml='';
+    if(meta){
+      const cond=Math.floor(meta.condition);
+      const condCls=cond>=70?'cond-ok':cond>=40?'cond-warn':'cond-bad';
+      const condLabel=cond>=70?'Good':cond>=40?'Fair':cond>=8?'Poor':'Critical';
+      const pinLabel=meta.pinned?'📌 Pinned':'📌 Pin';
+      condHtml=`<div style="display:flex;align-items:center;gap:6px;margin-top:3px"><div class="progress-bg" style="flex:1;height:5px"><div class="progress-fill ${condCls}" style="width:${cond}%;background:${cond>=70?'#7ab050':cond>=40?'#c0a030':'#c05030'}"></div></div><span class="${condCls}" style="font-size:.8em">${condLabel} (${cond}%)</span></div><div style="display:flex;gap:4px;margin-top:3px"><button class="prio-btn" onclick="manualMaintain(${tid})" title="Assign actor to repair">🔧</button><button class="prio-btn ${meta.pinned?'active':''}" onclick="togglePin(${tid})" title="${meta.pinned?'Unpin building':'Protect from demolition'}" style="${meta.pinned?'color:#ffc060;border-color:#ffc06088':''}">${pinLabel}</button>${meta.abandoned?`<span style="color:#c05030;font-size:.8em">⚠ Abandoned T${meta.abandonedSince}</span>`:''}${meta.demolitionQueued?`<span style="color:#c05030;font-size:.8em">🚫 Queued demolition</span>`:''}</div>`;
+    }
     const card=document.createElement('div');card.className='bld-inv-card';
-    card.innerHTML=`<div class="bi-header">${b.icon} ${b.name}</div><div class="bi-res">${resStr}</div>`;
+    card.innerHTML=`<div class="bi-header">${b.icon} ${b.name}</div><div class="bi-res">${resStr}</div>${condHtml}`;
     iEl.appendChild(card);
   }
 }
@@ -1111,6 +1674,47 @@ function setInfoTab(tab){
   document.getElementById('tab-btn-'+tab).classList.add('active');
   if(tab==='people') renderActorPanel();
   if(tab==='build') renderBuildPanel();
+  if(tab==='hist') renderHistoryPanel();
+}
+
+function renderHistoryPanel(){
+  // Discoveries
+  const dEl=document.getElementById('disc-list');
+  if(dEl){
+    dEl.innerHTML='';
+    if(state.discoveries.length===0){dEl.innerHTML='<div class="ts-note">No rare discoveries yet. Send explorers!</div>';}
+    else for(const d of state.discoveries){
+      const rr=RARE_RES[d.key];
+      const card=document.createElement('div');card.className='disc-card';
+      card.innerHTML=`<span class="disc-icon">${d.icon}</span><span class="disc-name">${d.name}</span> <span style="color:#7a8060;font-size:.85em">by ${d.finder}, turn ${d.turn}</span><div class="disc-desc">${rr.desc}</div>`;
+      dEl.appendChild(card);
+    }
+  }
+  // Wildlife
+  const wEl=document.getElementById('wildlife-list');
+  if(wEl){
+    wEl.innerHTML='';
+    const found=sim.wildlife.filter(w=>w.discovered);
+    if(found.length===0){wEl.innerHTML='<div class="ts-note">No wildlife discovered yet.</div>';}
+    else for(const wg of found){
+      const popFrac=(wg.population/wg.maxPopulation);
+      const card=document.createElement('div');card.className='wl-card '+(wg.extinct?'wl-extinct':'');
+      card.innerHTML=`<span style="font-size:1.1em">${wg.icon}</span> <span style="color:var(--hi);font-weight:bold">${wg.name}</span> <span class="${wg.extinct?'cond-bad':popFrac>0.5?'cond-ok':'cond-warn'}">${wg.extinct?'Extinct':Math.floor(wg.population)+'/'+wg.maxPopulation}</span><div style="color:#806040;font-size:.82em">Fear: ${Math.floor(wg.fear)}%${wg.aquatic?' · Aquatic':''}</div>`;
+      wEl.appendChild(card);
+    }
+  }
+  // Tech progress
+  const tEl=document.getElementById('tech-prog-list');
+  if(tEl){
+    tEl.innerHTML='';
+    for(const [key,t] of Object.entries(TECHS)){
+      const prog=state.techProgress[key]||0;
+      const done=state.techs[key];
+      const row=document.createElement('div');row.className='tech-prog-row';
+      row.innerHTML=`<span style="flex:1;color:${done?'#7ab050':'var(--text)'};font-size:.9em">${t.icon} ${t.name}</span><span style="color:var(--hi);min-width:28px;text-align:right">${done?'✓':Math.floor(prog)+'%'}</span><div class="tech-prog-bg" style="width:50px"><div class="tech-prog-fill" style="width:${done?100:prog}%"></div></div>`;
+      tEl.appendChild(row);
+    }
+  }
 }
 
 function showTileInfo(tile){
@@ -1129,12 +1733,44 @@ function showTileInfo(tile){
     const prod=Object.entries(b.prod||{}).map(([k,v])=>`+${v.toFixed(0)} ${k}/turn`).join(', ');
     const inv=sim.bldInv[tile.id];
     const invStr=inv?['food','wood','stone','water'].filter(r=>(inv.cap[r]||0)>0).map(r=>`${RES_ICON[r]}${Math.floor(inv[r]||0)}/${inv.cap[r]}`).join(' '):'';
-    el.innerHTML=`<div class="ti-name">${b.icon} ${b.name}</div><div class="ti-desc">${b.effect}</div>${prod?`<div class="ti-prod">${prod}</div>`:''}${invStr?`<div class="ti-inv">Stored: ${invStr}</div>`:''}`;
+    const meta=sim.bldMeta[tile.id];
+    const condStr=meta?`<div class="ti-prod"><span class="${condClass(meta.condition)}">Condition: ${condLabel(meta.condition)} (${Math.floor(meta.condition)}%)</span>${meta.abandoned?' <span class="cond-bad">ABANDONED</span>':''}</div>`:'';
+    const maintCost=bldMaintenanceCost?.(tile.building)||{};
+    const maintStr=meta&&meta.condition<80?`<div style="color:#9a8050;font-size:.8em">Maintenance: ${Object.entries(maintCost).map(([r,v])=>`${v} ${r}`).join(', ')}</div>`:'';
+    el.innerHTML=`<div class="ti-name">${b.icon} ${b.name}</div><div class="ti-desc">${b.effect}</div>${prod?`<div class="ti-prod">${prod}</div>`:''}${condStr}${maintStr}${invStr?`<div class="ti-inv">Stored: ${invStr}</div>`:''}${meta?`<div style="display:flex;gap:4px;margin-top:3px"><button class="maint-btn" onclick="manualMaintain(${tile.id})">🔨 Repair</button><button class="pin-btn" onclick="togglePin(${tile.id})">${meta.pinned?'📌 Unpin':'📌 Pin'}</button></div>`:''}`;
     return;
   }
   const node=sim.nodes.find(n=>n.tileId===tile.id);
+  const wg=sim.wildlife.find(w=>w.tileX===tile.id%COLS&&w.tileY===Math.floor(tile.id/COLS)&&w.discovered);
   const typ=tile.type.charAt(0).toUpperCase()+tile.type.slice(1);
-  el.innerHTML=`<div class="ti-name">${TYPE_EMOJI[tile.type]||'·'} ${typ}</div><div class="ti-desc">${TILE_DESC[tile.type]||''}</div>${node?`<div class="ti-prod">Resource node: ${node.type} · ${Math.floor(node.amount)}/${node.maxAmount}</div>`:''}`;
+  const surveyed=tile.surveyed?'Surveyed':'Not yet surveyed';
+  let nodeStr='';
+  if(node){
+    const penFactor=Math.max(0.1,1-node.overHarvestCount*.12);
+    const pct=Math.floor(node.amount/node.maxAmount*100);
+    const regenStr=node.regenRate>0?`Regen: ${(node.regenRate*60).toFixed(1)}/min`:'No regen';
+    const overStr=node.overHarvestCount>0?` · Over-harvested ×${node.overHarvestCount}`:'';
+    const assignedStr=node.assignedActors.length>0?` · ${node.assignedActors.length} gathering`:'';
+    nodeStr=`<div class="ti-prod">${node.depleted?'<span class="cond-bad">DEPLETED</span> ':''} ${node.type}: ${Math.floor(node.amount)}/${Math.floor(node.maxAmount*penFactor)} (${pct}%)</div><div style="color:#7a8060;font-size:.8em">${regenStr}${overStr}${assignedStr}</div>`;
+  }
+  const wgStr=wg?`<div class="ti-prod">${wg.icon} ${wg.name}: ${wg.extinct?'<span class="cond-bad">Extinct</span>':Math.floor(wg.population)+'/'+wg.maxPopulation+' pop'}</div>`:'';
+  el.innerHTML=`<div class="ti-name">${TYPE_EMOJI[tile.type]||'·'} ${typ}</div><div class="ti-desc">${TILE_DESC[tile.type]||''}</div><div style="color:#706050;font-size:.78em">${surveyed}</div>${nodeStr}${wgStr}`;
+}
+
+function manualMaintain(tileId){
+  const meta=sim.bldMeta[tileId];if(!meta) return;
+  meta.autoMaintain=true;meta.abandoned=false;meta.demolitionQueued=false;
+  const idleActor=sim.actors.find(a=>(a.state==='idle'||a.state==='resting')&&!a.task);
+  if(idleActor){idleActor.task={type:'maintain',maintainTileId:tileId};idleActor.state='maintaining';idleActor.tx=(tileId%COLS)*TP+TP/2;idleActor.ty=Math.floor(tileId/COLS)*TP+TP/2;addLog('Maintenance scheduled.');}
+  else addLog('No idle actor available for maintenance.','warn');
+}
+
+function togglePin(tileId){
+  const meta=sim.bldMeta[tileId];if(!meta) return;
+  meta.pinned=!meta.pinned;
+  if(meta.pinned){meta.abandoned=false;meta.demolitionQueued=false;}
+  addLog(meta.pinned?'Building pinned (protected from demolition).':'Building unpinned.');
+  showTileInfo(state.grid[tileId]);
 }
 
 function showTurnSummary(summary,prod){
@@ -1266,6 +1902,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='1') setInfoTab('world');
   if(e.key==='2') setInfoTab('people');
   if(e.key==='3') setInfoTab('build');
+  if(e.key==='4') setInfoTab('hist');
 });
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -1284,7 +1921,9 @@ function init(){
   updateVisibility();
   state.morale=computeMorale();
   initInv(startTile.id,'firePit',{food:60,wood:40,stone:25,water:35});
+  initBldMeta(startTile.id,'firePit');
   placeResourceNodes();
+  placeWildlife();
   spawnInitialActors(startTile.id,10);
   state.res.pop=sim.actors.length;
 
