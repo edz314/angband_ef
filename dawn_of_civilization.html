@@ -6,129 +6,126 @@
 <title>Dawn of Civilization</title>
 <style>
 :root {
-  --bg: #100c06; --panel: #1e1508; --panel2: #261d0a;
-  --earth: #7a5a18; --text: #c8a86a; --hi: #f0c050;
-  --grass: #2d4a1e; --forest: #162c10; --water: #0d2535;
-  --rock: #252520; --sand: #3a3320; --mountain: #1a1818;
-  --plains: #3a5a28;
+  --bg:#100c06;--panel:#1e1508;--panel2:#261d0a;
+  --earth:#7a5a18;--text:#c8a86a;--hi:#f0c050;
+  --grass:#2d4a1e;--forest:#162c10;--water:#0d2535;
+  --rock:#252520;--sand:#3a3320;--mountain:#1a1818;--plains:#3a5a28;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: Georgia, serif;
-       display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-
-#header { background: var(--panel); border-bottom: 2px solid var(--earth);
-          padding: 6px 12px; display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
-#title { font-size: 1.0em; color: var(--hi); letter-spacing: 2px;
-         text-shadow: 0 0 12px rgba(240,192,80,.5); white-space: nowrap; }
-.res-bar { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; }
-.res { display: flex; align-items: center; gap: 3px; font-size: .76em; }
-.res-val { color: var(--hi); min-width: 34px; }
-.res-cap { color: #806040; font-size: .82em; }
-.res-icon { font-size: 1.0em; }
-#time-wrap { color: #c09050; font-size: .76em; white-space: nowrap; text-align: right; line-height: 1.5; }
-#turn-display { color: var(--hi); font-weight: bold; }
-#end-turn-btn { background: #3a2808; border: 2px solid var(--hi); color: var(--hi);
-                padding: 5px 16px; font-size: .88em; cursor: pointer;
-                font-family: Georgia, serif; border-radius: 3px; white-space: nowrap;
-                transition: background .15s; flex-shrink: 0; }
-#end-turn-btn:hover { background: #5a3a10; box-shadow: 0 0 8px rgba(240,192,80,.4); }
-
-#main { display: flex; flex: 1; overflow: hidden; }
-
-#sidebar { width: 198px; background: var(--panel); border-right: 2px solid var(--earth);
-           overflow-y: auto; padding: 7px; display: flex; flex-direction: column; gap: 8px; }
-.sb-section h3 { color: var(--hi); font-size: .71em; text-transform: uppercase;
-                 letter-spacing: 1px; border-bottom: 1px solid var(--earth);
-                 padding-bottom: 2px; margin-bottom: 5px; }
-.bld-btn { width: 100%; background: var(--bg); border: 1px solid #4a3010; color: var(--text);
-           padding: 4px 6px; margin-bottom: 2px; cursor: pointer; text-align: left;
-           font-family: Georgia, serif; font-size: .71em; border-radius: 2px;
-           display: flex; align-items: center; gap: 5px; transition: background .15s; }
-.bld-btn:hover:not(.locked) { background: var(--panel2); border-color: var(--hi); }
-.bld-btn.selected { background: #2e2008; border-color: var(--hi); box-shadow: 0 0 5px rgba(240,192,80,.3); }
-.bld-btn.locked { opacity: .38; cursor: not-allowed; }
-.bld-icon { font-size: 1.05em; width: 20px; text-align: center; flex-shrink: 0; }
-.bld-meta { flex: 1; }
-.bld-name { font-weight: bold; color: var(--hi); line-height: 1.2; }
-.bld-cost { color: #907040; font-size: .78em; }
-.bld-effect { color: #7a8060; font-size: .71em; }
-#remove-btn { width: 100%; background: #2a0e0e; border: 1px solid #7a3030;
-              color: #d06060; padding: 5px; cursor: pointer; font-family: Georgia, serif;
-              font-size: .75em; border-radius: 2px; margin-top: 3px; }
-#remove-btn:hover { background: #3a1818; }
-#remove-btn.active { background: #4a1010; border-color: #c04040; }
-
-#map-wrap { flex: 1; overflow: auto; display: flex; align-items: flex-start;
-            justify-content: flex-start; padding: 8px; background: #070503; }
-#grid { display: grid;
-        grid-template-columns: repeat(60, 28px);
-        grid-template-rows: repeat(40, 28px);
-        gap: 0; background: #030201; border: 1px solid var(--earth); }
-.tile { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-        font-size: .86em; cursor: pointer; position: relative; user-select: none; }
-.tile:hover:not(.fog) { filter: brightness(1.4); z-index: 2; }
-.tile.t-grass    { background: var(--grass); }
-.tile.t-plains   { background: var(--plains); }
-.tile.t-forest   { background: var(--forest); }
-.tile.t-water    { background: var(--water); }
-.tile.t-rock     { background: var(--rock); }
-.tile.t-sand     { background: var(--sand); }
-.tile.t-mountain { background: var(--mountain); }
-.tile.fog        { background: #05040a; color: #0c0a14; cursor: default; }
-.tile.can-build:hover { outline: 2px solid rgba(240,192,80,.65); }
-.tile.no-build:hover  { outline: 2px solid rgba(200,60,60,.5); }
-
-#info { width: 215px; background: var(--panel); border-left: 2px solid var(--earth);
-        padding: 7px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
-#info h3 { color: var(--hi); font-size: .71em; text-transform: uppercase;
-           letter-spacing: 1px; border-bottom: 1px solid var(--earth); padding-bottom: 2px; }
-#tile-info { background: var(--bg); border: 1px solid var(--earth); padding: 7px;
-             border-radius: 2px; min-height: 58px; font-size: .77em; line-height: 1.5; }
-#tile-info .ti-name { color: var(--hi); font-weight: bold; margin-bottom: 3px; }
-#tile-info .ti-desc { color: #9a8050; }
-#tile-info .ti-prod { color: #6a9a40; font-size: .88em; }
-
-#pop-panel { background: var(--bg); border: 1px solid var(--earth); padding: 7px;
-             border-radius: 2px; font-size: .75em; }
-.pop-row { display: flex; justify-content: space-between; padding: 2px 0; }
-.pop-row span:first-child { color: #9a8050; }
-.pos { color: #7ab050; }
-.neg { color: #c04040; }
-.neu { color: #9a8050; }
-.morale-bg { background: #1a1008; height: 6px; border-radius: 3px; margin: 4px 0 6px;
-             border: 1px solid #3a2808; overflow: hidden; }
-.morale-fill { height: 100%; border-radius: 3px; transition: width .4s, background .4s; }
-
-#turn-summary { background: var(--bg); border: 1px solid #354020; padding: 7px;
-                border-radius: 2px; font-size: .74em; }
-.ts-title { color: var(--hi); font-weight: bold; margin-bottom: 4px; font-size: .9em; }
-.ts-row { display: flex; justify-content: space-between; padding: 1px 0; }
-.ts-note { color: #6a5030; font-size: .85em; margin-top: 3px; }
-
-.tech-row { display: flex; align-items: center; gap: 5px; padding: 3px 5px;
-            border: 1px solid #2a1e08; border-radius: 2px; font-size: .71em;
-            margin-bottom: 2px; line-height: 1.3; }
-.tech-row.tech-done  { border-color: #3a5a20; color: #7ab050; }
-.tech-row.tech-avail { border-color: var(--earth); cursor: pointer; }
-.tech-row.tech-avail:hover { background: var(--panel2); border-color: var(--hi); }
-.tech-row.tech-locked { opacity: .35; }
-.tech-icon { font-size: 1.0em; flex-shrink: 0; }
-.tech-name { flex: 1; font-weight: bold; }
-.tech-cost { color: #907040; font-size: .82em; }
-
-#log { overflow-y: auto; max-height: 220px; }
-.log-line { padding: 2px 0; border-bottom: 1px solid #1e1508; font-size: .74em;
-            color: #907040; line-height: 1.3; }
-.log-line.log-imp  { color: var(--hi); }
-.log-line.log-warn { color: #c07030; }
-.log-line.log-era  { color: #b090e0; font-style: italic; }
-
-#footer { background: var(--panel); border-top: 2px solid var(--earth);
-          padding: 4px 12px; font-size: .7em; color: #6a5030; display: flex; gap: 12px; align-items: center; }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+#header{background:var(--panel);border-bottom:2px solid var(--earth);padding:6px 12px;display:flex;align-items:center;gap:10px;flex-wrap:nowrap;}
+#title{font-size:1em;color:var(--hi);letter-spacing:2px;text-shadow:0 0 12px rgba(240,192,80,.5);white-space:nowrap;}
+.res-bar{display:flex;gap:8px;flex:1;flex-wrap:wrap;}
+.res{display:flex;align-items:center;gap:3px;font-size:.76em;}
+.res-val{color:var(--hi);min-width:34px;}
+.res-cap{color:#806040;font-size:.82em;}
+.res-icon{font-size:1em;}
+#time-wrap{color:#c09050;font-size:.76em;white-space:nowrap;text-align:right;line-height:1.5;}
+#turn-display{color:var(--hi);font-weight:bold;}
+#end-turn-btn{background:#3a2808;border:2px solid var(--hi);color:var(--hi);padding:5px 16px;font-size:.88em;cursor:pointer;font-family:Georgia,serif;border-radius:3px;white-space:nowrap;transition:background .15s;flex-shrink:0;}
+#end-turn-btn:hover{background:#5a3a10;box-shadow:0 0 8px rgba(240,192,80,.4);}
+#main{display:flex;flex:1;overflow:hidden;}
+#sidebar{width:198px;background:var(--panel);border-right:2px solid var(--earth);overflow-y:auto;padding:7px;display:flex;flex-direction:column;gap:8px;}
+.sb-section h3{color:var(--hi);font-size:.71em;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--earth);padding-bottom:2px;margin-bottom:5px;}
+.bld-btn{width:100%;background:var(--bg);border:1px solid #4a3010;color:var(--text);padding:4px 6px;margin-bottom:2px;cursor:pointer;text-align:left;font-family:Georgia,serif;font-size:.71em;border-radius:2px;display:flex;align-items:center;gap:5px;transition:background .15s;}
+.bld-btn:hover:not(.locked){background:var(--panel2);border-color:var(--hi);}
+.bld-btn.selected{background:#2e2008;border-color:var(--hi);box-shadow:0 0 5px rgba(240,192,80,.3);}
+.bld-btn.locked{opacity:.38;cursor:not-allowed;}
+.bld-icon{font-size:1.05em;width:20px;text-align:center;flex-shrink:0;}
+.bld-meta{flex:1;}
+.bld-name{font-weight:bold;color:var(--hi);line-height:1.2;}
+.bld-cost{color:#907040;font-size:.78em;}
+.bld-effect{color:#7a8060;font-size:.71em;}
+#remove-btn{width:100%;background:#2a0e0e;border:1px solid #7a3030;color:#d06060;padding:5px;cursor:pointer;font-family:Georgia,serif;font-size:.75em;border-radius:2px;margin-top:3px;}
+#remove-btn:hover{background:#3a1818;}
+#remove-btn.active{background:#4a1010;border-color:#c04040;}
+#map-wrap{flex:1;overflow:auto;padding:8px;background:#070503;}
+#grid-container{position:relative;display:inline-block;}
+#grid{display:grid;grid-template-columns:repeat(60,28px);grid-template-rows:repeat(40,28px);gap:0;background:#030201;border:1px solid var(--earth);}
+#sim-canvas{position:absolute;top:0;left:0;pointer-events:none;z-index:10;}
+.tile{width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:.86em;cursor:pointer;position:relative;user-select:none;}
+.tile:hover:not(.fog){filter:brightness(1.4);z-index:2;}
+.tile.t-grass{background:var(--grass);}
+.tile.t-plains{background:var(--plains);}
+.tile.t-forest{background:var(--forest);}
+.tile.t-water{background:var(--water);}
+.tile.t-rock{background:var(--rock);}
+.tile.t-sand{background:var(--sand);}
+.tile.t-mountain{background:var(--mountain);}
+.tile.fog{background:#05040a;color:#0c0a14;cursor:default;}
+.tile.can-build:hover{outline:2px solid rgba(240,192,80,.65);}
+.tile.no-build:hover{outline:2px solid rgba(200,60,60,.5);}
+.tile.construction{outline:2px solid rgba(255,200,0,.8);}
+#info{width:232px;background:var(--panel);border-left:2px solid var(--earth);display:flex;flex-direction:column;overflow:hidden;}
+.info-tabs{display:flex;border-bottom:1px solid var(--earth);flex-shrink:0;}
+.itab{flex:1;background:none;border:none;border-right:1px solid var(--earth);color:#907040;font-family:Georgia,serif;font-size:.68em;padding:5px 2px;cursor:pointer;transition:background .15s;}
+.itab:last-child{border-right:none;}
+.itab:hover{background:var(--panel2);color:var(--hi);}
+.itab.active{background:var(--panel2);color:var(--hi);border-bottom:2px solid var(--hi);}
+.tab-content{flex:1;overflow-y:auto;padding:7px;display:flex;flex-direction:column;gap:7px;}
+.tab-content.hidden{display:none;}
+#info h3{color:var(--hi);font-size:.71em;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--earth);padding-bottom:2px;}
+#tile-info{background:var(--bg);border:1px solid var(--earth);padding:7px;border-radius:2px;min-height:58px;font-size:.77em;line-height:1.5;}
+#tile-info .ti-name{color:var(--hi);font-weight:bold;margin-bottom:3px;}
+#tile-info .ti-desc{color:#9a8050;}
+#tile-info .ti-prod{color:#6a9a40;font-size:.88em;}
+#tile-info .ti-inv{color:#7090a0;font-size:.82em;margin-top:3px;}
+#pop-panel{background:var(--bg);border:1px solid var(--earth);padding:7px;border-radius:2px;font-size:.75em;}
+.pop-row{display:flex;justify-content:space-between;padding:2px 0;}
+.pop-row span:first-child{color:#9a8050;}
+.pos{color:#7ab050;}.neg{color:#c04040;}.neu{color:#9a8050;}
+.morale-bg{background:#1a1008;height:6px;border-radius:3px;margin:4px 0 6px;border:1px solid #3a2808;overflow:hidden;}
+.morale-fill{height:100%;border-radius:3px;transition:width .4s,background .4s;}
+#turn-summary{background:var(--bg);border:1px solid #354020;padding:7px;border-radius:2px;font-size:.74em;}
+.ts-title{color:var(--hi);font-weight:bold;margin-bottom:4px;font-size:.9em;}
+.ts-row{display:flex;justify-content:space-between;padding:1px 0;}
+.ts-note{color:#6a5030;font-size:.85em;margin-top:3px;}
+.tech-row{display:flex;align-items:center;gap:5px;padding:3px 5px;border:1px solid #2a1e08;border-radius:2px;font-size:.71em;margin-bottom:2px;line-height:1.3;}
+.tech-row.tech-done{border-color:#3a5a20;color:#7ab050;}
+.tech-row.tech-avail{border-color:var(--earth);cursor:pointer;}
+.tech-row.tech-avail:hover{background:var(--panel2);border-color:var(--hi);}
+.tech-row.tech-locked{opacity:.35;}
+.tech-icon{font-size:1em;flex-shrink:0;}
+.tech-name{flex:1;font-weight:bold;}
+.tech-cost{color:#907040;font-size:.82em;}
+#log{overflow-y:auto;max-height:180px;}
+.log-line{padding:2px 0;border-bottom:1px solid #1e1508;font-size:.74em;color:#907040;line-height:1.3;}
+.log-line.log-imp{color:var(--hi);}
+.log-line.log-warn{color:#c07030;}
+.log-line.log-era{color:#b090e0;font-style:italic;}
+.actor-card{background:var(--bg);border:1px solid #3a2a10;border-radius:2px;padding:5px 6px;font-size:.72em;margin-bottom:3px;cursor:pointer;transition:border-color .15s;}
+.actor-card:hover{border-color:var(--hi);}
+.actor-card.sel{border-color:var(--hi);background:var(--panel2);}
+.ac-header{display:flex;align-items:center;gap:5px;margin-bottom:2px;}
+.ac-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.ac-name{color:var(--hi);font-weight:bold;}
+.ac-role{color:#907040;font-size:.9em;}
+.ac-state{color:#7090b0;font-size:.88em;}
+.ac-inv{color:#80a060;font-size:.88em;}
+.ac-apt{display:flex;gap:2px;flex-wrap:wrap;margin-top:3px;}
+.apt-tag{background:#1a1208;border:1px solid #3a2808;border-radius:2px;padding:1px 3px;font-size:.82em;}
+.csite-card{background:var(--bg);border:1px solid #4a3a10;border-radius:2px;padding:5px 6px;font-size:.72em;margin-bottom:4px;}
+.cs-header{display:flex;align-items:center;gap:5px;margin-bottom:3px;}
+.cs-name{color:var(--hi);font-weight:bold;}
+.cs-phase{color:#c07030;font-size:.88em;}
+.cs-res{color:#9a8050;margin-bottom:2px;}
+.progress-bg{background:#1a1208;height:5px;border-radius:2px;margin:3px 0;border:1px solid #3a2808;overflow:hidden;}
+.progress-fill{height:100%;background:#8a6020;border-radius:2px;transition:width .3s;}
+.prio-row{display:flex;align-items:center;gap:5px;padding:3px 0;font-size:.74em;border-bottom:1px solid #1e1508;}
+.prio-label{flex:1;color:#9a8050;}
+.prio-btn{background:#2a1e08;border:1px solid #4a3010;color:var(--text);width:18px;height:18px;cursor:pointer;font-size:.8em;border-radius:2px;display:flex;align-items:center;justify-content:center;}
+.prio-btn:hover{background:#3a2e18;border-color:var(--hi);}
+.prio-val{color:var(--hi);min-width:16px;text-align:center;font-weight:bold;}
+.prio-bar{flex:1;background:#1a1208;height:4px;border-radius:2px;overflow:hidden;}
+.prio-bar-fill{height:100%;background:#8a6020;border-radius:2px;}
+.bld-inv-card{background:var(--bg);border:1px solid #2a2010;border-radius:2px;padding:4px 6px;font-size:.71em;margin-bottom:3px;}
+.bi-header{color:var(--hi);font-weight:bold;margin-bottom:2px;}
+.bi-res{color:#9a8050;display:flex;gap:6px;flex-wrap:wrap;}
+.bi-res span{color:#c0a060;}
+#footer{background:var(--panel);border-top:2px solid var(--earth);padding:4px 12px;font-size:.7em;color:#6a5030;display:flex;gap:12px;align-items:center;}
 </style>
 </head>
 <body>
-
 <div id="header">
   <div id="title">⛰ DAWN OF CIVILIZATION</div>
   <div class="res-bar">
@@ -146,7 +143,6 @@ body { background: var(--bg); color: var(--text); font-family: Georgia, serif;
   <div id="turn-display">Turn 0</div>
   <button id="end-turn-btn" onclick="endTurn()">⏳ End Turn</button>
 </div>
-
 <div id="main">
   <div id="sidebar">
     <div class="sb-section">
@@ -159,767 +155,1155 @@ body { background: var(--bg); color: var(--text); font-family: Georgia, serif;
       <div id="tech-list"></div>
     </div>
   </div>
-
   <div id="map-wrap">
-    <div id="grid"></div>
+    <div id="grid-container">
+      <div id="grid"></div>
+      <canvas id="sim-canvas"></canvas>
+    </div>
   </div>
-
   <div id="info">
-    <div>
-      <h3>Selected Tile</h3>
-      <div id="tile-info"><div class="ti-desc">Click a tile to inspect it.</div></div>
+    <div class="info-tabs">
+      <button class="itab active" id="tab-btn-world" onclick="setInfoTab('world')">World</button>
+      <button class="itab" id="tab-btn-people" onclick="setInfoTab('people')">People</button>
+      <button class="itab" id="tab-btn-build" onclick="setInfoTab('build')">Build</button>
     </div>
-    <div>
-      <h3>People</h3>
-      <div id="pop-panel">
-        <div class="pop-row"><span>Population</span><span id="pop-display" class="neu">3 / 5</span></div>
-        <div class="pop-row"><span>Morale</span><span id="morale-display">50</span></div>
-        <div class="morale-bg"><div class="morale-fill" id="morale-fill" style="width:50%;background:#a08030"></div></div>
-        <div class="pop-row"><span>Food/turn</span><span id="food-balance" class="neu">±0</span></div>
-        <div class="pop-row"><span>Water/turn</span><span id="water-balance" class="neu">±0</span></div>
-        <div class="pop-row"><span>Growth</span><span id="growth-trend" class="neu">Stable</span></div>
+    <div class="tab-content" id="tab-world">
+      <div><h3>Selected</h3><div id="tile-info"><div class="ti-desc">Click a tile to inspect it.</div></div></div>
+      <div><h3>Settlement</h3>
+        <div id="pop-panel">
+          <div class="pop-row"><span>Population</span><span id="pop-display" class="neu">3/5</span></div>
+          <div class="pop-row"><span>Morale</span><span id="morale-display">50</span></div>
+          <div class="morale-bg"><div class="morale-fill" id="morale-fill" style="width:50%;background:#a08030"></div></div>
+          <div class="pop-row"><span>Food/turn</span><span id="food-balance" class="neu">±0</span></div>
+          <div class="pop-row"><span>Water/turn</span><span id="water-balance" class="neu">±0</span></div>
+          <div class="pop-row"><span>Growth</span><span id="growth-trend" class="neu">Stable</span></div>
+        </div>
       </div>
+      <div><h3>Last Turn</h3><div id="turn-summary"><div class="ts-note">Press End Turn to begin.</div></div></div>
+      <div><h3>Event Log</h3><div id="log"></div></div>
     </div>
-    <div>
-      <h3>Last Turn</h3>
-      <div id="turn-summary"><div class="ts-note">Press End Turn to begin.</div></div>
+    <div class="tab-content hidden" id="tab-people">
+      <div><h3>Actors</h3><div id="actor-list"></div></div>
     </div>
-    <div>
-      <h3>Event Log</h3>
-      <div id="log"></div>
+    <div class="tab-content hidden" id="tab-build">
+      <div><h3>Construction</h3><div id="construction-list"></div></div>
+      <div><h3>Priorities</h3><div id="priority-panel"></div></div>
+      <div><h3>Inventories</h3><div id="inv-list"></div></div>
     </div>
   </div>
 </div>
-
 <div id="footer">
-  <span id="footer-hint">Select a building, then click a tile. Press Enter or Space to end turn.</span>
+  <span id="footer-hint">Select a building then click a tile. Keys: 1/2/3 = tabs, Enter = end turn.</span>
 </div>
-
 <script>
-// ── CONSTANTS ─────────────────────────────────────────────────────────────────
-const COLS = 60, ROWS = 40, TILE_PX = 28;
-const TURNS_PER_SEASON = 4;
-const SEASONS = ['Spring','Summer','Autumn','Winter'];
-const VIS_RADIUS = 7;
+// ── CONSTANTS ──────────────────────────────────────────────────────────────────
+const COLS=60,ROWS=40,TP=28;
+const TURNS_PER_SEASON=4;
+const SEASONS=['Spring','Summer','Autumn','Winter'];
+const VIS_RADIUS=7;
+const CW=COLS*TP,CH=ROWS*TP;
 
-// ── DATA ──────────────────────────────────────────────────────────────────────
-const BUILDINGS = {
-  firePit:      { name:'Fire Pit',          icon:'🔥', cost:{wood:8,stone:4},          popCap:0,  prod:{food:3},          effect:'+3 food/turn. Warmth boosts morale.',      moraleBonus:5,  req:[], era:0 },
-  leanTo:       { name:'Lean-to',           icon:'🏕️', cost:{wood:12},                 popCap:3,  prod:{},               effect:'+3 population capacity.',                  req:[], era:0 },
-  huntingCamp:  { name:'Hunting Camp',      icon:'🏹', cost:{wood:15,stone:5},         popCap:0,  prod:{food:8},          effect:'+8 food/turn.',                            req:[], era:0 },
-  foragingPatch:{ name:'Foraging Patch',    icon:'🌿', cost:{wood:5},                  popCap:0,  prod:{food:4,water:2},  effect:'+4 food, +2 water/turn.',                  req:[], era:0 },
-  waterHole:    { name:'Water Hole',        icon:'🪣', cost:{stone:8},                 popCap:0,  prod:{water:6},         effect:'+6 water/turn. Place near river.',         req:[], era:0, nearWater:true },
-  flintKnapping:{ name:'Knapping Site',     icon:'⚒️', cost:{stone:10},                popCap:0,  prod:{stone:3},         effect:'+3 stone/turn. Tools improve all yields.', req:[], era:0 },
-  lumberCamp:   { name:'Lumber Camp',       icon:'🪓', cost:{wood:10,stone:5},         popCap:0,  prod:{wood:8},          effect:'+8 wood/turn. Place on forest tile.',      req:[], era:0, onForest:true },
-  storagePit:   { name:'Storage Pit',       icon:'🏺', cost:{wood:18,stone:12},        popCap:0,  prod:{},               effect:'+100 food, wood & stone cap.',             req:[], era:1 },
-  earthLodge:   { name:'Earthen Lodge',     icon:'🛖', cost:{wood:30,stone:15},        popCap:6,  prod:{},               effect:'+6 population capacity.',                  req:[], era:1 },
-  shrine:       { name:'Sacred Shrine',     icon:'🗿', cost:{stone:35},                popCap:0,  prod:{},               effect:'+20 morale. Spiritual focus.',             moraleBonus:20, req:[], era:1 },
-  mine:         { name:'Stone Mine',        icon:'⛏️', cost:{wood:20,stone:10},        popCap:0,  prod:{stone:8},         effect:'+8 stone/turn. Place on rock tile.',       req:['toolMaking'], era:1, onRock:true },
-  field:        { name:'Cultivated Field',  icon:'🌾', cost:{wood:8,stone:5},          popCap:0,  prod:{food:10},         effect:'+10 food/turn.',                           req:['agriculture'], era:2 },
-  longhouse:    { name:'Longhouse',         icon:'🏠', cost:{wood:50,stone:25},        popCap:10, prod:{},               effect:'+10 population capacity.',                 req:['toolMaking'], era:2 },
-  granary:      { name:'Granary',           icon:'🌽', cost:{wood:35,stone:20},        popCap:0,  prod:{},               effect:'+200 food cap.',                           req:['agriculture'], era:2 },
-  potteryKiln:  { name:'Pottery Kiln',      icon:'🫙', cost:{wood:20,stone:25},        popCap:0,  prod:{water:4,food:2},  effect:'+4 water, +2 food/turn.',                  req:['pottery'], era:2 },
-  palisade:     { name:'Palisade Wall',     icon:'🛡️', cost:{wood:30,stone:20},        popCap:0,  prod:{},               effect:'+10 morale. Protects from raids.',         moraleBonus:10, req:['toolMaking'], era:2 },
-  watchPost:    { name:'Watch Post',        icon:'🏔️', cost:{wood:25,stone:30},        popCap:0,  prod:{},               effect:'+5 morale. Guards your people.',           moraleBonus:5,  req:['toolMaking'], era:2 },
-  pasture:      { name:'Animal Pasture',    icon:'🐂', cost:{wood:20,stone:10},        popCap:0,  prod:{food:12},         effect:'+12 food/turn.',                           req:['animalHusbandry'], era:3 },
-  wellShaft:    { name:'Deep Well',         icon:'💧', cost:{stone:40,wood:15},        popCap:0,  prod:{water:8},         effect:'+8 water/turn. Works in all seasons.',     req:['pottery'], era:3 },
-  market:       { name:'Barter Market',     icon:'🏪', cost:{wood:40,stone:30},        popCap:0,  prod:{},               effect:'+15 morale. Trade hub.',                   moraleBonus:15, req:['pottery','toolMaking'], era:3 },
-  greatHall:    { name:'Great Hall',        icon:'🏛️', cost:{wood:80,stone:60},        popCap:15, prod:{food:5},          effect:'+15 pop cap. +5 food/turn. Civic center.', moraleBonus:10, req:['architecture'], era:4 },
+// ── BUILDINGS ─────────────────────────────────────────────────────────────────
+const BUILDINGS={
+  firePit:      {name:'Fire Pit',        icon:'🔥',cost:{wood:8,stone:4},       popCap:0, prod:{food:3},         effect:'+3 food/turn.',        moraleBonus:5,  req:[],era:0},
+  leanTo:       {name:'Lean-to',         icon:'🏕️',cost:{wood:12},              popCap:3, prod:{},               effect:'+3 pop cap.',           req:[],era:0},
+  huntingCamp:  {name:'Hunting Camp',    icon:'🏹',cost:{wood:15,stone:5},      popCap:0, prod:{food:8},         effect:'+8 food/turn.',         req:[],era:0},
+  foragingPatch:{name:'Foraging Patch',  icon:'🌿',cost:{wood:5},               popCap:0, prod:{food:4,water:2}, effect:'+4 food +2 water/turn.',req:[],era:0},
+  waterHole:    {name:'Water Hole',      icon:'🪣',cost:{stone:8},              popCap:0, prod:{water:6},        effect:'+6 water/turn.',        req:[],era:0,nearWater:true},
+  flintKnapping:{name:'Knapping Site',   icon:'⚒️',cost:{stone:10},             popCap:0, prod:{stone:3},        effect:'+3 stone/turn.',        req:[],era:0},
+  lumberCamp:   {name:'Lumber Camp',     icon:'🪓',cost:{wood:10,stone:5},      popCap:0, prod:{wood:8},         effect:'+8 wood/turn.',         req:[],era:0,onForest:true},
+  storagePit:   {name:'Storage Pit',     icon:'🏺',cost:{wood:18,stone:12},     popCap:0, prod:{},               effect:'+200 cap.',             req:[],era:1},
+  earthLodge:   {name:'Earthen Lodge',   icon:'🛖',cost:{wood:30,stone:15},     popCap:6, prod:{},               effect:'+6 pop cap.',           req:[],era:1},
+  shrine:       {name:'Sacred Shrine',   icon:'🗿',cost:{stone:35},             popCap:0, prod:{},               effect:'+20 morale.',           moraleBonus:20,req:[],era:1},
+  mine:         {name:'Stone Mine',      icon:'⛏️',cost:{wood:20,stone:10},     popCap:0, prod:{stone:8},        effect:'+8 stone/turn.',        req:['toolMaking'],era:1,onRock:true},
+  field:        {name:'Cultivated Field',icon:'🌾',cost:{wood:8,stone:5},       popCap:0, prod:{food:10},        effect:'+10 food/turn.',        req:['agriculture'],era:2},
+  longhouse:    {name:'Longhouse',       icon:'🏠',cost:{wood:50,stone:25},     popCap:10,prod:{},               effect:'+10 pop cap.',          req:['toolMaking'],era:2},
+  granary:      {name:'Granary',         icon:'🌽',cost:{wood:35,stone:20},     popCap:0, prod:{},               effect:'+200 food cap.',        req:['agriculture'],era:2},
+  potteryKiln:  {name:'Pottery Kiln',    icon:'🫙',cost:{wood:20,stone:25},     popCap:0, prod:{water:4,food:2}, effect:'+4 water +2 food/turn.',req:['pottery'],era:2},
+  palisade:     {name:'Palisade Wall',   icon:'🛡️',cost:{wood:30,stone:20},     popCap:0, prod:{},               effect:'+10 morale.',           moraleBonus:10,req:['toolMaking'],era:2},
+  watchPost:    {name:'Watch Post',      icon:'🏔️',cost:{wood:25,stone:30},     popCap:0, prod:{},               effect:'+5 morale.',            moraleBonus:5,req:['toolMaking'],era:2},
+  pasture:      {name:'Animal Pasture',  icon:'🐂',cost:{wood:20,stone:10},     popCap:0, prod:{food:12},        effect:'+12 food/turn.',        req:['animalHusbandry'],era:3},
+  wellShaft:    {name:'Deep Well',       icon:'💧',cost:{stone:40,wood:15},     popCap:0, prod:{water:8},        effect:'+8 water/turn.',        req:['pottery'],era:3},
+  market:       {name:'Barter Market',   icon:'🏪',cost:{wood:40,stone:30},     popCap:0, prod:{},               effect:'+15 morale.',           moraleBonus:15,req:['pottery','toolMaking'],era:3},
+  greatHall:    {name:'Great Hall',      icon:'🏛️',cost:{wood:80,stone:60},     popCap:15,prod:{food:5},         effect:'+15 pop +5 food/turn.', moraleBonus:10,req:['architecture'],era:4},
 };
 
-const TECHS = {
-  toolMaking:     { name:'Tool Making',        icon:'🔧', cost:{stone:20},                   req:[],                           desc:'Stone tools. +15% all production.' },
-  agriculture:    { name:'Agriculture',        icon:'🌾', cost:{food:35,stone:15},            req:['toolMaking'],               desc:'Cultivated fields unlock.' },
-  pottery:        { name:'Pottery',            icon:'🏺', cost:{stone:25},                    req:['toolMaking'],               desc:'Clay vessels for storage.' },
-  animalHusbandry:{ name:'Animal Husbandry',   icon:'🐄', cost:{food:50,stone:10},            req:['agriculture'],              desc:'Domesticate animals. Pastures.' },
-  ritualKnowledge:{ name:'Ritual Knowledge',   icon:'🌀', cost:{stone:30,food:20},            req:['toolMaking'],               desc:'+10% production. +10 morale.' },
-  architecture:   { name:'Early Architecture', icon:'🏛️', cost:{stone:50,wood:30},            req:['toolMaking','pottery'],     desc:'Unlock Great Hall & advanced builds.' },
-  ironWorking:    { name:'Iron Working',       icon:'⚙️', cost:{stone:80,wood:30,food:30},    req:['toolMaking','architecture'], desc:'+25% all production.' },
+const BLD_CAPS={
+  firePit:{food:80,wood:80,stone:80,water:80},
+  storagePit:{food:300,wood:300,stone:200,water:200},
+  granary:{food:500,wood:0,stone:0,water:0},
+  waterHole:{food:0,wood:0,stone:0,water:200},
+  earthLodge:{food:80,wood:80,stone:80,water:80},
+  leanTo:{food:40,wood:40,stone:40,water:40},
+  longhouse:{food:80,wood:80,stone:80,water:80},
+  greatHall:{food:120,wood:120,stone:120,water:120},
 };
+function getBldCap(k){return BLD_CAPS[k]||{food:40,wood:40,stone:40,water:40};}
 
-const ERAS = [
-  { name:'Nomadic Band',             pop:0,   desc:'A small wandering group surviving day to day.' },
-  { name:'Encampment',               pop:5,   desc:'A seasonal camp. Roots are being put down.' },
-  { name:'Hunter-Gatherer Village',  pop:12,  desc:'A true village. Traditions form.' },
-  { name:'Early Settlement',         pop:25,  desc:'Agriculture and crafts emerge.' },
-  { name:'Proto-Town',               pop:45,  desc:'The largest settlement for days around.' },
-  { name:'Ancient Town',             pop:70,  desc:'Civilization is born.' },
-  { name:'Early City',               pop:100, desc:'History begins to be written.' },
+const TECHS={
+  toolMaking:     {name:'Tool Making',        icon:'🔧',cost:{stone:20},                 req:[],                         desc:'Stone tools. +15% all production.'},
+  agriculture:    {name:'Agriculture',        icon:'🌾',cost:{food:35,stone:15},          req:['toolMaking'],             desc:'Cultivated fields unlock.'},
+  pottery:        {name:'Pottery',            icon:'🏺',cost:{stone:25},                  req:['toolMaking'],             desc:'Clay vessels for storage.'},
+  animalHusbandry:{name:'Animal Husbandry',   icon:'🐄',cost:{food:50,stone:10},          req:['agriculture'],            desc:'Domesticate animals.'},
+  ritualKnowledge:{name:'Ritual Knowledge',   icon:'🌀',cost:{stone:30,food:20},          req:['toolMaking'],             desc:'+10% production. +10 morale.'},
+  architecture:   {name:'Early Architecture', icon:'🏛️',cost:{stone:50,wood:30},          req:['toolMaking','pottery'],   desc:'Unlock Great Hall.'},
+  ironWorking:    {name:'Iron Working',       icon:'⚙️',cost:{stone:80,wood:30,food:30},  req:['toolMaking','architecture'],desc:'+25% all production.'},
+};
+const ERAS=[
+  {name:'Nomadic Band',pop:0},{name:'Encampment',pop:5},{name:'Hunter-Gatherer Village',pop:12},
+  {name:'Early Settlement',pop:25},{name:'Proto-Town',pop:45},{name:'Ancient Town',pop:70},{name:'Early City',pop:100},
 ];
+const TYPE_EMOJI={grass:'',plains:'',forest:'🌲',water:'〰️',rock:'🪨',sand:'',mountain:'⛰️'};
+const TILE_DESC={grass:'Open grassland.',plains:'Fertile plains.',forest:'Dense forest. Lumber Camp here.',water:'River or pool.',rock:'Rocky ground. Stone Mine here.',sand:'Sandy shore.',mountain:'Impassable mountains.'};
 
-const TYPE_EMOJI = {
-  grass:'', plains:'', forest:'🌲', water:'〰️', rock:'🪨', sand:'', mountain:'⛰️'
+// ── SIMULATION CONSTANTS ───────────────────────────────────────────────────────
+const ACTOR_NAMES=['Og','Mara','Keth','Thorn','Ash','Bryn','Flin','Grit','Rook','Sera','Veld','Wren','Zara','Dav','Elm','Hern','Broc','Fen'];
+const APT_KEYS=['hunter','builder','forager','shaman','crafter','carrier','generalist'];
+const ROLE_COLOR={hunter:'#e08040',builder:'#c0a060',forager:'#50b060',shaman:'#b060e0',crafter:'#4090e0',carrier:'#e0b030',generalist:'#909090'};
+const ROLE_ICON={hunter:'🏹',builder:'🔨',forager:'🌿',shaman:'🌀',crafter:'⚒️',carrier:'🎒',generalist:'👤'};
+const STATE_LBL={idle:'idle',moving_to_resource:'→ node',gathering:'gathering',moving_to_storage:'→ storage',depositing:'depositing',moving_to_construction:'→ site',delivering_to_construction:'delivering',building:'building',resting:'resting'};
+const RES_ICON={food:'🍖',wood:'🪵',stone:'🪨',water:'💧'};
+
+// ── GAME STATE ─────────────────────────────────────────────────────────────────
+let state={
+  res:{food:0,wood:0,stone:0,water:0,pop:10},
+  cap:{food:200,wood:200,stone:150,water:150,pop:5},
+  techs:{toolMaking:false,agriculture:false,pottery:false,animalHusbandry:false,ritualKnowledge:false,architecture:false,ironWorking:false},
+  grid:[],era:0,turn:0,year:1,season:0,morale:50,starveTurns:0,
+  selected:null,removing:false,events:[],
+  priorities:{food:3,wood:2,stone:2,build:2,culture:1},
 };
 
-const TILE_DESC = {
-  grass:    'Open grassland. Buildable.',
-  plains:   'Fertile plains. Buildable. Passive food bonus.',
-  forest:   'Dense forest. Place Lumber Camp here. Passive wood.',
-  water:    'River or pool. Place Water Hole nearby.',
-  rock:     'Rocky ground. Place Stone Mine here. Passive stone.',
-  sand:     'Sandy shore. Buildable.',
-  mountain: 'Impassable mountains. Cannot build here.',
-};
+let sim={actors:[],nodes:[],sites:[],bldInv:{},nextId:0};
+let tileEls=[];
+let selectedActor=null;
+let infoTab='world';
+let lastTime=0,taskTimer=0,uiTimer=0;
+let usedNames=[];
 
-// ── STATE ─────────────────────────────────────────────────────────────────────
-let state = {
-  res:  { food:50, wood:30, stone:20, water:30, pop:3 },
-  cap:  { food:200, wood:200, stone:150, water:150, pop:5 },
-  techs: { toolMaking:false, agriculture:false, pottery:false,
-           animalHusbandry:false, ritualKnowledge:false, architecture:false, ironWorking:false },
-  grid:     [],
-  era:      0,
-  turn:     0,
-  year:     1,
-  season:   0,
-  morale:   50,
-  starveTurns: 0,
-  selected:  null,
-  removing:  false,
-  events:    [],
-};
+// ── MAP GENERATION ─────────────────────────────────────────────────────────────
+function rng(seed){let s=seed;return()=>{s=(s*1664525+1013904223)&0xffffffff;return(s>>>0)/0xffffffff;};}
 
-let tileEls = [];
-
-// ── MAP GENERATION ────────────────────────────────────────────────────────────
-function rng(seed) {
-  let s = seed;
-  return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
-}
-
-function generateMap() {
-  const rand = rng(Date.now() & 0xffff);
-  const grid = [];
-  for (let i = 0; i < COLS * ROWS; i++) {
-    grid.push({ type: rand() < 0.35 ? 'plains' : 'grass', building: null, id: i, explored: false });
+function generateMap(){
+  const rand=rng(Date.now()&0xffff);
+  const grid=[];
+  for(let i=0;i<COLS*ROWS;i++) grid.push({type:rand()<0.35?'plains':'grass',building:null,constrSiteId:null,id:i,explored:false});
+  for(let x=0;x<COLS;x++){
+    const h=1+Math.floor(rand()*2);for(let y=0;y<h;y++) grid[y*COLS+x].type='mountain';
+    const hS=1+Math.floor(rand()*2);for(let y=ROWS-hS;y<ROWS;y++) grid[y*COLS+x].type='mountain';
   }
-
-  // Mountain border (thin, irregular)
-  for (let x = 0; x < COLS; x++) {
-    const h = 1 + Math.floor(rand() * 2);
-    for (let y = 0; y < h; y++) grid[y*COLS+x].type = 'mountain';
-    const hS = 1 + Math.floor(rand() * 2);
-    for (let y = ROWS - hS; y < ROWS; y++) grid[y*COLS+x].type = 'mountain';
+  for(let y=0;y<ROWS;y++){
+    const w=Math.floor(rand()*2);for(let x=0;x<w;x++) grid[y*COLS+x].type='mountain';
+    const wE=Math.floor(rand()*2);for(let x=COLS-wE;x<COLS;x++) grid[y*COLS+x].type='mountain';
   }
-  for (let y = 0; y < ROWS; y++) {
-    const w = Math.floor(rand() * 2);
-    for (let x = 0; x < w; x++) grid[y*COLS+x].type = 'mountain';
-    const wE = Math.floor(rand() * 2);
-    for (let x = COLS - wE; x < COLS; x++) grid[y*COLS+x].type = 'mountain';
+  const mC=Array.from({length:5},()=>({cx:5+Math.floor(rand()*(COLS-10)),cy:3+Math.floor(rand()*(ROWS-6)),r:1+Math.floor(rand()*3)}));
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    const t=grid[y*COLS+x];if(t.type!=='grass'&&t.type!=='plains') continue;
+    for(const m of mC) if(Math.abs(x-m.cx)+Math.abs(y-m.cy)<=m.r&&rand()>0.3){t.type='mountain';break;}
   }
-
-  // Interior mountain clusters
-  const mC = Array.from({length:5}, () => ({
-    cx: 5+Math.floor(rand()*(COLS-10)), cy: 3+Math.floor(rand()*(ROWS-6)), r: 1+Math.floor(rand()*3)
-  }));
-  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
-    const t = grid[y*COLS+x];
-    if (t.type !== 'grass' && t.type !== 'plains') continue;
-    for (const m of mC) {
-      if (Math.abs(x-m.cx)+Math.abs(y-m.cy) <= m.r && rand() > 0.3) { t.type='mountain'; break; }
-    }
-  }
-
-  // 2–3 rivers (wiggly vertical)
-  const numRivers = 2 + Math.floor(rand());
-  const usedX = [];
-  for (let ri = 0; ri < numRivers; ri++) {
-    let rx = Math.floor(COLS * (0.15 + rand() * 0.7));
-    let tries = 0;
-    while (usedX.some(u => Math.abs(u - rx) < 10) && tries++ < 20)
-      rx = Math.floor(COLS * (0.1 + rand() * 0.8));
+  const usedX=[];
+  for(let ri=0;ri<2+Math.floor(rand());ri++){
+    let rx=Math.floor(COLS*(0.15+rand()*0.7)),tries=0;
+    while(usedX.some(u=>Math.abs(u-rx)<10)&&tries++<20) rx=Math.floor(COLS*(0.1+rand()*0.8));
     usedX.push(rx);
-    for (let y = 0; y < ROWS; y++) {
-      rx = Math.max(2, Math.min(COLS-3, rx + Math.floor(rand()*3)-1));
-      for (let dx = -1; dx <= 1; dx++)
-        if (rx+dx >= 0 && rx+dx < COLS) grid[y*COLS+(rx+dx)].type = 'water';
-      if (rx-2 >= 0 && grid[y*COLS+(rx-2)].type !== 'water') grid[y*COLS+(rx-2)].type = 'sand';
-      if (rx+2 < COLS && grid[y*COLS+(rx+2)].type !== 'water') grid[y*COLS+(rx+2)].type = 'sand';
+    for(let y=0;y<ROWS;y++){
+      rx=Math.max(2,Math.min(COLS-3,rx+Math.floor(rand()*3)-1));
+      for(let dx=-1;dx<=1;dx++) if(rx+dx>=0&&rx+dx<COLS) grid[y*COLS+(rx+dx)].type='water';
+      if(rx-2>=0&&grid[y*COLS+(rx-2)].type!=='water') grid[y*COLS+(rx-2)].type='sand';
+      if(rx+2<COLS&&grid[y*COLS+(rx+2)].type!=='water') grid[y*COLS+(rx+2)].type='sand';
     }
   }
-
-  // Forest clusters (15)
-  const fC = Array.from({length:15}, () => ({
-    cx: Math.floor(rand()*COLS), cy: Math.floor(rand()*ROWS), r: 2+Math.floor(rand()*4)
-  }));
-  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
-    const t = grid[y*COLS+x];
-    if (t.type !== 'grass' && t.type !== 'plains') continue;
-    for (const f of fC) {
-      if (Math.abs(x-f.cx)+Math.abs(y-f.cy) <= f.r && rand() > 0.25) { t.type='forest'; break; }
-    }
+  const fC=Array.from({length:15},()=>({cx:Math.floor(rand()*COLS),cy:Math.floor(rand()*ROWS),r:2+Math.floor(rand()*4)}));
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    const t=grid[y*COLS+x];if(t.type!=='grass'&&t.type!=='plains') continue;
+    for(const f of fC) if(Math.abs(x-f.cx)+Math.abs(y-f.cy)<=f.r&&rand()>0.25){t.type='forest';break;}
   }
-
-  // Rock outcrops (10)
-  const rC = Array.from({length:10}, () => ({
-    cx: Math.floor(rand()*COLS), cy: Math.floor(rand()*ROWS)
-  }));
-  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
-    const t = grid[y*COLS+x];
-    if (t.type !== 'grass' && t.type !== 'plains') continue;
-    for (const c of rC) {
-      if (Math.abs(x-c.cx)+Math.abs(y-c.cy) <= 2 && rand() > 0.35) { t.type='rock'; break; }
-    }
+  const rC=Array.from({length:10},()=>({cx:Math.floor(rand()*COLS),cy:Math.floor(rand()*ROWS)}));
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    const t=grid[y*COLS+x];if(t.type!=='grass'&&t.type!=='plains') continue;
+    for(const c of rC) if(Math.abs(x-c.cx)+Math.abs(y-c.cy)<=2&&rand()>0.35){t.type='rock';break;}
   }
-
   return grid;
 }
 
-// ── VISIBILITY ────────────────────────────────────────────────────────────────
-function updateVisibility() {
-  for (const tile of state.grid) {
-    if (!tile.building) continue;
-    const tx = tile.id % COLS, ty = Math.floor(tile.id / COLS);
-    for (let dy = -VIS_RADIUS; dy <= VIS_RADIUS; dy++) {
-      for (let dx = -VIS_RADIUS; dx <= VIS_RADIUS; dx++) {
-        if (Math.abs(dx) + Math.abs(dy) > VIS_RADIUS) continue;
-        const nx = tx+dx, ny = ty+dy;
-        if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS)
-          state.grid[ny*COLS+nx].explored = true;
-      }
+function updateVisibility(){
+  for(const tile of state.grid){
+    if(!tile.building&&!tile.constrSiteId) continue;
+    const tx=tile.id%COLS,ty=Math.floor(tile.id/COLS);
+    for(let dy=-VIS_RADIUS;dy<=VIS_RADIUS;dy++) for(let dx=-VIS_RADIUS;dx<=VIS_RADIUS;dx++){
+      if(Math.abs(dx)+Math.abs(dy)>VIS_RADIUS) continue;
+      const nx=tx+dx,ny=ty+dy;
+      if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS) state.grid[ny*COLS+nx].explored=true;
     }
   }
 }
 
-// ── PRODUCTION & MORALE ───────────────────────────────────────────────────────
-function computeMorale() {
-  let m = 50;
-  for (const tile of state.grid)
-    if (tile.building) m += BUILDINGS[tile.building].moraleBonus || 0;
+// ── RESOURCE NODES ─────────────────────────────────────────────────────────────
+function placeResourceNodes(){
+  sim.nodes=[];
+  const rand=rng((Date.now()*31)&0xffff);
+  const startTile=state.grid.find(t=>t.building==='firePit');
+  if(!startTile) return;
+  const sx=startTile.id%COLS,sy=Math.floor(startTile.id/COLS);
 
-  const foodDays = state.res.pop > 0 ? state.res.food / (state.res.pop * 2) : 10;
-  if (foodDays > 5) m += 15;
-  else if (foodDays > 2) m += 5;
-  else if (foodDays < 1) m -= 25;
-  else if (foodDays < 2) m -= 10;
-
-  const waterDays = state.res.pop > 0 ? state.res.water / state.res.pop : 10;
-  if (waterDays > 5) m += 10;
-  else if (waterDays < 1) m -= 15;
-
-  if (state.res.pop >= state.cap.pop)           m -= 20;
-  else if (state.res.pop >= state.cap.pop * 0.9) m -= 10;
-
-  if (state.season === 3) m -= 15;
-  if (state.season === 1) m += 8;
-  if (state.techs.ritualKnowledge) m += 10;
-  if (state.techs.architecture)    m += 5;
-
-  return Math.max(0, Math.min(100, m));
-}
-
-function productionMultiplier() {
-  let m = 0.5 + (state.morale / 100); // 0.5 at 0 morale, 1.5 at 100
-  if (state.techs.toolMaking)      m += 0.15;
-  if (state.techs.ritualKnowledge) m += 0.10;
-  if (state.techs.ironWorking)     m += 0.25;
-  if (state.season === 3)          m -= 0.20;
-  if (state.season === 1)          m += 0.10;
-  return Math.max(0.3, m);
-}
-
-function computeProduction() {
-  const delta = { food:0, wood:0, stone:0, water:0 };
-  const mult = productionMultiplier();
-
-  for (const tile of state.grid) {
-    if (!tile.building) continue;
-    for (const [res, val] of Object.entries(BUILDINGS[tile.building].prod || {}))
-      delta[res] = (delta[res]||0) + val * mult;
-  }
-
-  // Base gathering by population
-  if (state.res.pop > 0) {
-    delta.food  += state.res.pop * 2;
-    delta.water += state.res.pop * 1;
-    delta.wood  += 2;
-    delta.stone += 1;
-  }
-
-  // Passive terrain bonuses from explored tiles
-  let forests = 0, rocks = 0, plains = 0;
-  for (const t of state.grid) {
-    if (!t.explored || t.building) continue;
-    if (t.type === 'forest') forests++;
-    else if (t.type === 'rock') rocks++;
-    else if (t.type === 'plains') plains++;
-  }
-  delta.wood  += Math.min(forests * 0.25, 15);
-  delta.stone += Math.min(rocks   * 0.18, 8);
-  delta.food  += Math.min(plains  * 0.12, 10);
-
-  return delta;
-}
-
-function computePopCap() {
-  let cap = 5;
-  for (const tile of state.grid)
-    if (tile.building) cap += BUILDINGS[tile.building].popCap || 0;
-  return cap;
-}
-
-function computeStorageCaps() {
-  let food=200, wood=200, stone=150, water=150;
-  for (const tile of state.grid) {
-    if (tile.building === 'storagePit') { food+=100; wood+=100; stone+=75; water+=75; }
-    if (tile.building === 'granary')    { food+=200; }
-    if (tile.building === 'wellShaft')  { water+=100; }
-  }
-  return { food, wood, stone, water };
-}
-
-// ── END TURN ──────────────────────────────────────────────────────────────────
-function endTurn() {
-  state.turn++;
-
-  const prev = { ...state.res };
-  const summary = { food:0, wood:0, stone:0, water:0, pop:0, events:[] };
-
-  state.cap = { ...computeStorageCaps(), pop: computePopCap() };
-
-  const prod = computeProduction();
-  for (const r of ['food','wood','stone','water'])
-    state.res[r] = Math.min(state.cap[r], Math.max(0, state.res[r] + prod[r]));
-
-  // Population consumption
-  const foodEaten  = state.res.pop * 2;
-  const waterDrank = state.res.pop * 1;
-  state.res.food  = Math.max(0, state.res.food  - foodEaten);
-  state.res.water = Math.max(0, state.res.water - waterDrank);
-
-  for (const r of ['food','wood','stone','water'])
-    summary[r] = state.res[r] - prev[r];
-
-  state.morale = computeMorale();
-
-  // Population growth / decline (every 4 turns)
-  if (state.turn % 4 === 0) {
-    const starving    = state.res.food  < state.res.pop * 2;
-    const dehydrated  = state.res.water < state.res.pop;
-    const hasRoom     = state.res.pop   < state.cap.pop;
-    const content     = state.morale    >= 40;
-
-    if (!starving && !dehydrated && hasRoom && content) {
-      state.starveTurns = 0;
-      const chance = 0.25 + (state.morale - 40) / 200;
-      if (Math.random() < chance) {
-        state.res.pop++;
-        summary.pop = 1;
-        summary.events.push({ msg:'Your band grows — a new member arrives!', cls:'imp' });
-      }
-    } else if ((starving || dehydrated) && state.res.pop > 1) {
-      state.starveTurns++;
-      if (state.starveTurns >= 2) {
-        state.res.pop = Math.max(1, state.res.pop - 1);
-        state.starveTurns = 0;
-        summary.pop = -1;
-        summary.events.push({ msg:'Hardship claims a life. Secure food and water!', cls:'warn' });
-      } else {
-        summary.events.push({ msg:'Your people are hungry and thirsty!', cls:'warn' });
-      }
-    } else {
-      state.starveTurns = 0;
-    }
-  }
-
-  // Season advance
-  if (state.turn % TURNS_PER_SEASON === 0) {
-    state.season = (state.season + 1) % 4;
-    if (state.season === 0) {
-      state.year++;
-      summary.events.push({ msg:`Year ${state.year} begins.`, cls:'era' });
-    }
-    if (state.season === 3) summary.events.push({ msg:'Winter descends. Production falls.', cls:'warn' });
-    if (state.season === 1) summary.events.push({ msg:'Summer — the land is generous.', cls:'imp' });
-    document.getElementById('season-tag').textContent = `${SEASONS[state.season]} · Year ${state.year}`;
-  }
-
-  // Random event (28% per turn)
-  if (Math.random() < 0.28) {
-    const ev = randomEvent();
-    if (ev) summary.events.push(ev);
-  }
-
-  checkEra();
-  updateVisibility();
-
-  document.getElementById('turn-display').textContent = `Turn ${state.turn}`;
-
-  renderResources();
-  renderSidebar();
-  updateAllTiles();
-  showTurnSummary(summary, prod);
-
-  for (const ev of summary.events) addLog(ev.msg, ev.cls);
-}
-
-function randomEvent() {
-  const pop = state.res.pop;
-  const events = [
-    { w:3, msg:'Hunters return with a great catch!',         fn:()=>{ state.res.food  = Math.min(state.cap.food,  state.res.food +30); }, cls:'imp' },
-    { w:3, msg:'Children find a flint-rich outcrop.',        fn:()=>{ state.res.stone = Math.min(state.cap.stone, state.res.stone+20); }, cls:'imp' },
-    { w:2, msg:'Heavy rains replenish the water holes.',     fn:()=>{ state.res.water = Math.min(state.cap.water, state.res.water+35); }, cls:'imp' },
-    { w:2, msg:'Fallen trees yield good timber.',            fn:()=>{ state.res.wood  = Math.min(state.cap.wood,  state.res.wood +25); }, cls:'imp' },
-    { w:1, msg:'A cold snap spoils stored food!',            fn:()=>{ state.res.food  = Math.max(0, state.res.food -25); }, cls:'warn' },
-    { w:1, msg:'A wildfire destroys wood stores!',           fn:()=>{ state.res.wood  = Math.max(0, state.res.wood -20); }, cls:'warn' },
-    { w:1, msg:'Rich vein of stone discovered!',             fn:()=>{ state.res.stone = Math.min(state.cap.stone, state.res.stone+25); }, cls:'imp' },
-    { w:pop>8  ? 2:0, msg:'Wanderers join your settlement!', fn:()=>{ if(state.res.pop<state.cap.pop) state.res.pop++; }, cls:'imp' },
-    { w:pop>15 ? 1:0, msg:'Raiders steal food from storage!',fn:()=>{ state.res.food  = Math.max(0, state.res.food -30); }, cls:'warn' },
-    { w:pop>20 ? 1:0, msg:'Disease spreads through the camp!',fn:()=>{ if(state.res.pop>2) state.res.pop--; }, cls:'warn' },
+  // Force-place nodes near start so actors have work immediately
+  const nearSlots=[
+    {dx:3,dy:0,type:'wood'},{dx:-3,dy:1,type:'wood'},
+    {dx:0,dy:3,type:'food'},{dx:-2,dy:-3,type:'food'},{dx:4,dy:2,type:'food'},
+    {dx:2,dy:-3,type:'stone'},{dx:-4,dy:0,type:'stone'},
+    {dx:1,dy:4,type:'water'},{dx:-1,dy:-4,type:'water'},
+    {dx:5,dy:-2,type:'wood'},{dx:-5,dy:3,type:'food'},{dx:6,dy:1,type:'stone'},
   ];
-  const pool = events.filter(e => e.w > 0);
-  const total = pool.reduce((s,e) => s+e.w, 0);
-  let r = Math.random() * total;
-  for (const e of pool) {
-    r -= e.w;
-    if (r <= 0) { e.fn(); return { msg:e.msg, cls:e.cls }; }
+  const usedTiles=new Set([startTile.id]);
+  for(const slot of nearSlots){
+    const nx=Math.max(1,Math.min(COLS-2,sx+slot.dx)),ny=Math.max(1,Math.min(ROWS-2,sy+slot.dy));
+    const tileId=ny*COLS+nx;
+    if(usedTiles.has(tileId)) continue;
+    const tile=state.grid[tileId];
+    if(tile.type==='mountain') continue;
+    usedTiles.add(tileId);
+    tile.explored=true;
+    const amt=slot.type==='water'?250:slot.type==='food'?130:180;
+    sim.nodes.push({
+      id:sim.nextId++,tileId,type:slot.type,
+      tileX:nx,tileY:ny,px:nx*TP+TP/2,py:ny*TP+TP/2,
+      amount:amt,maxAmount:amt,gatherRate:1,
+      maxWorkers:slot.type==='water'?3:4,assignedActors:[],depleted:false
+    });
   }
+
+  // Scatter additional nodes across explored region
+  const types={wood:0,stone:0,food:0,water:0};
+  const targets={wood:5,stone:4,food:6,water:3};
+  const cands=[];
+  for(let y=1;y<ROWS-1;y++) for(let x=1;x<COLS-1;x++){
+    const t=state.grid[y*COLS+x];
+    if(!t.explored||usedTiles.has(t.id)) continue;
+    if(t.type==='forest') cands.push({tileId:t.id,type:'wood',x,y});
+    else if(t.type==='rock') cands.push({tileId:t.id,type:'stone',x,y});
+    else if(t.type==='water') cands.push({tileId:t.id,type:'water',x,y});
+    else if(t.type==='plains'||t.type==='grass') cands.push({tileId:t.id,type:'food',x,y});
+  }
+  for(let i=cands.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[cands[i],cands[j]]=[cands[j],cands[i]];}
+  for(const c of cands){
+    if((types[c.type]||0)>=targets[c.type]) continue;
+    let close=false;
+    for(const n of sim.nodes){if(Math.abs(n.tileX-c.x)+Math.abs(n.tileY-c.y)<5){close=true;break;}}
+    if(close||usedTiles.has(c.tileId)) continue;
+    usedTiles.add(c.tileId);
+    const amt=c.type==='water'?250:c.type==='food'?130:180;
+    sim.nodes.push({
+      id:sim.nextId++,tileId:c.tileId,type:c.type,
+      tileX:c.x,tileY:c.y,px:c.x*TP+TP/2,py:c.y*TP+TP/2,
+      amount:amt,maxAmount:amt,gatherRate:1,
+      maxWorkers:c.type==='water'?3:4,assignedActors:[],depleted:false
+    });
+    types[c.type]=(types[c.type]||0)+1;
+  }
+}
+
+// ── APTITUDES ──────────────────────────────────────────────────────────────────
+function genApt(force){
+  const apt={};
+  for(const k of APT_KEYS) apt[k]=10+Math.floor(Math.random()*55);
+  const dom=force||APT_KEYS[Math.floor(Math.random()*APT_KEYS.length)];
+  apt[dom]=55+Math.floor(Math.random()*40);
+  return apt;
+}
+function domApt(apt){let b=APT_KEYS[0],bv=0;for(const k of APT_KEYS) if(apt[k]>bv){bv=apt[k];b=k;}return b;}
+
+// ── ACTOR CLASS ────────────────────────────────────────────────────────────────
+class Actor{
+  constructor(id,name,px,py){
+    this.id=id;this.name=name;this.px=px;this.py=py;this.tx=px;this.ty=py;
+    this.apt=genApt();this.dominant=domApt(this.apt);
+    this.state='idle';this.task=null;
+    this.inv={type:null,amount:0,capacity:8};
+    this.speed=36+Math.random()*16;
+    this.timer=0;this.restTimer=0;
+    this.color=ROLE_COLOR[this.dominant];
+    this.idleX=px;this.idleY=py;
+  }
+  get stateLabel(){return STATE_LBL[this.state]||this.state;}
+  get carrying(){return this.inv.amount>0?`${this.inv.type}×${this.inv.amount.toFixed(1)}`:'—';}
+  aptB(role){return(this.apt[role]||0)/100;}
+  dist(px,py){const dx=px-this.px,dy=py-this.py;return Math.sqrt(dx*dx+dy*dy);}
+  move(px,py,dt){
+    const dx=px-this.px,dy=py-this.py,d=Math.sqrt(dx*dx+dy*dy);
+    if(d<2){this.px=px;this.py=py;return true;}
+    const s=this.speed*dt;
+    this.px+=dx/d*Math.min(s,d);this.py+=dy/d*Math.min(s,d);
+    return false;
+  }
+}
+
+// ── BUILDING INVENTORIES ───────────────────────────────────────────────────────
+function initInv(tileId,bldKey,init){
+  const cap=getBldCap(bldKey);
+  sim.bldInv[tileId]={food:0,wood:0,stone:0,water:0,cap,bldKey};
+  if(init) for(const [k,v] of Object.entries(init)) sim.bldInv[tileId][k]=Math.min(v,cap[k]||999);
+}
+
+function storageBlds(){
+  return Object.entries(sim.bldInv)
+    .map(([id,inv])=>({tileId:+id,inv,tile:state.grid[+id]}))
+    .filter(b=>b.tile&&b.tile.building);
+}
+
+function nearestStorage(px,py,resType){
+  let best=null,bestD=999999;
+  for(const sb of storageBlds()){
+    if(resType&&(sb.inv.cap[resType]||0)===0) continue;
+    const tx=(sb.tileId%COLS)*TP+TP/2,ty=Math.floor(sb.tileId/COLS)*TP+TP/2;
+    const d=Math.abs(px-tx)+Math.abs(py-ty);
+    if(d<bestD){bestD=d;best=sb;}
+  }
+  return best;
+}
+
+function deposit(tileId,res,amt){
+  const inv=sim.bldInv[tileId];if(!inv) return 0;
+  const space=Math.max(0,(inv.cap[res]||0)-inv[res]);
+  const got=Math.min(amt,space);inv[res]+=got;return got;
+}
+
+function withdraw(tileId,res,amt){
+  const inv=sim.bldInv[tileId];if(!inv) return 0;
+  const got=Math.min(amt,inv[res]||0);inv[res]-=got;return got;
+}
+
+function totalRes(res){
+  let t=0;
+  for(const inv of Object.values(sim.bldInv)) t+=inv[res]||0;
+  for(const a of sim.actors) if(a.inv.type===res) t+=a.inv.amount;
+  return t;
+}
+
+function totalCap(res){
+  let t=0;
+  for(const inv of Object.values(sim.bldInv)) t+=inv.cap[res]||0;
+  return Math.max(t,50);
+}
+
+function consumeRes(res,amt){
+  let rem=amt;
+  for(const tid of Object.keys(sim.bldInv)){
+    if(rem<=0) break;
+    const t=Math.min(sim.bldInv[tid][res]||0,rem);
+    sim.bldInv[tid][res]-=t;rem-=t;
+  }
+}
+
+// ── CONSTRUCTION SITES ──────────────────────────────────────────────────────────
+function createSite(tileId,bldKey){
+  const b=BUILDINGS[bldKey];
+  const tx=tileId%COLS,ty=Math.floor(tileId/COLS);
+  const site={
+    id:sim.nextId++,tileId,bldKey,
+    px:tx*TP+TP/2,py:ty*TP+TP/2,
+    required:{...b.cost},delivered:{},
+    progress:0,complete:false,
+    assignedBuilders:[],assignedCarriers:[],
+  };
+  for(const k of Object.keys(b.cost)) site.delivered[k]=0;
+  sim.sites.push(site);
+  state.grid[tileId].constrSiteId=site.id;
+  updateTile(state.grid[tileId]);
+  addLog(`Construction started: ${b.name}.`,'imp');
+  return site;
+}
+
+function siteNeedsRes(site){
+  for(const [k,v] of Object.entries(site.required)) if((site.delivered[k]||0)<v) return k;
+  return null;
+}
+function siteMet(site){return Object.keys(site.required).every(k=>(site.delivered[k]||0)>=site.required[k]);}
+
+// ── TASK MANAGER ──────────────────────────────────────────────────────────────
+function urgency(res){
+  const total=totalRes(res),thresh={food:30,wood:20,stone:20,water:25}[res]||15;
+  const p=state.priorities[res]||2;
+  if(total<thresh*0.3) return 5+p;
+  if(total<thresh) return 2+p;
+  return p-1;
+}
+
+function nodeScore(actor,node){
+  if(node.depleted||node.assignedActors.length>=node.maxWorkers) return -1;
+  const aptMap={wood:'forager',stone:'forager',food:actor.apt.hunter>actor.apt.forager?'hunter':'forager',water:'forager'};
+  return actor.aptB(aptMap[node.type]||'generalist')*35+urgency(node.type)*25-actor.dist(node.px,node.py)*0.015+(node.amount/node.maxAmount)*8;
+}
+
+function assignTasks(){
+  for(const actor of sim.actors){
+    if(actor.state!=='idle'&&actor.state!=='resting') continue;
+    if(actor.restTimer>0) continue;
+
+    // 1. Deliver resources to construction site
+    let assigned=false;
+    for(const site of sim.sites){
+      if(site.complete) continue;
+      const need=siteNeedsRes(site);if(!need) continue;
+      const needed=(site.required[need]||0)-(site.delivered[need]||0);if(needed<=0) continue;
+      if(site.assignedCarriers.filter(id=>id===actor.id).length>0) continue;
+      const stor=nearestStorage(actor.px,actor.py,need);
+      if(!stor||(stor.inv[need]||0)<1) continue;
+      const carry=Math.min(needed,actor.inv.capacity,stor.inv[need]);
+      if(carry<=0) continue;
+      site.assignedCarriers.push(actor.id);
+      actor.task={type:'pickup_for_site',siteId:site.id,resType:need,amount:carry,storageTileId:stor.tileId};
+      actor.state='moving_to_storage';
+      actor.tx=(stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(stor.tileId/COLS)*TP+TP/2;
+      assigned=true;break;
+    }
+    if(assigned) continue;
+
+    // 2. Build at site with resources delivered
+    for(const site of sim.sites){
+      if(site.complete||!siteMet(site)) continue;
+      if(site.assignedBuilders.length>=2) continue;
+      if(actor.apt.builder<15&&site.assignedBuilders.length>0) continue;
+      site.assignedBuilders.push(actor.id);
+      actor.task={type:'build',siteId:site.id};
+      actor.state='moving_to_construction';
+      actor.tx=site.px;actor.ty=site.py;
+      assigned=true;break;
+    }
+    if(assigned) continue;
+
+    // 3. Gather from node
+    let bestNode=null,bestScore=-999;
+    for(const node of sim.nodes){
+      const s=nodeScore(actor,node);
+      if(s>bestScore){bestScore=s;bestNode=node;}
+    }
+    if(bestNode&&bestScore>0){
+      bestNode.assignedActors.push(actor.id);
+      actor.task={type:'gather',nodeId:bestNode.id,resType:bestNode.type};
+      actor.state='moving_to_resource';
+      actor.tx=bestNode.px;actor.ty=bestNode.py;
+    }
+  }
+}
+
+// ── SIMULATION UPDATE ──────────────────────────────────────────────────────────
+function clearTask(actor){
+  if(actor.task){
+    const nid=actor.task.nodeId;
+    if(nid!=null){const n=sim.nodes.find(n=>n.id===nid);if(n) n.assignedActors=n.assignedActors.filter(i=>i!==actor.id);}
+    const sid=actor.task.siteId;
+    if(sid!=null){
+      const s=sim.sites.find(s=>s.id===sid);
+      if(s){s.assignedBuilders=s.assignedBuilders.filter(i=>i!==actor.id);s.assignedCarriers=s.assignedCarriers.filter(i=>i!==actor.id);}
+    }
+  }
+  actor.task=null;actor.state='idle';actor.restTimer=0.4+Math.random()*0.6;
+}
+
+function gatherDur(actor,node){return Math.max(0.7,2.4-actor.apt.forager*0.013);}
+
+function updateActors(dt){
+  for(const actor of sim.actors){
+    if(actor.restTimer>0){actor.restTimer-=dt;if(actor.restTimer<=0){actor.restTimer=0;actor.state='idle';}continue;}
+
+    switch(actor.state){
+      case 'idle':
+        actor.timer-=dt;
+        if(actor.timer<=0){
+          actor.timer=1+Math.random()*2;
+          actor.tx=actor.idleX+(Math.random()-0.5)*44;
+          actor.ty=actor.idleY+(Math.random()-0.5)*44;
+          actor.tx=Math.max(TP,Math.min(CW-TP,actor.tx));
+          actor.ty=Math.max(TP,Math.min(CH-TP,actor.ty));
+        }
+        actor.move(actor.tx,actor.ty,dt);
+        break;
+
+      case 'moving_to_resource':{
+        const node=sim.nodes.find(n=>n.id===actor.task?.nodeId);
+        if(!node||node.depleted){clearTask(actor);break;}
+        if(actor.move(node.px,node.py,dt)){actor.state='gathering';actor.timer=gatherDur(actor,node);}
+        break;
+      }
+
+      case 'gathering':{
+        const node=sim.nodes.find(n=>n.id===actor.task?.nodeId);
+        if(!node){clearTask(actor);break;}
+        actor.timer-=dt;
+        if(actor.timer<=0){
+          const rate=node.gatherRate*(1+actor.aptB('forager')*0.5);
+          const g=Math.min(rate,node.amount,actor.inv.capacity-actor.inv.amount);
+          if(g>0){
+            node.amount=Math.max(0,node.amount-g);
+            actor.inv.type=node.type;actor.inv.amount+=g;
+          }
+          if(node.amount<=0) node.depleted=true;
+          if(actor.inv.amount>=actor.inv.capacity*0.88||node.depleted){
+            node.assignedActors=node.assignedActors.filter(i=>i!==actor.id);
+            const stor=nearestStorage(actor.px,actor.py,actor.inv.type);
+            if(stor){
+              actor.state='moving_to_storage';
+              actor.tx=(stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(stor.tileId/COLS)*TP+TP/2;
+              actor.task={...actor.task,storageTileId:stor.tileId};
+            } else {clearTask(actor);}
+          } else {actor.timer=gatherDur(actor,node);}
+        }
+        break;
+      }
+
+      case 'moving_to_storage':{
+        const stid=actor.task?.storageTileId;
+        if(stid==null){clearTask(actor);break;}
+        const sx=(stid%COLS)*TP+TP/2,sy=Math.floor(stid/COLS)*TP+TP/2;
+        if(actor.move(sx,sy,dt)){actor.state='depositing';actor.timer=0.5;}
+        break;
+      }
+
+      case 'depositing':{
+        actor.timer-=dt;
+        if(actor.timer<=0){
+          const stid=actor.task?.storageTileId;
+          if(stid!=null&&actor.inv.type&&actor.inv.amount>0){
+            const dep=deposit(stid,actor.inv.type,actor.inv.amount);
+            actor.inv.amount=Math.max(0,actor.inv.amount-dep);
+            if(actor.inv.amount<=0) actor.inv.type=null;
+          }
+          if(actor.task?.type==='pickup_for_site'){
+            // Now pick up from storage to carry to site
+            const stid2=actor.task.storageTileId;
+            const res=actor.task.resType;
+            const avail=sim.bldInv[stid2]?.[res]||0;
+            const take=Math.min(actor.task.amount,actor.inv.capacity,avail);
+            if(take>0){
+              withdraw(stid2,res,take);
+              actor.inv.type=res;actor.inv.amount=take;
+              const site=sim.sites.find(s=>s.id===actor.task.siteId);
+              if(site){actor.state='moving_to_construction';actor.tx=site.px;actor.ty=site.py;}
+              else{clearTask(actor);}
+            } else {clearTask(actor);}
+            break;
+          }
+          // Resume gathering?
+          const node=sim.nodes.find(n=>n.id===actor.task?.nodeId);
+          if(node&&!node.depleted&&actor.inv.amount===0){
+            actor.state='moving_to_resource';actor.tx=node.px;actor.ty=node.py;
+            node.assignedActors.push(actor.id);
+          } else {clearTask(actor);}
+        }
+        break;
+      }
+
+      case 'moving_to_construction':{
+        const site=sim.sites.find(s=>s.id===actor.task?.siteId);
+        if(!site){clearTask(actor);break;}
+        if(actor.move(site.px,site.py,dt)){
+          if(actor.task?.type==='pickup_for_site'){actor.state='delivering_to_construction';actor.timer=0.6;}
+          else{actor.state='building';actor.timer=0;}
+        }
+        break;
+      }
+
+      case 'delivering_to_construction':{
+        actor.timer-=dt;
+        if(actor.timer<=0){
+          const site=sim.sites.find(s=>s.id===actor.task?.siteId);
+          if(site&&actor.inv.type&&actor.inv.amount>0){
+            const res=actor.inv.type;
+            const need=Math.max(0,(site.required[res]||0)-(site.delivered[res]||0));
+            const del=Math.min(actor.inv.amount,need);
+            site.delivered[res]=(site.delivered[res]||0)+del;
+            actor.inv.amount-=del;if(actor.inv.amount<=0) actor.inv.type=null;
+            site.assignedCarriers=site.assignedCarriers.filter(i=>i!==actor.id);
+          }
+          clearTask(actor);
+        }
+        break;
+      }
+
+      case 'building':{
+        const site=sim.sites.find(s=>s.id===actor.task?.siteId);
+        if(!site||!siteMet(site)){if(site) site.assignedBuilders=site.assignedBuilders.filter(i=>i!==actor.id);clearTask(actor);break;}
+        const rate=(5+actor.apt.builder*0.04)*dt;
+        site.progress=Math.min(100,site.progress+rate);
+        if(site.progress>=100) completeSite(site);
+        break;
+      }
+    }
+  }
+}
+
+function updateNodes(dt){
+  for(const node of sim.nodes){
+    if(node.depleted){
+      node.amount=Math.min(node.maxAmount,node.amount+dt*0.4);
+      if(node.amount>node.maxAmount*0.15) node.depleted=false;
+    }
+  }
+}
+
+function completeSite(site){
+  const tile=state.grid[site.tileId];
+  tile.building=site.bldKey;tile.constrSiteId=null;
+  for(const a of sim.actors) if(a.task?.siteId===site.id) clearTask(a);
+  sim.sites=sim.sites.filter(s=>s.id!==site.id);
+  initInv(site.tileId,site.bldKey,{});
+  updateVisibility();updateAllTiles();
+  state.cap={...computeStorageCaps(),pop:computePopCap()};
+  addLog(`✦ ${BUILDINGS[site.bldKey].name} complete!`,'imp');
+  renderSidebar();
+}
+
+// ── CANVAS RENDERING ───────────────────────────────────────────────────────────
+const canvas=document.getElementById('sim-canvas');
+canvas.width=CW;canvas.height=CH;
+const ctx=canvas.getContext('2d');
+
+function renderSim(){
+  ctx.clearRect(0,0,CW,CH);
+
+  // Resource nodes
+  for(const node of sim.nodes){
+    if(node.depleted) continue;
+    const tile=state.grid[node.tileId];if(!tile.explored) continue;
+    const col={wood:'#3a7a20',stone:'#707878',food:'#c08030',water:'#2060c0'}[node.type]||'#888';
+    const r=node.amount/node.maxAmount;
+    ctx.globalAlpha=0.45+r*0.45;
+    ctx.fillStyle=col;
+    ctx.beginPath();ctx.arc(node.px,node.py,5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.22)';ctx.lineWidth=1;ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+
+  // Construction sites
+  for(const site of sim.sites){
+    const tile=state.grid[site.tileId];if(!tile.explored) continue;
+    const prog=site.progress/100;
+    ctx.globalAlpha=0.75;
+    ctx.fillStyle='#2a1e06';ctx.fillRect(site.px-11,site.py-11,22,22);
+    ctx.strokeStyle='#f0c050';ctx.lineWidth=1.5;ctx.strokeRect(site.px-11,site.py-11,22,22);
+    ctx.strokeStyle='#f09020';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(site.px,site.py,8,-Math.PI/2,-Math.PI/2+Math.PI*2*prog);ctx.stroke();
+    ctx.globalAlpha=1;
+    ctx.font='10px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#f0c050';ctx.fillText(BUILDINGS[site.bldKey].icon,site.px,site.py);
+  }
+
+  // Actors
+  for(const actor of sim.actors){
+    // shadow
+    ctx.globalAlpha=0.28;ctx.fillStyle='#000';
+    ctx.beginPath();ctx.ellipse(actor.px,actor.py+9,6,3,0,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+    // body
+    ctx.fillStyle=actor===selectedActor?'#fff':actor.color;
+    ctx.beginPath();ctx.arc(actor.px,actor.py,7,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=actor===selectedActor?'#fff':'rgba(0,0,0,0.55)';
+    ctx.lineWidth=actor===selectedActor?2:1;ctx.stroke();
+    // activity ring
+    if(actor.state!=='idle'&&actor.state!=='resting'){
+      ctx.strokeStyle='rgba(255,255,255,0.45)';ctx.lineWidth=1;
+      ctx.setLineDash([2,2]);
+      ctx.beginPath();ctx.arc(actor.px,actor.py,9.5,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // initial letter
+    ctx.fillStyle='rgba(255,255,255,0.9)';ctx.font='bold 8px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(actor.name[0],actor.px,actor.py);
+    // carry dot
+    if(actor.inv.amount>0){
+      const cc={food:'#e09030',wood:'#50a030',stone:'#888880',water:'#3080c0'}[actor.inv.type]||'#aaa';
+      ctx.fillStyle=cc;ctx.beginPath();ctx.arc(actor.px+6,actor.py-6,3.5,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.4)';ctx.lineWidth=1;ctx.stroke();
+    }
+  }
+}
+
+// ── GAME LOOP ──────────────────────────────────────────────────────────────────
+function gameLoop(ts){
+  const dt=Math.min((ts-lastTime)/1000,0.1);lastTime=ts;
+  updateActors(dt);updateNodes(dt);
+  taskTimer-=dt;if(taskTimer<=0){taskTimer=0.65;assignTasks();}
+  uiTimer-=dt;if(uiTimer<=0){
+    uiTimer=0.28;
+    renderResources();
+    if(infoTab==='people') renderActorPanel();
+    if(infoTab==='build') renderBuildPanel();
+  }
+  renderSim();
+  requestAnimationFrame(gameLoop);
+}
+
+// ── ECONOMY ────────────────────────────────────────────────────────────────────
+function computeMorale(){
+  let m=50;
+  for(const tile of state.grid) if(tile.building) m+=BUILDINGS[tile.building].moraleBonus||0;
+  const food=totalRes('food'),water=totalRes('water'),pop=state.res.pop;
+  const fd=pop>0?food/(pop*2):10,wd=pop>0?water/pop:10;
+  if(fd>5) m+=15; else if(fd>2) m+=5; else if(fd<1) m-=25; else if(fd<2) m-=10;
+  if(wd>5) m+=10; else if(wd<1) m-=15;
+  if(pop>=state.cap.pop) m-=20; else if(pop>=state.cap.pop*0.9) m-=10;
+  if(state.season===3) m-=15;if(state.season===1) m+=8;
+  if(state.techs.ritualKnowledge) m+=10;if(state.techs.architecture) m+=5;
+  return Math.max(0,Math.min(100,m));
+}
+
+function prodMult(){
+  let m=0.5+state.morale/100;
+  if(state.techs.toolMaking) m+=0.15;if(state.techs.ritualKnowledge) m+=0.10;if(state.techs.ironWorking) m+=0.25;
+  if(state.season===3) m-=0.20;if(state.season===1) m+=0.10;
+  return Math.max(0.3,m);
+}
+
+function computeProd(){
+  const d={food:0,wood:0,stone:0,water:0},mult=prodMult();
+  for(const tile of state.grid){
+    if(!tile.building) continue;
+    for(const [r,v] of Object.entries(BUILDINGS[tile.building].prod||{})) d[r]=(d[r]||0)+v*mult;
+  }
+  const pop=state.res.pop;
+  if(pop>0){d.food+=pop*1.5;d.water+=pop*0.8;d.wood+=1.5;d.stone+=0.8;}
+  let fst=0,rk=0,pl=0;
+  for(const t of state.grid){
+    if(!t.explored||t.building) continue;
+    if(t.type==='forest') fst++;else if(t.type==='rock') rk++;else if(t.type==='plains') pl++;
+  }
+  d.wood+=Math.min(fst*0.2,12);d.stone+=Math.min(rk*0.15,6);d.food+=Math.min(pl*0.1,8);
+  return d;
+}
+
+function computePopCap(){
+  let c=5;for(const tile of state.grid) if(tile.building) c+=BUILDINGS[tile.building].popCap||0;return c;
+}
+
+function computeStorageCaps(){
+  let food=0,wood=0,stone=0,water=0;
+  for(const inv of Object.values(sim.bldInv)){food+=inv.cap.food||0;wood+=inv.cap.wood||0;stone+=inv.cap.stone||0;water+=inv.cap.water||0;}
+  return{food:Math.max(food,200),wood:Math.max(wood,200),stone:Math.max(stone,150),water:Math.max(water,150)};
+}
+
+function endTurn(){
+  state.turn++;
+  const prev={food:totalRes('food'),wood:totalRes('wood'),stone:totalRes('stone'),water:totalRes('water')};
+  const summary={food:0,wood:0,stone:0,water:0,pop:0,events:[]};
+  state.cap={...computeStorageCaps(),pop:computePopCap()};
+
+  const prod=computeProd();
+  const primaryId=Object.keys(sim.bldInv)[0];
+  if(primaryId){
+    for(const r of['food','wood','stone','water']) deposit(+primaryId,r,prod[r]);
+  }
+
+  const fe=state.res.pop*2,we=state.res.pop;
+  consumeRes('food',fe);consumeRes('water',we);
+
+  for(const r of['food','wood','stone','water']){
+    state.res[r]=totalRes(r);summary[r]=state.res[r]-prev[r];
+  }
+  state.morale=computeMorale();
+
+  if(state.turn%4===0){
+    const starving=totalRes('food')<state.res.pop*2,dehy=totalRes('water')<state.res.pop;
+    const hasRoom=state.res.pop<state.cap.pop,content=state.morale>=40;
+    if(!starving&&!dehy&&hasRoom&&content){
+      state.starveTurns=0;
+      if(Math.random()<0.25+(state.morale-40)/200){
+        state.res.pop++;summary.pop=1;
+        summary.events.push({msg:'Your band grows — a new member arrives!',cls:'imp'});
+        spawnActor();
+      }
+    } else if((starving||dehy)&&state.res.pop>1){
+      state.starveTurns++;
+      if(state.starveTurns>=2){
+        state.res.pop=Math.max(1,state.res.pop-1);state.starveTurns=0;summary.pop=-1;
+        summary.events.push({msg:'Hardship claims a life.',cls:'warn'});
+      } else {summary.events.push({msg:'Your people are hungry and thirsty!',cls:'warn'});}
+    } else {state.starveTurns=0;}
+  }
+
+  if(state.turn%TURNS_PER_SEASON===0){
+    state.season=(state.season+1)%4;
+    if(state.season===0){state.year++;summary.events.push({msg:`Year ${state.year} begins.`,cls:'era'});}
+    if(state.season===3) summary.events.push({msg:'Winter descends. Production falls.',cls:'warn'});
+    if(state.season===1) summary.events.push({msg:'Summer — the land is generous.',cls:'imp'});
+    document.getElementById('season-tag').textContent=`${SEASONS[state.season]} · Year ${state.year}`;
+  }
+
+  if(Math.random()<0.28){const ev=randomEvent();if(ev) summary.events.push(ev);}
+  checkEra();updateVisibility();
+  document.getElementById('turn-display').textContent=`Turn ${state.turn}`;
+  renderResources();renderSidebar();updateAllTiles();showTurnSummary(summary,prod);
+  for(const ev of summary.events) addLog(ev.msg,ev.cls);
+}
+
+function randomEvent(){
+  const pop=state.res.pop;
+  const pid=Object.keys(sim.bldInv)[0];
+  const ev=[
+    {w:3,msg:'Hunters return with a great catch!',fn:()=>{if(pid) deposit(+pid,'food',30);},cls:'imp'},
+    {w:3,msg:'Children find a flint-rich outcrop.',fn:()=>{if(pid) deposit(+pid,'stone',20);},cls:'imp'},
+    {w:2,msg:'Heavy rains replenish the water holes.',fn:()=>{if(pid) deposit(+pid,'water',35);},cls:'imp'},
+    {w:2,msg:'Fallen trees yield good timber.',fn:()=>{if(pid) deposit(+pid,'wood',25);},cls:'imp'},
+    {w:1,msg:'A cold snap spoils stored food!',fn:()=>consumeRes('food',25),cls:'warn'},
+    {w:1,msg:'A wildfire destroys wood stores!',fn:()=>consumeRes('wood',20),cls:'warn'},
+    {w:pop>8?2:0,msg:'Wanderers join your settlement!',fn:()=>{if(state.res.pop<state.cap.pop){state.res.pop++;spawnActor();}},cls:'imp'},
+    {w:pop>15?1:0,msg:'Raiders steal food from storage!',fn:()=>consumeRes('food',30),cls:'warn'},
+    {w:pop>20?1:0,msg:'Disease spreads through the camp!',fn:()=>{if(state.res.pop>2) state.res.pop--;},cls:'warn'},
+  ];
+  const pool=ev.filter(e=>e.w>0);
+  const total=pool.reduce((s,e)=>s+e.w,0);
+  let r=Math.random()*total;
+  for(const e of pool){r-=e.w;if(r<=0){e.fn();return{msg:e.msg,cls:e.cls};}}
   return null;
 }
 
-function checkEra() {
-  let newEra = 0;
-  for (let i = ERAS.length-1; i >= 0; i--) {
-    if (state.res.pop >= ERAS[i].pop) { newEra = i; break; }
-  }
-  if (newEra > state.era) {
-    state.era = newEra;
-    addLog(`✦ Era: ${ERAS[newEra].name} — ${ERAS[newEra].desc}`, 'era');
-    document.getElementById('era-tag').textContent = ERAS[newEra].name;
-    renderSidebar();
+function checkEra(){
+  let ne=0;for(let i=ERAS.length-1;i>=0;i--){if(state.res.pop>=ERAS[i].pop){ne=i;break;}}
+  if(ne>state.era){
+    state.era=ne;addLog(`✦ Era: ${ERAS[ne].name}`,'era');
+    document.getElementById('era-tag').textContent=ERAS[ne].name;renderSidebar();
   }
 }
 
-// ── RENDER ────────────────────────────────────────────────────────────────────
-function tileEmoji(tile) {
-  if (!tile.explored) return '';
-  if (tile.building) return BUILDINGS[tile.building].icon;
-  return TYPE_EMOJI[tile.type] || '';
+// ── RENDER ─────────────────────────────────────────────────────────────────────
+function tileEmoji(tile){
+  if(!tile.explored) return '';
+  if(tile.constrSiteId) return '🚧';
+  if(tile.building) return BUILDINGS[tile.building].icon;
+  return TYPE_EMOJI[tile.type]||'';
 }
 
-function tileClass(tile) {
-  if (!tile.explored) return 'tile fog';
-  if (tile.type === 'mountain') return `tile t-mountain no-build`;
-  if (tile.type === 'water')    return `tile t-water no-build`;
-  if (tile.building) {
-    const req = BUILDINGS[tile.building];
-    return `tile t-${tile.type} no-build`;
-  }
-  const bk = state.selected;
-  let buildable = true;
-  if (bk) {
-    const b = BUILDINGS[bk];
-    if (b.onForest && tile.type !== 'forest') buildable = false;
-    if (b.onRock   && tile.type !== 'rock')   buildable = false;
-  }
-  return `tile t-${tile.type} ${buildable ? 'can-build' : 'no-build'}`;
+function tileClass(tile){
+  if(!tile.explored) return 'tile fog';
+  if(tile.type==='mountain') return 'tile t-mountain no-build';
+  if(tile.type==='water') return 'tile t-water no-build';
+  if(tile.building||tile.constrSiteId) return `tile t-${tile.type} no-build${tile.constrSiteId?' construction':''}`;
+  const bk=state.selected;let ok=true;
+  if(bk){const b=BUILDINGS[bk];if(b.onForest&&tile.type!=='forest') ok=false;if(b.onRock&&tile.type!=='rock') ok=false;}
+  return `tile t-${tile.type} ${ok?'can-build':'no-build'}`;
 }
 
-function renderGrid() {
-  const grid = document.getElementById('grid');
-  grid.innerHTML = '';
-  const frag = document.createDocumentFragment();
-  tileEls = [];
-  for (const tile of state.grid) {
-    const el = document.createElement('div');
-    el.className = tileClass(tile);
-    el.textContent = tileEmoji(tile);
-    el.dataset.id = tile.id;
-    el.addEventListener('click', () => onTileClick(tile));
-    el.addEventListener('mouseenter', () => showTileInfo(tile));
-    frag.appendChild(el);
-    tileEls.push(el);
+function renderGrid(){
+  const grid=document.getElementById('grid');grid.innerHTML='';
+  const frag=document.createDocumentFragment();tileEls=[];
+  for(const tile of state.grid){
+    const el=document.createElement('div');
+    el.className=tileClass(tile);el.textContent=tileEmoji(tile);el.dataset.id=tile.id;
+    el.addEventListener('click',()=>onTileClick(tile));
+    el.addEventListener('mouseenter',()=>showTileInfo(tile));
+    frag.appendChild(el);tileEls.push(el);
   }
   grid.appendChild(frag);
 }
 
-function updateAllTiles() {
-  for (const tile of state.grid) {
-    const el = tileEls[tile.id];
-    if (!el) continue;
-    el.className  = tileClass(tile);
-    el.textContent = tileEmoji(tile);
-  }
+function updateAllTiles(){for(const tile of state.grid){const el=tileEls[tile.id];if(!el) continue;el.className=tileClass(tile);el.textContent=tileEmoji(tile);}}
+function updateTile(tile){const el=tileEls[tile.id];if(!el) return;el.className=tileClass(tile);el.textContent=tileEmoji(tile);}
+
+function renderResources(){
+  for(const r of['food','wood','stone','water']) state.res[r]=totalRes(r);
+  state.cap={...computeStorageCaps(),pop:computePopCap()};
+  const fmt=v=>Math.floor(v);
+  document.getElementById('r-food').textContent=fmt(state.res.food);
+  document.getElementById('r-wood').textContent=fmt(state.res.wood);
+  document.getElementById('r-stone').textContent=fmt(state.res.stone);
+  document.getElementById('r-water').textContent=fmt(state.res.water);
+  document.getElementById('r-pop').textContent=fmt(state.res.pop);
+  document.getElementById('r-morale').textContent=fmt(state.morale);
+  document.getElementById('rc-food').textContent='/'+fmt(state.cap.food);
+  document.getElementById('rc-wood').textContent='/'+fmt(state.cap.wood);
+  document.getElementById('rc-stone').textContent='/'+fmt(state.cap.stone);
+  document.getElementById('rc-water').textContent='/'+fmt(state.cap.water);
+  document.getElementById('rc-pop').textContent='/'+computePopCap();
+  document.getElementById('pop-display').textContent=`${fmt(state.res.pop)} / ${computePopCap()}`;
+  document.getElementById('morale-display').textContent=fmt(state.morale);
+  const mc=state.morale<30?'#c04040':state.morale<50?'#c07030':state.morale<70?'#a09030':'#7ab050';
+  const fill=document.getElementById('morale-fill');fill.style.width=state.morale+'%';fill.style.background=mc;
+  const prod=computeProd();
+  const fb=Math.round(prod.food-state.res.pop*2),wb=Math.round(prod.water-state.res.pop);
+  const fbEl=document.getElementById('food-balance');fbEl.textContent=(fb>=0?'+':'')+fb+'/turn';fbEl.className=fb>=0?'pos':'neg';
+  const wbEl=document.getElementById('water-balance');wbEl.textContent=(wb>=0?'+':'')+wb+'/turn';wbEl.className=wb>=0?'pos':'neg';
+  const gt=document.getElementById('growth-trend');
+  if(state.res.pop>=computePopCap()){gt.textContent='At capacity';gt.className='neu';}
+  else if(fb>=0&&wb>=0&&state.morale>=40){gt.textContent='Growing ▲';gt.className='pos';}
+  else if(fb<-4||wb<-2){gt.textContent='Declining ▼';gt.className='neg';}
+  else{gt.textContent='Stable';gt.className='neu';}
 }
 
-function updateTile(tile) {
-  const el = tileEls[tile.id];
-  if (!el) return;
-  el.className  = tileClass(tile);
-  el.textContent = tileEmoji(tile);
-}
-
-function renderResources() {
-  const r = state.res, c = state.cap;
-  const fmt = v => Math.floor(v);
-  document.getElementById('r-food').textContent  = fmt(r.food);
-  document.getElementById('r-wood').textContent  = fmt(r.wood);
-  document.getElementById('r-stone').textContent = fmt(r.stone);
-  document.getElementById('r-water').textContent = fmt(r.water);
-  document.getElementById('r-pop').textContent   = fmt(r.pop);
-  document.getElementById('r-morale').textContent = fmt(state.morale);
-  document.getElementById('rc-food').textContent  = '/'+c.food;
-  document.getElementById('rc-wood').textContent  = '/'+c.wood;
-  document.getElementById('rc-stone').textContent = '/'+c.stone;
-  document.getElementById('rc-water').textContent = '/'+c.water;
-  document.getElementById('rc-pop').textContent   = '/'+c.pop;
-
-  document.getElementById('pop-display').textContent = `${fmt(r.pop)} / ${c.pop}`;
-  document.getElementById('morale-display').textContent = fmt(state.morale);
-  const mCol = state.morale < 30 ? '#c04040' : state.morale < 50 ? '#c07030' : state.morale < 70 ? '#a09030' : '#7ab050';
-  const fill = document.getElementById('morale-fill');
-  fill.style.width = state.morale + '%';
-  fill.style.background = mCol;
-
-  const prod = computeProduction();
-  const fb = Math.round(prod.food - r.pop * 2);
-  const wb = Math.round(prod.water - r.pop);
-
-  const fbEl = document.getElementById('food-balance');
-  fbEl.textContent = (fb >= 0 ? '+' : '') + fb + '/turn';
-  fbEl.className = fb >= 0 ? 'pos' : 'neg';
-
-  const wbEl = document.getElementById('water-balance');
-  wbEl.textContent = (wb >= 0 ? '+' : '') + wb + '/turn';
-  wbEl.className = wb >= 0 ? 'pos' : 'neg';
-
-  const gtEl = document.getElementById('growth-trend');
-  if (r.pop >= c.pop)                   { gtEl.textContent = 'At capacity'; gtEl.className = 'neu'; }
-  else if (fb >= 0 && wb >= 0 && state.morale >= 40) { gtEl.textContent = 'Growing ▲'; gtEl.className = 'pos'; }
-  else if (fb < -4 || wb < -2)          { gtEl.textContent = 'Declining ▼'; gtEl.className = 'neg'; }
-  else                                   { gtEl.textContent = 'Stable'; gtEl.className = 'neu'; }
-}
-
-function renderSidebar() {
-  const list = document.getElementById('bld-list');
-  list.innerHTML = '';
-  for (const [key, b] of Object.entries(BUILDINGS)) {
-    if (b.era > state.era + 1) continue;
-    const locked = !canAfford(b.cost, true) || !meetsReqs(b.req);
-    const btn = document.createElement('button');
-    btn.className = 'bld-btn' + (state.selected===key?' selected':'') + (locked?' locked':'');
-    btn.innerHTML = `<span class="bld-icon">${b.icon}</span><span class="bld-meta"><span class="bld-name">${b.name}</span><br><span class="bld-cost">${costStr(b.cost)}</span><br><span class="bld-effect">${b.effect}</span></span>`;
-    btn.onclick = () => { if (!locked) selectBuilding(key); };
+function renderSidebar(){
+  const list=document.getElementById('bld-list');list.innerHTML='';
+  for(const [key,b] of Object.entries(BUILDINGS)){
+    if(b.era>state.era+1) continue;
+    const locked=!canAffordCheck(b.cost)||!meetsReqs(b.req);
+    const btn=document.createElement('button');
+    btn.className='bld-btn'+(state.selected===key?' selected':'')+(locked?' locked':'');
+    btn.innerHTML=`<span class="bld-icon">${b.icon}</span><span class="bld-meta"><span class="bld-name">${b.name}</span><br><span class="bld-cost">${costStr(b.cost)}</span><br><span class="bld-effect">${b.effect}</span></span>`;
+    btn.onclick=()=>{if(!locked) selectBuilding(key);};
     list.appendChild(btn);
   }
-
-  const tl = document.getElementById('tech-list');
-  tl.innerHTML = '';
-  for (const [key, t] of Object.entries(TECHS)) {
-    const done  = state.techs[key];
-    const avail = !done && t.req.every(r => state.techs[r]) && canAfford(t.cost, true);
-    const row = document.createElement('div');
-    row.className = 'tech-row ' + (done ? 'tech-done' : avail ? 'tech-avail' : 'tech-locked');
-    row.innerHTML = `<span class="tech-icon">${t.icon}</span><span class="tech-name">${t.name}</span><span class="tech-cost">${done ? '✓' : costStr(t.cost)}</span>`;
-    row.title = t.desc;
-    if (avail) row.onclick = () => researchTech(key);
+  const tl=document.getElementById('tech-list');tl.innerHTML='';
+  for(const [key,t] of Object.entries(TECHS)){
+    const done=state.techs[key];
+    const avail=!done&&t.req.every(r=>state.techs[r])&&canAffordCheck(t.cost);
+    const row=document.createElement('div');
+    row.className='tech-row '+(done?'tech-done':avail?'tech-avail':'tech-locked');
+    row.innerHTML=`<span class="tech-icon">${t.icon}</span><span class="tech-name">${t.name}</span><span class="tech-cost">${done?'✓':costStr(t.cost)}</span>`;
+    row.title=t.desc;if(avail) row.onclick=()=>researchTech(key);
     tl.appendChild(row);
   }
 }
 
-function showTurnSummary(summary, prod) {
-  const el = document.getElementById('turn-summary');
-  if (!summary) { el.innerHTML = '<div class="ts-note">End your first turn to see results.</div>'; return; }
-
-  function fmt(n) { const s = Math.round(n); return (s >= 0 ? '+' : '') + s; }
-  function nc(n) { return n >= 0 ? 'pos' : 'neg'; }
-
-  el.innerHTML = `
-    <div class="ts-title">Turn ${state.turn}</div>
-    <div class="ts-row"><span>🍖 Food</span><span class="${nc(summary.food)}">${fmt(summary.food)}</span></div>
-    <div class="ts-row"><span>🪵 Wood</span><span class="${nc(summary.wood)}">${fmt(summary.wood)}</span></div>
-    <div class="ts-row"><span>🪨 Stone</span><span class="${nc(summary.stone)}">${fmt(summary.stone)}</span></div>
-    <div class="ts-row"><span>💧 Water</span><span class="${nc(summary.water)}">${fmt(summary.water)}</span></div>
-    ${summary.pop !== 0 ? `<div class="ts-row"><span>👥 People</span><span class="${nc(summary.pop)}">${fmt(summary.pop)}</span></div>` : ''}
-    <div class="ts-note">Mult: ×${productionMultiplier().toFixed(2)} · Morale: ${Math.floor(state.morale)}</div>
-  `;
+function renderActorPanel(){
+  const el=document.getElementById('actor-list');el.innerHTML='';
+  for(const actor of sim.actors){
+    const card=document.createElement('div');
+    card.className='actor-card'+(selectedActor===actor?' sel':'');
+    const aptStr=APT_KEYS.map(k=>`<span class="apt-tag" style="color:${ROLE_COLOR[k]}">${k[0].toUpperCase()} ${actor.apt[k]}</span>`).join('');
+    card.innerHTML=`<div class="ac-header"><div class="ac-dot" style="background:${actor.color}"></div><span class="ac-name">${actor.name}</span><span class="ac-role">${ROLE_ICON[actor.dominant]} ${actor.dominant}-leaning</span></div><div class="ac-state">⚡ ${actor.stateLabel}</div><div class="ac-inv">🎒 ${actor.carrying}</div><div class="ac-apt">${aptStr}</div>`;
+    card.onclick=()=>{selectedActor=selectedActor===actor?null:actor;renderActorPanel();};
+    el.appendChild(card);
+  }
 }
 
-function showTileInfo(tile) {
-  const el = document.getElementById('tile-info');
-  if (!tile.explored) {
-    el.innerHTML = '<div class="ti-name">Unexplored</div><div class="ti-desc">Build further out to reveal the fog.</div>';
-    return;
-  }
-  if (tile.building) {
-    const b = BUILDINGS[tile.building];
-    const prod = Object.entries(b.prod||{}).map(([k,v]) => `+${v.toFixed(0)} ${k}/turn`).join(', ');
-    el.innerHTML = `<div class="ti-name">${b.icon} ${b.name}</div>
-      <div class="ti-desc">${b.effect}</div>
-      ${prod ? `<div class="ti-prod">${prod}</div>` : ''}`;
+function renderBuildPanel(){
+  const cEl=document.getElementById('construction-list');cEl.innerHTML='';
+  if(sim.sites.length===0){
+    cEl.innerHTML='<div class="ts-note">No active construction.<br>Select a building from the left panel and click a tile.</div>';
   } else {
-    const typ = tile.type.charAt(0).toUpperCase() + tile.type.slice(1);
-    el.innerHTML = `<div class="ti-name">${TYPE_EMOJI[tile.type]||'·'} ${typ}</div>
-      <div class="ti-desc">${TILE_DESC[tile.type]||''}</div>`;
+    for(const site of sim.sites){
+      const b=BUILDINGS[site.bldKey];
+      const met=siteMet(site);
+      const needR=siteNeedsRes(site);
+      const phase=met?`Building… ${Math.floor(site.progress)}%`:needR?`Needs ${needR}`:'Awaiting delivery';
+      const resLines=Object.entries(site.required).map(([k,v])=>{
+        const got=site.delivered[k]||0;
+        return `<span class="${got>=v?'pos':'neg'}">${k}: ${Math.floor(got)}/${v}</span>`;
+      }).join(' ');
+      const card=document.createElement('div');card.className='csite-card';
+      card.innerHTML=`<div class="cs-header"><span style="font-size:1.2em">${b.icon}</span><span class="cs-name">${b.name}</span><span class="cs-phase">${phase}</span></div><div class="cs-res">${resLines}</div><div class="progress-bg"><div class="progress-fill" style="width:${site.progress}%"></div></div><div class="ts-note">Builders: ${site.assignedBuilders.length} · Carriers: ${site.assignedCarriers.length}</div>`;
+      cEl.appendChild(card);
+    }
+  }
+  const pEl=document.getElementById('priority-panel');pEl.innerHTML='';
+  for(const [key,icon] of[['food','🍖'],['wood','🪵'],['stone','🪨'],['build','🔨'],['culture','🌀']]){
+    const val=state.priorities[key]||1;
+    const row=document.createElement('div');row.className='prio-row';
+    row.innerHTML=`<span class="prio-label">${icon} ${key.charAt(0).toUpperCase()+key.slice(1)}</span><button class="prio-btn" onclick="adjPrio('${key}',-1)">−</button><span class="prio-val">${val}</span><button class="prio-btn" onclick="adjPrio('${key}',1)">+</button><div class="prio-bar"><div class="prio-bar-fill" style="width:${val*20}%"></div></div>`;
+    pEl.appendChild(row);
+  }
+  const iEl=document.getElementById('inv-list');iEl.innerHTML='';
+  for(const [tid,inv] of Object.entries(sim.bldInv)){
+    const tile=state.grid[+tid];if(!tile?.building) continue;
+    const b=BUILDINGS[tile.building];
+    const resStr=['food','wood','stone','water'].filter(r=>(inv.cap[r]||0)>0).map(r=>`<span>${RES_ICON[r]}${Math.floor(inv[r]||0)}/${inv.cap[r]}</span>`).join(' ');
+    const card=document.createElement('div');card.className='bld-inv-card';
+    card.innerHTML=`<div class="bi-header">${b.icon} ${b.name}</div><div class="bi-res">${resStr}</div>`;
+    iEl.appendChild(card);
   }
 }
 
-// ── INTERACTION ───────────────────────────────────────────────────────────────
-function selectBuilding(key) {
-  state.selected = (state.selected === key) ? null : key;
-  state.removing = false;
+function adjPrio(key,d){state.priorities[key]=Math.max(1,Math.min(5,(state.priorities[key]||1)+d));renderBuildPanel();}
+
+function setInfoTab(tab){
+  infoTab=tab;
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.add('hidden'));
+  document.querySelectorAll('.itab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.remove('hidden');
+  document.getElementById('tab-btn-'+tab).classList.add('active');
+  if(tab==='people') renderActorPanel();
+  if(tab==='build') renderBuildPanel();
+}
+
+function showTileInfo(tile){
+  const el=document.getElementById('tile-info');
+  if(!tile.explored){el.innerHTML='<div class="ti-name">Unexplored</div><div class="ti-desc">Build further out to reveal the fog.</div>';return;}
+  if(tile.constrSiteId){
+    const site=sim.sites.find(s=>s.id===tile.constrSiteId);
+    if(site){
+      const b=BUILDINGS[site.bldKey];
+      el.innerHTML=`<div class="ti-name">🚧 ${b.name}</div><div class="ti-desc">Progress: ${Math.floor(site.progress)}%</div><div class="ti-prod">${Object.entries(site.required).map(([k,v])=>`${k}: ${Math.floor(site.delivered[k]||0)}/${v}`).join(' · ')}</div>`;
+      return;
+    }
+  }
+  if(tile.building){
+    const b=BUILDINGS[tile.building];
+    const prod=Object.entries(b.prod||{}).map(([k,v])=>`+${v.toFixed(0)} ${k}/turn`).join(', ');
+    const inv=sim.bldInv[tile.id];
+    const invStr=inv?['food','wood','stone','water'].filter(r=>(inv.cap[r]||0)>0).map(r=>`${RES_ICON[r]}${Math.floor(inv[r]||0)}/${inv.cap[r]}`).join(' '):'';
+    el.innerHTML=`<div class="ti-name">${b.icon} ${b.name}</div><div class="ti-desc">${b.effect}</div>${prod?`<div class="ti-prod">${prod}</div>`:''}${invStr?`<div class="ti-inv">Stored: ${invStr}</div>`:''}`;
+    return;
+  }
+  const node=sim.nodes.find(n=>n.tileId===tile.id);
+  const typ=tile.type.charAt(0).toUpperCase()+tile.type.slice(1);
+  el.innerHTML=`<div class="ti-name">${TYPE_EMOJI[tile.type]||'·'} ${typ}</div><div class="ti-desc">${TILE_DESC[tile.type]||''}</div>${node?`<div class="ti-prod">Resource node: ${node.type} · ${Math.floor(node.amount)}/${node.maxAmount}</div>`:''}`;
+}
+
+function showTurnSummary(summary,prod){
+  const el=document.getElementById('turn-summary');
+  if(!summary){el.innerHTML='<div class="ts-note">Press End Turn to begin.</div>';return;}
+  const fmt=n=>(Math.round(n)>=0?'+':'')+Math.round(n);
+  const nc=n=>n>=0?'pos':'neg';
+  el.innerHTML=`<div class="ts-title">Turn ${state.turn}</div><div class="ts-row"><span>🍖 Food</span><span class="${nc(summary.food)}">${fmt(summary.food)}</span></div><div class="ts-row"><span>🪵 Wood</span><span class="${nc(summary.wood)}">${fmt(summary.wood)}</span></div><div class="ts-row"><span>🪨 Stone</span><span class="${nc(summary.stone)}">${fmt(summary.stone)}</span></div><div class="ts-row"><span>💧 Water</span><span class="${nc(summary.water)}">${fmt(summary.water)}</span></div>${summary.pop!==0?`<div class="ts-row"><span>👥 People</span><span class="${nc(summary.pop)}">${fmt(summary.pop)}</span></div>`:''}<div class="ts-note">×${prodMult().toFixed(2)} · Morale ${Math.floor(state.morale)}</div>`;
+}
+
+// ── INTERACTION ────────────────────────────────────────────────────────────────
+function selectBuilding(key){
+  state.selected=(state.selected===key)?null:key;
+  state.removing=false;
   document.getElementById('remove-btn').classList.remove('active');
-  renderSidebar();
-  updateAllTiles();
-  document.getElementById('footer-hint').textContent =
-    state.selected ? `Placing: ${BUILDINGS[key].name} · Cost: ${costStr(BUILDINGS[key].cost)}` : '';
+  renderSidebar();updateAllTiles();
+  document.getElementById('footer-hint').textContent=state.selected?`Placing: ${BUILDINGS[key].name} — click a tile to queue construction`:'';
 }
 
-function toggleRemove() {
-  state.removing = !state.removing;
-  state.selected = null;
-  document.getElementById('remove-btn').classList.toggle('active', state.removing);
+function toggleRemove(){
+  state.removing=!state.removing;state.selected=null;
+  document.getElementById('remove-btn').classList.toggle('active',state.removing);
   renderSidebar();
-  document.getElementById('footer-hint').textContent = state.removing ? 'Click a structure to remove it (refunds 50%).' : '';
+  document.getElementById('footer-hint').textContent=state.removing?'Click a structure to remove it (refunds 50%).':'';
 }
 
-function onTileClick(tile) {
-  if (!tile.explored) return;
+function onTileClick(tile){
+  if(!tile.explored) return;
+  showTileInfo(tile);
 
-  if (state.removing) {
-    if (tile.building) {
-      const b = BUILDINGS[tile.building];
-      for (const [res, val] of Object.entries(b.cost))
-        state.res[res] = Math.min(state.cap[res], state.res[res] + Math.floor(val * 0.5));
+  if(state.removing){
+    if(tile.building){
+      const b=BUILDINGS[tile.building];
+      const stor=nearestStorage(0,0,null);
+      if(stor){
+        for(const [res,val] of Object.entries(b.cost)) deposit(+stor.tileId,res,Math.floor(val*0.5));
+      }
+      delete sim.bldInv[tile.id];
       addLog(`Dismantled ${b.name}.`);
-      tile.building = null;
-      updateTile(tile);
-      renderSidebar();
-      renderResources();
+      tile.building=null;updateTile(tile);renderSidebar();renderResources();
     }
     return;
   }
 
-  if (!state.selected) return;
-
-  const b = BUILDINGS[state.selected];
-
-  if (tile.type === 'mountain' || tile.type === 'water')
-    { addLog('Cannot build there.', 'warn'); return; }
-  if (tile.building)
-    { addLog('Tile already occupied.', 'warn'); return; }
-
-  if (b.onForest && tile.type !== 'forest')
-    { addLog(`${b.name} must be placed on a forest tile.`, 'warn'); return; }
-  if (b.onRock && tile.type !== 'rock')
-    { addLog(`${b.name} must be placed on a rock tile.`, 'warn'); return; }
-
-  if (b.nearWater) {
-    const tx = tile.id % COLS, ty = Math.floor(tile.id / COLS);
-    const adj = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]];
-    const near = adj.some(([dx,dy]) => {
-      const nx=tx+dx, ny=ty+dy;
-      return nx>=0&&nx<COLS&&ny>=0&&ny<ROWS && state.grid[ny*COLS+nx].type==='water';
+  if(!state.selected) return;
+  const b=BUILDINGS[state.selected];
+  if(tile.type==='mountain'||tile.type==='water'){addLog('Cannot build there.','warn');return;}
+  if(tile.building){addLog('Tile already occupied.','warn');return;}
+  if(tile.constrSiteId){addLog('Construction already in progress here.','warn');return;}
+  if(b.onForest&&tile.type!=='forest'){addLog(`${b.name} needs a forest tile.`,'warn');return;}
+  if(b.onRock&&tile.type!=='rock'){addLog(`${b.name} needs a rock tile.`,'warn');return;}
+  if(b.nearWater){
+    const tx=tile.id%COLS,ty=Math.floor(tile.id/COLS);
+    const near=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]].some(([dx,dy])=>{
+      const nx=tx+dx,ny=ty+dy;return nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&state.grid[ny*COLS+nx].type==='water';
     });
-    if (!near) { addLog(`${b.name} must be placed near water.`, 'warn'); return; }
+    if(!near){addLog(`${b.name} must be near water.`,'warn');return;}
   }
-
-  if (!canAfford(b.cost)) return;
-  if (!meetsReqs(b.req)) { addLog('Technology requirement not met.', 'warn'); return; }
-
-  for (const [res, val] of Object.entries(b.cost)) state.res[res] -= val;
-  tile.building = state.selected;
-
-  updateVisibility();
-  updateAllTiles();
-  addLog(`Built ${b.name}.`);
-  state.cap = { ...computeStorageCaps(), pop: computePopCap() };
-  renderResources();
-  renderSidebar();
-}
-
-function researchTech(key) {
-  const t = TECHS[key];
-  if (!canAfford(t.cost) || !t.req.every(r => state.techs[r])) return;
-  for (const [res, val] of Object.entries(t.cost)) state.res[res] -= val;
-  state.techs[key] = true;
-  addLog(`✦ Discovered: ${t.name}. ${t.desc}`, 'imp');
-  renderSidebar();
-  renderResources();
-}
-
-function canAfford(cost, checkOnly=false) {
-  for (const [res, val] of Object.entries(cost)) {
-    if ((state.res[res]||0) < val) {
-      if (!checkOnly) addLog(`Not enough ${res}.`, 'warn');
-      return false;
-    }
+  if(!meetsReqs(b.req)){addLog('Technology requirement not met.','warn');return;}
+  const tots={food:totalRes('food'),wood:totalRes('wood'),stone:totalRes('stone'),water:totalRes('water')};
+  for(const [res,val] of Object.entries(b.cost)){
+    if((tots[res]||0)<val){addLog(`Not enough ${res} (need ${val}, have ${Math.floor(tots[res]||0)}).`,'warn');return;}
   }
-  return true;
+  createSite(tile.id,state.selected);
+  state.selected=null;renderSidebar();updateAllTiles();
+  document.getElementById('footer-hint').textContent='Construction site placed — actors will gather resources and build.';
 }
 
-function meetsReqs(reqs) { return reqs.every(r => state.techs[r]); }
-
-function costStr(cost) {
-  return Object.entries(cost).map(([k,v]) => `${v} ${k}`).join(', ');
+function researchTech(key){
+  const t=TECHS[key];
+  if(!t.req.every(r=>state.techs[r])) return;
+  for(const [res,val] of Object.entries(t.cost)){
+    if(totalRes(res)<val){addLog(`Not enough ${res}.`,'warn');return;}
+    consumeRes(res,val);
+  }
+  state.techs[key]=true;
+  addLog(`✦ Discovered: ${t.name}. ${t.desc}`,'imp');
+  renderSidebar();renderResources();
 }
 
-function addLog(msg, cls='') {
-  state.events.unshift({ msg, cls });
-  if (state.events.length > 60) state.events.pop();
-  const log = document.getElementById('log');
-  log.innerHTML = '';
-  for (const e of state.events.slice(0, 30)) {
-    const d = document.createElement('div');
-    d.className = 'log-line' + (e.cls ? ' log-'+e.cls : '');
-    d.textContent = e.msg;
-    log.appendChild(d);
+function canAffordCheck(cost){for(const [r,v] of Object.entries(cost)) if(totalRes(r)<v) return false;return true;}
+function meetsReqs(reqs){return reqs.every(r=>state.techs[r]);}
+function costStr(cost){return Object.entries(cost).map(([k,v])=>`${v} ${k}`).join(', ');}
+
+function addLog(msg,cls=''){
+  state.events.unshift({msg,cls});if(state.events.length>60) state.events.pop();
+  const log=document.getElementById('log');log.innerHTML='';
+  for(const e of state.events.slice(0,30)){
+    const d=document.createElement('div');
+    d.className='log-line'+(e.cls?' log-'+e.cls:'');d.textContent=e.msg;log.appendChild(d);
   }
 }
 
-// ── KEYBOARD SHORTCUTS ────────────────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); endTurn(); }
-  if (e.key === 'Escape') {
-    state.selected = null;
-    state.removing = false;
+// ── ACTORS ─────────────────────────────────────────────────────────────────────
+function nextName(){
+  const avail=ACTOR_NAMES.filter(n=>!usedNames.includes(n));
+  const n=avail.length?avail[Math.floor(Math.random()*avail.length)]:'P'+sim.actors.length;
+  usedNames.push(n);return n;
+}
+
+function spawnActor(px,py){
+  const first=Object.keys(sim.bldInv)[0];
+  if(!first&&px==null) return;
+  if(px==null){const tid=+first;px=(tid%COLS)*TP+TP/2+(Math.random()-0.5)*30;py=Math.floor(tid/COLS)*TP+TP/2+(Math.random()-0.5)*30;}
+  const a=new Actor(sim.nextId++,nextName(),px,py);
+  a.idleX=px;a.idleY=py;sim.actors.push(a);return a;
+}
+
+function spawnInitialActors(tileId,count){
+  const cx=(tileId%COLS)*TP+TP/2,cy=Math.floor(tileId/COLS)*TP+TP/2;
+  const roles=['hunter','builder','forager','carrier','builder','hunter','forager','carrier','generalist','shaman','crafter','forager'];
+  for(let i=0;i<count;i++){
+    const px=cx+(Math.random()-0.5)*56,py=cy+(Math.random()-0.5)*56;
+    const a=new Actor(sim.nextId++,nextName(),px,py);
+    if(i<roles.length){a.apt=genApt(roles[i]);a.dominant=domApt(a.apt);a.color=ROLE_COLOR[a.dominant];}
+    a.idleX=cx;a.idleY=cy;sim.actors.push(a);
+  }
+}
+
+// ── KEYBOARD ──────────────────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();endTurn();}
+  if(e.key==='Escape'){
+    state.selected=null;state.removing=false;
     document.getElementById('remove-btn').classList.remove('active');
-    renderSidebar();
-    updateAllTiles();
-    document.getElementById('footer-hint').textContent = '';
+    renderSidebar();updateAllTiles();document.getElementById('footer-hint').textContent='';
   }
+  if(e.key==='1') setInfoTab('world');
+  if(e.key==='2') setInfoTab('people');
+  if(e.key==='3') setInfoTab('build');
 });
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-function init() {
-  state.grid = generateMap();
-
-  // Find good starting position near center
-  const cx = Math.floor(COLS/2), cy = Math.floor(ROWS/2);
-  let startTile = null;
-  outer: for (let rad = 0; rad <= 10; rad++) {
-    for (let dy = -rad; dy <= rad; dy++) {
-      for (let dx = -rad; dx <= rad; dx++) {
-        const nx = cx+dx, ny = cy+dy;
-        if (nx<0||nx>=COLS||ny<0||ny>=ROWS) continue;
-        const t = state.grid[ny*COLS+nx];
-        if ((t.type==='grass'||t.type==='plains') && !t.building) { startTile=t; break outer; }
-      }
-    }
+function init(){
+  state.grid=generateMap();
+  const cx=Math.floor(COLS/2),cy=Math.floor(ROWS/2);
+  let startTile=null;
+  outer:for(let rad=0;rad<=10;rad++) for(let dy=-rad;dy<=rad;dy++) for(let dx=-rad;dx<=rad;dx++){
+    const nx=cx+dx,ny=cy+dy;if(nx<0||nx>=COLS||ny<0||ny>=ROWS) continue;
+    const t=state.grid[ny*COLS+nx];
+    if((t.type==='grass'||t.type==='plains')&&!t.building){startTile=t;break outer;}
   }
-  if (startTile) startTile.building = 'firePit';
+  if(!startTile) startTile=state.grid[cy*COLS+cx];
+  startTile.building='firePit';
 
   updateVisibility();
-  state.morale = computeMorale();
-  state.cap = { ...computeStorageCaps(), pop: computePopCap() };
+  state.morale=computeMorale();
+  initInv(startTile.id,'firePit',{food:60,wood:40,stone:25,water:35});
+  placeResourceNodes();
+  spawnInitialActors(startTile.id,10);
+  state.res.pop=sim.actors.length;
 
-  renderGrid();
-  renderSidebar();
-  renderResources();
-  showTurnSummary(null);
-  addLog('Your band enters a new valley. Build shelters and gather resources to survive.', 'era');
-  document.getElementById('era-tag').textContent = ERAS[0].name;
+  for(const r of['food','wood','stone','water']) state.res[r]=totalRes(r);
+  state.cap={...computeStorageCaps(),pop:computePopCap()};
 
-  // Scroll map to start position
-  setTimeout(() => {
-    const wrap = document.getElementById('map-wrap');
-    if (startTile) {
-      const sx = (startTile.id % COLS) * TILE_PX;
-      const sy = Math.floor(startTile.id / COLS) * TILE_PX;
-      wrap.scrollTo(sx - wrap.clientWidth/2 + TILE_PX/2, sy - wrap.clientHeight/2 + TILE_PX/2);
+  renderGrid();renderSidebar();renderResources();showTurnSummary(null);
+  addLog('Your band enters a new valley. Watch your people work!','era');
+  document.getElementById('era-tag').textContent=ERAS[0].name;
+
+  setTimeout(()=>{
+    const wrap=document.getElementById('map-wrap');
+    if(startTile){
+      const sx=(startTile.id%COLS)*TP,sy=Math.floor(startTile.id/COLS)*TP;
+      wrap.scrollTo(sx-wrap.clientWidth/2+TP/2,sy-wrap.clientHeight/2+TP/2);
     }
-  }, 80);
+  },80);
+
+  requestAnimationFrame(ts=>{lastTime=ts;requestAnimationFrame(gameLoop);});
 }
 
 init();
