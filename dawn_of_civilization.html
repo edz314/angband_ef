@@ -138,6 +138,28 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
 .maint-btn:hover{background:#3a2e18;}
 .pin-btn{background:#1a2a1a;border:1px solid #3a5a20;color:#7ab050;font-size:.7em;padding:2px 6px;cursor:pointer;border-radius:2px;font-family:Georgia,serif;margin-top:2px;}
 .abandon-warn{color:#c07030;font-size:.8em;}
+.fatigue-bar{height:3px;background:#1a1208;border-radius:1px;overflow:hidden;margin:2px 0;}
+.fatigue-fill{height:100%;border-radius:1px;}
+.goal-line{color:#60b0a0;font-size:.76em;margin:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.decision-block{margin-top:4px;border-top:1px solid #2a2010;padding-top:3px;}
+.decision-row{display:flex;align-items:baseline;gap:3px;padding:1px 0;font-size:.69em;border-bottom:1px solid #151005;}
+.decision-row.top{color:var(--hi);}
+.decision-score{color:#a09050;min-width:22px;text-align:right;font-weight:bold;flex-shrink:0;}
+.decision-reason{color:#6a8040;font-size:.88em;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.crisis-badge{display:inline-block;background:#4a1010;border:1px solid #c04040;color:#e06060;border-radius:3px;padding:1px 6px;font-size:.75em;margin:2px 0;font-weight:bold;}
+.crisis-badge.warn{background:#3a2a00;border-color:#c07030;color:#e0a040;}
+.crisis-badge.ok{background:#0a2a0a;border-color:#3a7030;color:#70b050;}
+.intent-tag{background:#1a2a10;border:1px solid #3a5020;color:#80b050;border-radius:3px;padding:1px 5px;font-size:.71em;margin:2px 2px 0 0;display:inline-block;}
+.debug-section{background:var(--bg);border:1px solid var(--earth);padding:6px;border-radius:2px;font-size:.72em;margin-bottom:5px;}
+.debug-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0;border-bottom:1px solid #1a1208;font-size:.75em;}
+.debug-label{color:#9a8050;}.debug-val{color:var(--hi);}.debug-warn{color:#c07030;}.debug-crit{color:#c04040;}
+.task-row{display:flex;align-items:center;gap:5px;padding:2px 0;font-size:.73em;}
+.task-bar{flex:1;background:#1a1208;height:4px;border-radius:2px;overflow:hidden;border:1px solid #2a1a08;}
+.task-bar-fill{height:100%;background:#6a8030;border-radius:2px;}
+.ai-actor-card{background:var(--bg);border:1px solid #2a2010;border-radius:2px;padding:4px 6px;font-size:.71em;margin-bottom:3px;}
+.ai-actor-header{display:flex;align-items:center;gap:4px;margin-bottom:2px;font-size:.88em;}
+.ai-goal{color:#60b090;font-size:.88em;}
+.ai-top-task{color:var(--hi);font-weight:bold;}
 </style>
 </head>
 <body>
@@ -182,6 +204,7 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
       <button class="itab" id="tab-btn-people" onclick="setInfoTab('people')">People</button>
       <button class="itab" id="tab-btn-build" onclick="setInfoTab('build')">Build</button>
       <button class="itab" id="tab-btn-hist" onclick="setInfoTab('hist')">History</button>
+      <button class="itab" id="tab-btn-debug" onclick="setInfoTab('debug')">AI</button>
     </div>
     <div class="tab-content" id="tab-world">
       <div><h3>Selected</h3><div id="tile-info"><div class="ti-desc">Click a tile to inspect it.</div></div></div>
@@ -211,10 +234,17 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
       <div><h3>Wildlife</h3><div id="wildlife-list"></div></div>
       <div><h3>Tech Progress</h3><div id="tech-prog-list"></div></div>
     </div>
+    <div class="tab-content hidden" id="tab-debug">
+      <div><h3>Settlement AI</h3><div id="debug-crisis-panel" class="debug-section"></div></div>
+      <div><h3>Intents</h3><div id="debug-intents-panel" class="debug-section"></div></div>
+      <div><h3>Active Tasks</h3><div id="debug-tasks-panel" class="debug-section"></div></div>
+      <div><h3>Resources</h3><div id="debug-res-panel" class="debug-section"></div></div>
+      <div><h3>Actor Decisions</h3><div id="debug-actor-panel" style="max-height:300px;overflow-y:auto"></div></div>
+    </div>
   </div>
 </div>
 <div id="footer">
-  <span id="footer-hint">Select a building then click a tile. Keys: 1/2/3 = tabs, Enter = end turn.</span>
+  <span id="footer-hint">Select a building then click a tile. Keys: 1-5 = tabs, Enter = end turn.</span>
 </div>
 <script>
 // ── CONSTANTS ──────────────────────────────────────────────────────────────────
@@ -305,8 +335,8 @@ const WILDLIFE_TYPES={
   fishShoal:{name:'Fish Shoal',icon:'🐟',initPop:60,maxPop:80,terrain:['water'],           yields:{food:2},        regen:.005,aquatic:true},
 };
 
-const ALL_TRAITS=['curious','cautious','industrious','spiritual','practical','restless','careful'];
-const TRAIT_COLOR={curious:'#60b0e0',cautious:'#a07050',industrious:'#c09030',spiritual:'#b060e0',practical:'#50a050',restless:'#e07040',careful:'#70c0a0'};
+const ALL_TRAITS=['curious','cautious','industrious','spiritual','practical','restless','careful','social','patient'];
+const TRAIT_COLOR={curious:'#60b0e0',cautious:'#a07050',industrious:'#c09030',spiritual:'#b060e0',practical:'#50a050',restless:'#e07040',careful:'#70c0a0',social:'#e0a040',patient:'#60d0b0'};
 const TRAIT_FX={
   curious:    {exploreScore:.4, exploreRange:1.3},
   cautious:   {exploreScore:-.3,nearScore:.15},
@@ -315,6 +345,8 @@ const TRAIT_FX={
   practical:  {foodPrio:.2},
   restless:   {taskSwitch:1.5},
   careful:    {recoveryBonus:.3},
+  social:     {helpScore:.3,    collaborateBonus:.2},
+  patient:    {taskSwitch:-.5,  longTaskBonus:.15},
 };
 const RES_ICON={food:'🍖',wood:'🪵',stone:'🪨',water:'💧'};
 
@@ -332,7 +364,7 @@ let state={
   foodPresBonus:false,yieldBonus:0,medicineBonus:false,
 };
 
-let sim={actors:[],nodes:[],wildlife:[],sites:[],bldInv:{},bldMeta:{},nextId:0,gameTime:0};
+let sim={actors:[],nodes:[],wildlife:[],sites:[],bldInv:{},bldMeta:{},nextId:0,gameTime:0,crisisMode:null,intents:[],plannerTimer:8};
 let tileEls=[];
 let selectedActor=null;
 let infoTab='world';
@@ -507,12 +539,28 @@ class Actor{
     const shuffled=[...ALL_TRAITS].sort(()=>Math.random()-.5);
     this.traits=shuffled.slice(0,1+Math.floor(Math.random()*2));
     this.exploreTarget=null;
+    this.fatigue=0;
+    this.avoidNodes=new Set();
+    this.avoidHerds=new Set();
+    this.lastDecisions=[];
+    this.goal='';
+    this.exp={hunter:0,builder:0,forager:0,shaman:0,crafter:0,carrier:0,generalist:0};
+    this.decisionTimer=Math.random()*2.5;
+    this.taskAge=0;
   }
   hasTrait(t){return this.traits.includes(t);}
   traitFx(field,def=0){let v=def;for(const t of this.traits){const f=TRAIT_FX[t];if(f&&f[field]!==undefined) v+=f[field];}return v;}
   get stateLabel(){return STATE_LBL[this.state]||this.state;}
   get carrying(){return this.inv.amount>0?`${this.inv.type}×${this.inv.amount.toFixed(1)}`:'—';}
   aptB(role){return(this.apt[role]||0)/100;}
+  gainExp(role,amt){
+    this.exp[role]=Math.min(100,(this.exp[role]||0)+amt);
+    const gain=amt*0.06*(1-(this.apt[role]||0)/120);
+    this.apt[role]=Math.min(99,Math.floor((this.apt[role]||0)+gain));
+    this.dominant=domApt(this.apt);this.color=ROLE_COLOR[this.dominant];
+  }
+  memorizeDepletion(nodeId){if(nodeId==null) return;this.avoidNodes.add(nodeId);setTimeout(()=>this.avoidNodes.delete(nodeId),90000);}
+  memorizeHerd(wgId){if(wgId==null) return;this.avoidHerds.add(wgId);setTimeout(()=>this.avoidHerds.delete(wgId),60000);}
   dist(px,py){const dx=px-this.px,dy=py-this.py;return Math.sqrt(dx*dx+dy*dy);}
   move(px,py,dt){
     const dx=px-this.px,dy=py-this.py,d=Math.sqrt(dx*dx+dy*dy);
@@ -683,145 +731,257 @@ function nodeScore(actor,node){
   return actor.aptB(aptMap[node.type]||'generalist')*35+urgency(node.type)*25-actor.dist(node.px,node.py)*0.015+(node.amount/node.maxAmount)*8;
 }
 
+// ── UTILITY AI ─────────────────────────────────────────────────────────────────
+const SUSTAIN={
+  normal:{nodeMinPct:0.18,herdMinPct:0.38,shoalMinPct:0.35},
+  crisis:{nodeMinPct:0.04,herdMinPct:0.12,shoalMinPct:0.12},
+};
+
+function detectCrisis(){
+  const food=totalRes('food'),water=totalRes('water'),pop=state.res.pop;
+  if(food<pop*2||water<pop*0.5) return'starvation';
+  if(food<pop*5||water<pop*2) return'food';
+  const critBlds=Object.entries(sim.bldMeta).filter(([,m])=>m.condition<25&&!m.abandoned&&!m.pinned);
+  if(critBlds.length>=2) return'maintenance';
+  const idleN=sim.actors.filter(a=>a.state==='idle'&&a.restTimer<=0).length;
+  if(idleN>=sim.actors.length*0.65&&sim.actors.length>3) return'idle';
+  return null;
+}
+
+function computeIntents(){
+  const intents=[];
+  const food=totalRes('food'),water=totalRes('water'),wood=totalRes('wood'),pop=state.res.pop;
+  if(food<pop*5) intents.push('increase food production');
+  if(water<pop*3) intents.push('secure water sources');
+  if(wood<30) intents.push('gather more timber');
+  if(sim.sites.length>0) intents.push('complete active construction');
+  const critBlds=Object.entries(sim.bldMeta).filter(([,m])=>m.condition<40&&!m.abandoned);
+  if(critBlds.length>0) intents.push('repair deteriorating buildings');
+  if(!sim.nodes.every(n=>n.discovered)||state.grid.some(t=>t.explored&&!t.surveyed&&t.type!=='mountain')) intents.push('explore new territory');
+  for(const wg of sim.wildlife){
+    if(!wg.extinct&&wg.discovered&&(wg.population/wg.maxPopulation)<0.4){intents.push('reduce hunting on '+wg.name);break;}
+  }
+  if(intents.length===0) intents.push('maintain settlement');
+  return intents;
+}
+
+function runSettlementPlanner(){
+  const prev=sim.crisisMode;
+  sim.crisisMode=detectCrisis();
+  sim.intents=computeIntents();
+  if(sim.crisisMode==='starvation'&&prev!=='starvation'){
+    for(const actor of sim.actors){
+      if(actor.hasTrait('patient')&&actor.taskAge<12) continue;
+      if(actor.task&&actor.task.type==='gather'&&actor.task.resType!=='food') clearTask(actor);
+      if(actor.task&&(actor.task.type==='maintain'||actor.task.type==='demolish')) clearTask(actor);
+    }
+    addLog('Starvation risk! Refocusing on food.','warn');
+  }
+}
+
+function assignedCount(taskType,targetId){
+  let n=0;
+  for(const a of sim.actors){
+    if(!a.task) continue;
+    if(taskType==='gather'&&a.task.nodeId===targetId) n++;
+    else if((taskType==='hunt'||taskType==='fish')&&a.task.wildlifeId===targetId) n++;
+    else if(taskType==='build'&&a.task.type==='build'&&a.task.siteId===targetId) n++;
+    else if(taskType==='deliver'&&a.task.type==='pickup_for_site'&&a.task.siteId===targetId) n++;
+    else if(taskType==='maintain'&&a.task.maintainTileId===targetId) n++;
+    else if(taskType==='demolish'&&a.task.demolishTileId===targetId) n++;
+  }
+  return n;
+}
+
+function generateCandidates(actor){
+  const cands=[];
+  const inCrisis=sim.crisisMode==='food'||sim.crisisMode==='starvation';
+  const thresh=inCrisis?SUSTAIN.crisis:SUSTAIN.normal;
+
+  for(const node of sim.nodes){
+    if(!node.discovered||node.depleted||actor.avoidNodes.has(node.id)) continue;
+    const cap=totalCap(node.type),cur=totalRes(node.type);
+    if(cur>=cap*0.95&&node.type!=='food') continue;
+    if(assignedCount('gather',node.id)>=node.maxWorkers) continue;
+    cands.push({type:'gather',node});
+  }
+  for(const wg of sim.wildlife){
+    if(!wg.discovered||wg.extinct||wg.aquatic) continue;
+    if(wg.population/wg.maxPopulation<thresh.herdMinPct) continue;
+    if(actor.avoidHerds.has(wg.id)) continue;
+    if(assignedCount('hunt',wg.id)>=(inCrisis?4:2)) continue;
+    cands.push({type:'hunt',wg});
+  }
+  for(const wg of sim.wildlife){
+    if(!wg.discovered||wg.extinct||!wg.aquatic) continue;
+    if(wg.population/wg.maxPopulation<thresh.shoalMinPct) continue;
+    if(assignedCount('fish',wg.id)>=2) continue;
+    cands.push({type:'fish',wg});
+  }
+  for(const site of sim.sites){
+    if(site.complete) continue;
+    const need=siteNeedsRes(site);if(!need) continue;
+    const needed=(site.required[need]||0)-(site.delivered[need]||0);if(needed<=0) continue;
+    const stor=nearestStorage(actor.px,actor.py,need);
+    if(!stor||(stor.inv[need]||0)<1) continue;
+    if(assignedCount('deliver',site.id)>=2) continue;
+    cands.push({type:'deliver',site,need,stor});
+  }
+  for(const site of sim.sites){
+    if(site.complete||!siteMet(site)) continue;
+    if(assignedCount('build',site.id)>=2) continue;
+    cands.push({type:'build',site});
+  }
+  if(state.autoMaintain){
+    for(const [tid,meta] of Object.entries(sim.bldMeta)){
+      const tile=state.grid[+tid];
+      if(!tile?.building||meta.condition>82||meta.abandoned||meta.demolitionQueued) continue;
+      if(assignedCount('maintain',+tid)>0) continue;
+      const cost=bldMaintenanceCost(tile.building);
+      const stor=nearestStorage(actor.px,actor.py,null);
+      if(!stor) continue;
+      let ok=true;for(const [r,v] of Object.entries(cost)) if((sim.bldInv[stor.tileId]?.[r]||0)<v){ok=false;break;}
+      if(!ok) continue;
+      cands.push({type:'maintain',tid:+tid,meta,bk:tile.building});
+    }
+  }
+  if(state.autoDemolish&&actor.apt.builder>15){
+    for(const [tid,meta] of Object.entries(sim.bldMeta)){
+      if(!meta.demolitionQueued||meta.pinned) continue;
+      const tile=state.grid[+tid];if(!tile?.building) continue;
+      const inv=sim.bldInv[+tid];
+      if(inv&&['food','wood','stone','water'].some(r=>(inv[r]||0)>5)) continue;
+      if(assignedCount('demolish',+tid)>0) continue;
+      cands.push({type:'demolish',tid:+tid});
+    }
+  }
+  if(computeExploreScore(actor)>0) cands.push({type:'explore'});
+  return cands;
+}
+
+function utilityScore(actor,cand){
+  const fu=urgency('food'),wu=urgency('wood'),su=urgency('stone');
+  const fatPen=actor.fatigue*0.08;
+  const crisis=sim.crisisMode;
+  let score=0;const reasons=[];
+
+  if(cand.type==='gather'){
+    const node=cand.node;const urg=urgency(node.type);
+    const aptKey=node.type==='food'?(actor.apt.hunter>actor.apt.forager?'hunter':'forager'):'forager';
+    const apt=actor.aptB(aptKey);
+    const dist=actor.dist(node.px,node.py);
+    const fill=node.amount/node.maxAmount;
+    const siteNeeds=sim.sites.some(s=>!s.complete&&siteNeedsRes(s)===node.type);
+    score+=urg*12+apt*22+fill*8-dist*0.007-fatPen;
+    if(siteNeeds){score+=12;reasons.push('site needs '+node.type);}
+    if(node.type==='food') score+=actor.traitFx('foodPrio')*18;
+    if(crisis==='food'&&node.type==='food'){score+=18;reasons.push('food low');}
+    if(crisis==='starvation'&&node.type==='food'){score+=35;reasons.push('starvation!');}
+    reasons.push(node.type+' urgency:'+urg.toFixed(0));
+    if(apt>0.7) reasons.push('high apt');
+  }
+  else if(cand.type==='hunt'){
+    const wg=cand.wg;const apt=actor.aptB('hunter');
+    const dist=actor.dist(wg.px,wg.py);
+    const popFrac=wg.population/wg.maxPopulation;
+    score+=fu*10+apt*28+popFrac*10-dist*0.008-fatPen*1.5;
+    if(apt<0.3) score*=0.4;
+    if(crisis==='starvation'){score+=30;reasons.push('starvation override');}
+    else if(crisis==='food'){score+=18;reasons.push('food low');}
+    reasons.push('hunter:'+actor.apt.hunter);reasons.push('herd '+Math.floor(popFrac*100)+'%');
+  }
+  else if(cand.type==='fish'){
+    const wg=cand.wg;const apt=actor.aptB('forager');
+    const dist=actor.dist(wg.px,wg.py);
+    score+=fu*9+apt*22-dist*0.007-fatPen;
+    if(crisis==='food'||crisis==='starvation') score+=(crisis==='starvation'?28:14);
+    reasons.push('forager:'+actor.apt.forager);
+  }
+  else if(cand.type==='deliver'){
+    const stor=cand.stor;const apt=actor.aptB('carrier');
+    const storPx=(stor.tileId%COLS)*TP+TP/2,storPy=Math.floor(stor.tileId/COLS)*TP+TP/2;
+    const dist=actor.dist(storPx,storPy);
+    score+=28+apt*20-dist*0.006+state.priorities.build*6;
+    reasons.push('deliver '+cand.need+' → '+BUILDINGS[cand.site.bldKey].name.split(' ')[0]);
+    if(apt>0.6) reasons.push('carrier');
+  }
+  else if(cand.type==='build'){
+    const site=cand.site;const apt=actor.aptB('builder');
+    const dist=actor.dist(site.px,site.py);
+    score+=18+apt*28-dist*0.006-fatPen+state.priorities.build*5+actor.traitFx('buildScore')*15;
+    if(apt<0.25) score-=12;
+    reasons.push('builder:'+actor.apt.builder);
+  }
+  else if(cand.type==='maintain'){
+    const meta=cand.meta;const tid=cand.tid;
+    const apt=actor.aptB('builder');
+    const dist=actor.dist((tid%COLS)*TP+TP/2,Math.floor(tid/COLS)*TP+TP/2);
+    const condUrg=meta.condition<25?38:meta.condition<50?18:6;
+    const b=BUILDINGS[cand.bk];
+    score+=condUrg+apt*18-dist*0.005+actor.traitFx('maintainScore')*14;
+    if(b&&Object.keys(b.prod||{}).length>0) score+=10;
+    reasons.push('condition '+Math.floor(meta.condition)+'%');
+    if(apt>0.6) reasons.push('builder');
+  }
+  else if(cand.type==='demolish'){
+    score+=8+actor.aptB('builder')*10+actor.traitFx('recoveryBonus')*12;
+    reasons.push('reclaim materials');
+  }
+  else if(cand.type==='explore'){
+    const es=computeExploreScore(actor);
+    score+=es*35+actor.traitFx('exploreScore')*15;
+    if(fu>4) reasons.push('seeking food');
+    else if(wu>4) reasons.push('seeking wood');
+    else reasons.push('explore drive:'+es.toFixed(1));
+  }
+  score=Math.max(0,Math.round(score));
+  return{score,reasons};
+}
+
+function taskLabel(cand){
+  if(cand.type==='gather') return 'Gather '+cand.node.type;
+  if(cand.type==='hunt') return 'Hunt '+cand.wg.name;
+  if(cand.type==='fish') return 'Fish '+cand.wg.name;
+  if(cand.type==='deliver') return 'Deliver '+cand.need+' → '+BUILDINGS[cand.site.bldKey].name.split(' ')[0];
+  if(cand.type==='build') return 'Build '+BUILDINGS[cand.site.bldKey].name.split(' ')[0];
+  if(cand.type==='maintain') return 'Repair '+(BUILDINGS[cand.bk]?.name.split(' ')[0]||'building');
+  if(cand.type==='demolish') return 'Demolish building';
+  if(cand.type==='explore') return 'Explore';
+  return cand.type;
+}
+
+function assignTaskFromCandidate(actor,cand){
+  switch(cand.type){
+    case 'gather':{const node=cand.node;if(node.assignedActors.length>=node.maxWorkers||node.depleted) return;node.assignedActors.push(actor.id);actor.task={type:'gather',nodeId:node.id,resType:node.type};actor.state='moving_to_resource';actor.tx=node.px;actor.ty=node.py;actor.goal='Gather '+node.type;break;}
+    case 'hunt':{const wg=cand.wg;wg.assignedHunters.push(actor.id);actor.task={type:'hunt',wildlifeId:wg.id};actor.state='hunting';actor.tx=wg.px;actor.ty=wg.py;actor.goal='Hunt '+wg.name;break;}
+    case 'fish':{const wg=cand.wg;wg.assignedHunters.push(actor.id);actor.task={type:'fish',wildlifeId:wg.id};actor.state='fishing';actor.tx=wg.px;actor.ty=wg.py;actor.timer=2.5-actor.apt.forager*0.01;actor.goal='Fish '+wg.name;break;}
+    case 'deliver':{const site=cand.site;const stor=cand.stor;const carry=Math.min((site.required[cand.need]||0)-(site.delivered[cand.need]||0),actor.inv.capacity,stor.inv[cand.need]);if(carry<=0) return;site.assignedCarriers.push(actor.id);actor.task={type:'pickup_for_site',siteId:site.id,resType:cand.need,amount:carry,storageTileId:stor.tileId};actor.state='moving_to_storage';actor.tx=(stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(stor.tileId/COLS)*TP+TP/2;actor.goal='Deliver '+cand.need+' to '+BUILDINGS[site.bldKey].name;break;}
+    case 'build':{const site=cand.site;site.assignedBuilders.push(actor.id);actor.task={type:'build',siteId:site.id};actor.state='moving_to_construction';actor.tx=site.px;actor.ty=site.py;actor.goal='Build '+BUILDINGS[site.bldKey].name;break;}
+    case 'maintain':{actor.task={type:'maintain',maintainTileId:cand.tid};actor.state='maintaining';actor.tx=(cand.tid%COLS)*TP+TP/2;actor.ty=Math.floor(cand.tid/COLS)*TP+TP/2;actor.goal='Repair '+(BUILDINGS[cand.bk]?.name||'building');break;}
+    case 'demolish':{actor.task={type:'demolish',demolishTileId:cand.tid,progress:0};actor.state='demolishing';actor.timer=2+Math.random();actor.tx=(cand.tid%COLS)*TP+TP/2;actor.ty=Math.floor(cand.tid/COLS)*TP+TP/2;actor.goal='Demolish unused building';break;}
+    case 'explore':{const target=findExploreTarget(actor);if(target!=null){actor.task={type:'explore',exploreTileId:target};actor.state='exploring';actor.tx=(target%COLS)*TP+TP/2;actor.ty=Math.floor(target/COLS)*TP+TP/2;actor.goal='Explore territory';}break;}
+  }
+}
+
+function evalAndAssignTask(actor){
+  if(actor.fatigue>82&&sim.crisisMode!=='starvation'){
+    actor.state='resting';actor.restTimer=3+Math.random()*2;actor.goal='Resting';
+    return;
+  }
+  const cands=generateCandidates(actor);
+  if(cands.length===0){actor.lastDecisions=[];return;}
+  const scored=cands.map(c=>{const r=utilityScore(actor,c);return{cand:c,score:r.score,reasons:r.reasons};}).sort((a,b)=>b.score-a.score);
+  actor.lastDecisions=scored.slice(0,3).map(s=>({label:taskLabel(s.cand),score:s.score,reason:s.reasons.slice(0,2).join(', ')}));
+  const best=scored[0];
+  if(best&&best.score>0){assignTaskFromCandidate(actor,best.cand);actor.taskAge=0;}
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 function assignTasks(){
   for(const actor of sim.actors){
-    if(actor.state!=='idle'&&actor.state!=='resting') continue;
-    if(actor.restTimer>0) continue;
+    if(actor.state!=='idle'||actor.restTimer>0) continue;
 
-    // 1. Deliver resources to construction site
-    let assigned=false;
-    for(const site of sim.sites){
-      if(site.complete) continue;
-      const need=siteNeedsRes(site);if(!need) continue;
-      const needed=(site.required[need]||0)-(site.delivered[need]||0);if(needed<=0) continue;
-      if(site.assignedCarriers.filter(id=>id===actor.id).length>0) continue;
-      const stor=nearestStorage(actor.px,actor.py,need);
-      if(!stor||(stor.inv[need]||0)<1) continue;
-      const carry=Math.min(needed,actor.inv.capacity,stor.inv[need]);
-      if(carry<=0) continue;
-      site.assignedCarriers.push(actor.id);
-      actor.task={type:'pickup_for_site',siteId:site.id,resType:need,amount:carry,storageTileId:stor.tileId};
-      actor.state='moving_to_storage';
-      actor.tx=(stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(stor.tileId/COLS)*TP+TP/2;
-      assigned=true;break;
-    }
-    if(assigned) continue;
-
-    // 2. Build at site with resources delivered
-    for(const site of sim.sites){
-      if(site.complete||!siteMet(site)) continue;
-      if(site.assignedBuilders.length>=2) continue;
-      if(actor.apt.builder<15&&site.assignedBuilders.length>0) continue;
-      site.assignedBuilders.push(actor.id);
-      actor.task={type:'build',siteId:site.id};
-      actor.state='moving_to_construction';
-      actor.tx=site.px;actor.ty=site.py;
-      assigned=true;break;
-    }
-    if(assigned) continue;
-
-    // 3. Maintain critical building (<25% condition)
-    const foodLow=totalRes('food')<state.res.pop*6;
-    if(!foodLow&&state.autoMaintain){
-      for(const [tid,meta] of Object.entries(sim.bldMeta)){
-        const tile=state.grid[+tid];
-        if(!tile?.building||meta.condition>40) continue;
-        if(meta.abandoned||!meta.autoMaintain) continue;
-        const cost=bldMaintenanceCost(tile.building);
-        const stor=nearestStorage(actor.px,actor.py,null);
-        if(!stor) continue;
-        let hasRes=true;
-        for(const [r,v] of Object.entries(cost)) if((sim.bldInv[stor.tileId]?.[r]||0)<v){hasRes=false;break;}
-        if(!hasRes) continue;
-        const maintScore=(actor.apt.builder/100)*30+(actor.traitFx('maintainScore'))*20+(meta.condition<25?50:20);
-        if(maintScore>10){
-          actor.task={type:'maintain',maintainTileId:+tid};
-          actor.state='maintaining';actor.tx=(+tid%COLS)*TP+TP/2;actor.ty=Math.floor(+tid/COLS)*TP+TP/2;
-          assigned=true;break;
-        }
-      }
-    }
-    if(assigned) continue;
-
-    // 4. Hunt wildlife if food low
-    if(actor.apt.hunter>30||actor.apt.forager>40){
-      const foodUrgent=urgency('food');
-      for(const wg of sim.wildlife){
-        if(!wg.discovered||wg.extinct||wg.assignedHunters.length>=2) continue;
-        const dist=actor.dist(wg.px,wg.py);
-        const isAquatic=wg.aquatic;
-        const aptScore=isAquatic?actor.apt.forager:actor.apt.hunter;
-        const sc=aptScore*0.25+foodUrgent*15-dist*0.01+(wg.population/wg.maxPopulation)*10;
-        if(sc>20){
-          wg.assignedHunters.push(actor.id);
-          actor.task={type:isAquatic?'fish':'hunt',wildlifeId:wg.id};
-          actor.state=isAquatic?'fishing':'hunting';
-          actor.tx=wg.px;actor.ty=wg.py;
-          if(isAquatic){actor.timer=2.5-actor.apt.forager*0.01;}
-          assigned=true;break;
-        }
-      }
-    }
-    if(assigned) continue;
-
-    // 5. Gather from node
-    let bestNode=null,bestScore=-999;
-    for(const node of sim.nodes){
-      if(!node.discovered) continue;
-      const s=nodeScore(actor,node);
-      if(s>bestScore){bestScore=s;bestNode=node;}
-    }
-    if(bestNode&&bestScore>0){
-      bestNode.assignedActors.push(actor.id);
-      actor.task={type:'gather',nodeId:bestNode.id,resType:bestNode.type};
-      actor.state='moving_to_resource';
-      actor.tx=bestNode.px;actor.ty=bestNode.py;
-      assigned=true;
-    }
-    if(assigned) continue;
-
-    // 6. Demolish abandoned building
-    if(state.autoDemolish&&actor.apt.builder>15){
-      for(const [tid,meta] of Object.entries(sim.bldMeta)){
-        if(!meta.demolitionQueued||meta.pinned) continue;
-        const tile=state.grid[+tid];if(!tile?.building) continue;
-        actor.task={type:'demolish',demolishTileId:+tid,progress:0};
-        actor.state='demolishing';actor.timer=2+Math.random();
-        actor.tx=(+tid%COLS)*TP+TP/2;actor.ty=Math.floor(+tid/COLS)*TP+TP/2;
-        assigned=true;break;
-      }
-    }
-    if(assigned) continue;
-
-    // 7. Explore unknown tiles
-    const exploreScore=computeExploreScore(actor);
-    if(exploreScore>0){
-      const target=findExploreTarget(actor);
-      if(target!=null){
-        actor.task={type:'explore',exploreTileId:target};
-        actor.state='exploring';
-        actor.tx=(target%COLS)*TP+TP/2;actor.ty=Math.floor(target/COLS)*TP+TP/2;
-        assigned=true;
-      }
-    }
-
-    // 8. Non-critical maintenance (condition 40-70)
-    if(!assigned&&state.autoMaintain&&!foodLow){
-      for(const [tid,meta] of Object.entries(sim.bldMeta)){
-        const tile=state.grid[+tid];
-        if(!tile?.building||meta.condition>70||meta.condition<=40) continue;
-        if(meta.abandoned||!meta.autoMaintain) continue;
-        const cost=bldMaintenanceCost(tile.building);
-        const stor=nearestStorage(actor.px,actor.py,null);
-        if(!stor) continue;
-        let hasRes=true;
-        for(const [r,v] of Object.entries(cost)) if((sim.bldInv[stor.tileId]?.[r]||0)<v){hasRes=false;break;}
-        if(!hasRes||Math.random()>0.3) continue;
-        actor.task={type:'maintain',maintainTileId:+tid};
-        actor.state='maintaining';actor.tx=(+tid%COLS)*TP+TP/2;actor.ty=Math.floor(+tid/COLS)*TP+TP/2;
-        break;
-      }
-    }
+    evalAndAssignTask(actor);
   }
 }
 
@@ -838,9 +998,13 @@ function computeExploreScore(actor){
 function findExploreTarget(actor){
   const rangeMulti=actor.traitFx('exploreRange',1);
   const baseRange=Math.floor(12*rangeMulti);
-  // Find nearest unexplored tile within range
   const ax=Math.round(actor.px/TP),ay=Math.round(actor.py/TP);
-  let best=null,bestDist=9999;
+  // Preferred terrain based on settlement shortages
+  const prefTerrain=new Set();
+  if(urgency('food')>4){prefTerrain.add('forest');prefTerrain.add('plains');prefTerrain.add('water');}
+  if(urgency('wood')>4) prefTerrain.add('forest');
+  if(urgency('stone')>4) prefTerrain.add('rock');
+  let best=null,bestScore=-9999;
   for(let dy=-baseRange;dy<=baseRange;dy++) for(let dx=-baseRange;dx<=baseRange;dx++){
     const nx=ax+dx,ny=ay+dy;
     if(nx<1||nx>=COLS-1||ny<1||ny>=ROWS-1) continue;
@@ -848,7 +1012,8 @@ function findExploreTarget(actor){
     if(tile.explored&&tile.surveyed) continue;
     if(tile.type==='mountain') continue;
     const d=Math.abs(dx)+Math.abs(dy);
-    if(d<bestDist){bestDist=d;best=tile.id;}
+    const s=-d+(prefTerrain.has(tile.type)?8:0);
+    if(s>bestScore){bestScore=s;best=tile.id;}
   }
   return best;
 }
@@ -872,6 +1037,16 @@ function gatherDur(actor,node){return Math.max(0.7,2.4-actor.apt.forager*0.013);
 
 function updateActors(dt){
   for(const actor of sim.actors){
+    // Fatigue: drain slowly when active, recover when idle/resting
+    const activeState=actor.state!=='idle'&&actor.state!=='resting';
+    if(activeState){
+      const fatigueRate=actor.state==='building'||actor.state==='performing_hunt'?2.2:1.4;
+      actor.fatigue=Math.min(100,actor.fatigue+dt*fatigueRate*(actor.hasTrait('industrious')?0.7:1));
+    } else {
+      actor.fatigue=Math.max(0,actor.fatigue-dt*5);
+    }
+    actor.taskAge=activeState?(actor.taskAge||0)+dt:0;
+
     if(actor.restTimer>0){actor.restTimer-=dt;if(actor.restTimer<=0){actor.restTimer=0;actor.state='idle';}continue;}
 
     switch(actor.state){
@@ -905,7 +1080,8 @@ function updateActors(dt){
             node.amount=Math.max(0,node.amount-g);
             actor.inv.type=node.type;actor.inv.amount+=g;
           }
-          if(node.amount<=0){node.depleted=true;node.overHarvestCount++;if(node.overHarvestCount>1) addLog(`${node.type} node depleted (${node.overHarvestCount}x over-harvested).`,'warn');}
+          if(node.amount<=0){node.depleted=true;node.overHarvestCount++;if(node.overHarvestCount>1) addLog(`${node.type} node depleted (${node.overHarvestCount}x over-harvested).`,'warn');actor.memorizeDepletion(node.id);}
+          actor.gainExp('forager',0.08);
           if(actor.inv.amount>=actor.inv.capacity*0.88||node.depleted){
             node.assignedActors=node.assignedActors.filter(i=>i!==actor.id);
             const stor=nearestStorage(actor.px,actor.py,actor.inv.type);
@@ -994,6 +1170,7 @@ function updateActors(dt){
         const bldMult=1+(actor.hasTrait('industrious')?.15:0);
         const rate=(5+actor.apt.builder*0.04)*dt*bldMult;
         site.progress=Math.min(100,site.progress+rate);
+        actor.gainExp('builder',dt*0.04);
         if(site.progress>=100) completeSite(site);
         break;
       }
@@ -1039,10 +1216,11 @@ function updateActors(dt){
             const actualKills=Math.min(kills,Math.floor(wg.population));
             wg.population=Math.max(0,wg.population-actualKills);
             wg.fear=Math.min(100,wg.fear+actualKills*10);
-            if(wg.population<1){wg.extinct=true;wg.population=0;addLog(`The ${wg.name} has been hunted out!`,'warn');}
+            if(wg.population<1){wg.extinct=true;wg.population=0;addLog(`The ${wg.name} has been hunted out!`,'warn');actor.memorizeHerd(wg.id);}
             const foodYield=(wg.yields.food||0)*actualKills*(1+state.yieldBonus);
             const space=actor.inv.capacity-actor.inv.amount;
             actor.inv.type='food';actor.inv.amount+=Math.min(space,foodYield);
+            actor.gainExp('hunter',0.35);
             wg.lastHuntedAt=sim.gameTime;
             // Hides to a separate carry (simplified: fold into food yield)
           }
@@ -1105,6 +1283,7 @@ function updateActors(dt){
               meta.condition=Math.min(100,meta.condition+restoreAmt);
               meta.lastMaintainedTurn=state.turn;
               meta.abandoned=false;meta.demolitionQueued=false;
+              actor.gainExp('builder',0.18);
               addLog(`${actor.name} repaired ${BUILDINGS[bk]?.name||'building'}.`);
             }
           }
@@ -1362,12 +1541,14 @@ function gameLoop(ts){
   const dt=Math.min((ts-lastTime)/1000,0.1);lastTime=ts;
   updateActors(dt);updateNodes(dt);updateWildlife(dt);
   taskTimer-=dt;if(taskTimer<=0){taskTimer=0.65;assignTasks();}
+  sim.plannerTimer-=dt;if(sim.plannerTimer<=0){sim.plannerTimer=8;runSettlementPlanner();}
   uiTimer-=dt;if(uiTimer<=0){
     uiTimer=0.28;
     renderResources();
     if(infoTab==='people') renderActorPanel();
     if(infoTab==='build') renderBuildPanel();
     if(infoTab==='hist') renderHistoryPanel();
+    if(infoTab==='debug') renderDebugPanel();
   }
   renderSim();
   requestAnimationFrame(gameLoop);
@@ -1612,7 +1793,15 @@ function renderActorPanel(){
     card.className='actor-card'+(selectedActor===actor?' sel':'');
     const aptStr=APT_KEYS.map(k=>`<span class="apt-tag" style="color:${ROLE_COLOR[k]}">${k[0].toUpperCase()} ${actor.apt[k]}</span>`).join('');
     const traitStr=(actor.traits||[]).map(t=>`<span class="trait-tag" style="background:${TRAIT_COLOR[t]}22;color:${TRAIT_COLOR[t]};border:1px solid ${TRAIT_COLOR[t]}44;border-radius:3px;padding:0 3px;font-size:.78em;margin-right:2px">${t}</span>`).join('');
-    card.innerHTML=`<div class="ac-header"><div class="ac-dot" style="background:${actor.color}"></div><span class="ac-name">${actor.name}</span><span class="ac-role">${ROLE_ICON[actor.dominant]} ${actor.dominant}-leaning</span></div><div class="ac-state">⚡ ${actor.stateLabel}</div><div class="ac-inv">🎒 ${actor.carrying}</div><div class="ac-apt">${aptStr}</div>${traitStr?`<div class="ac-traits" style="margin-top:3px">${traitStr}</div>`:''}`;
+    const fatPct=Math.floor(actor.fatigue||0);
+    const fatCol=fatPct>80?'#c04040':fatPct>50?'#c07030':'#6a8030';
+    const fatBar=`<div class="fatigue-bar" title="Fatigue: ${fatPct}%"><div class="fatigue-fill" style="width:${fatPct}%;background:${fatCol}"></div></div>`;
+    const goalHtml=actor.goal?`<div class="goal-line">🎯 ${actor.goal}</div>`:'';
+    let decisionsHtml='';
+    if(selectedActor===actor&&actor.lastDecisions&&actor.lastDecisions.length>0){
+      decisionsHtml=`<div class="decision-block"><div style="color:#7a8060;font-size:.68em;margin-bottom:1px">Considered tasks:</div>${actor.lastDecisions.map((d,i)=>`<div class="decision-row ${i===0?'top':''}"><span style="color:#7a8060;flex-shrink:0">${i===0?'▶':i+1+'.'}</span><span style="flex:1;padding:0 2px">${d.label}</span><span class="decision-score">${d.score}</span><span class="decision-reason">${d.reason}</span></div>`).join('')}</div>`;
+    }
+    card.innerHTML=`<div class="ac-header"><div class="ac-dot" style="background:${actor.color}"></div><span class="ac-name">${actor.name}</span><span class="ac-role">${ROLE_ICON[actor.dominant]} ${actor.dominant}-leaning</span></div>${goalHtml}<div class="ac-state">⚡ ${actor.stateLabel}</div><div class="ac-inv">🎒 ${actor.carrying}</div>${fatBar}<div class="ac-apt">${aptStr}</div>${traitStr?`<div class="ac-traits" style="margin-top:3px">${traitStr}</div>`:''}${decisionsHtml}`;
     card.onclick=()=>{selectedActor=selectedActor===actor?null:actor;renderActorPanel();};
     el.appendChild(card);
   }
@@ -1675,6 +1864,7 @@ function setInfoTab(tab){
   if(tab==='people') renderActorPanel();
   if(tab==='build') renderBuildPanel();
   if(tab==='hist') renderHistoryPanel();
+  if(tab==='debug') renderDebugPanel();
 }
 
 function renderHistoryPanel(){
@@ -1713,6 +1903,59 @@ function renderHistoryPanel(){
       const row=document.createElement('div');row.className='tech-prog-row';
       row.innerHTML=`<span style="flex:1;color:${done?'#7ab050':'var(--text)'};font-size:.9em">${t.icon} ${t.name}</span><span style="color:var(--hi);min-width:28px;text-align:right">${done?'✓':Math.floor(prog)+'%'}</span><div class="tech-prog-bg" style="width:50px"><div class="tech-prog-fill" style="width:${done?100:prog}%"></div></div>`;
       tEl.appendChild(row);
+    }
+  }
+}
+
+function renderDebugPanel(){
+  const crisis=sim.crisisMode;
+  const crisisEl=document.getElementById('debug-crisis-panel');
+  if(crisisEl){
+    const cls=!crisis?'ok':crisis==='starvation'?'':'warn';
+    const label=!crisis?'No crisis':crisis==='starvation'?'🚨 STARVATION':crisis==='food'?'⚠ Food low':crisis==='maintenance'?'⚠ Buildings decaying':crisis==='idle'?'💤 Actors idle':'?';
+    crisisEl.innerHTML=`<span class="crisis-badge ${cls}">${label}</span>`;
+    const idleN=sim.actors.filter(a=>a.state==='idle'&&a.restTimer<=0).length;
+    const restN=sim.actors.filter(a=>a.state==='resting').length;
+    const avgFat=sim.actors.length?Math.floor(sim.actors.reduce((s,a)=>s+(a.fatigue||0),0)/sim.actors.length):0;
+    crisisEl.innerHTML+=`<div class="debug-row"><span class="debug-label">Actors idle / resting / total</span><span class="debug-val">${idleN} / ${restN} / ${sim.actors.length}</span></div>`;
+    crisisEl.innerHTML+=`<div class="debug-row"><span class="debug-label">Avg fatigue</span><span class="${avgFat>70?'debug-crit':avgFat>40?'debug-warn':'debug-val'}">${avgFat}%</span></div>`;
+  }
+  const intentEl=document.getElementById('debug-intents-panel');
+  if(intentEl){
+    intentEl.innerHTML=(sim.intents||[]).map(i=>`<span class="intent-tag">${i}</span>`).join('')||'<span style="color:#6a5030;font-size:.8em">Analysing…</span>';
+  }
+  const taskEl=document.getElementById('debug-tasks-panel');
+  if(taskEl){
+    const counts={gather:0,hunt:0,fish:0,deliver:0,build:0,maintain:0,demolish:0,explore:0,other:0};
+    for(const a of sim.actors){
+      if(!a.task){continue;}
+      const t=a.task.type;
+      if(t==='pickup_for_site') counts.deliver++;
+      else if(t in counts) counts[t]++;
+      else counts.other++;
+    }
+    taskEl.innerHTML=Object.entries(counts).filter(([,v])=>v>0).map(([k,v])=>`<div class="task-row"><span style="color:#9a8050;min-width:58px">${k}</span><div class="task-bar"><div class="task-bar-fill" style="width:${v/sim.actors.length*100}%"></div></div><span style="color:var(--hi);min-width:18px;text-align:right">${v}</span></div>`).join('')||'<span style="color:#6a5030;font-size:.8em">No active tasks</span>';
+  }
+  const resEl=document.getElementById('debug-res-panel');
+  if(resEl){
+    const pop=state.res.pop;
+    const rows=['food','wood','stone','water'].map(r=>{
+      const cur=Math.floor(totalRes(r)),cap=totalCap(r),urg=urgency(r);
+      const cls=urg>5?'debug-crit':urg>3?'debug-warn':'debug-val';
+      const depleted=sim.nodes.filter(n=>n.type===r&&n.depleted).length;
+      return `<div class="debug-row"><span class="debug-label">${RES_ICON[r]} ${r}</span><span class="${cls}">${cur}/${cap} (u:${urg.toFixed(0)}${depleted?' ⚠'+depleted+' dep':''})</span></div>`;
+    });
+    resEl.innerHTML=rows.join('');
+  }
+  const actorEl=document.getElementById('debug-actor-panel');
+  if(actorEl){
+    actorEl.innerHTML='';
+    for(const actor of sim.actors){
+      const div=document.createElement('div');div.className='ai-actor-card';
+      const fatPct=Math.floor(actor.fatigue||0);
+      const top=actor.lastDecisions?.[0];
+      div.innerHTML=`<div class="ai-actor-header"><div class="ac-dot" style="background:${actor.color}"></div><span style="color:var(--hi);font-weight:bold">${actor.name}</span><span style="color:#9a8050;font-size:.88em;margin-left:4px">${actor.dominant}</span><span style="color:#6a7040;font-size:.8em;margin-left:auto">fatigue:${fatPct}%</span></div><div class="ai-goal">${actor.goal||actor.stateLabel}</div>${top?`<div class="ai-top-task" style="font-size:.78em">▶ ${top.label} <span style="color:#a09050">${top.score}</span> <span style="color:#6a8040">${top.reason}</span></div>`:''}<div style="color:#6a5030;font-size:.68em">${(actor.lastDecisions||[]).slice(1).map((d,i)=>`${i+2}. ${d.label}: ${d.score}`).join(' · ')}</div>`;
+      actorEl.appendChild(div);
     }
   }
 }
@@ -1903,6 +2146,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='2') setInfoTab('people');
   if(e.key==='3') setInfoTab('build');
   if(e.key==='4') setInfoTab('hist');
+  if(e.key==='5') setInfoTab('debug');
 });
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
