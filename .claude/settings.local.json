@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(\\(Get-Content \"c:\\\\Users\\\\edfow\\\\OneDrive\\\\Documents\\\\GitHub\\\\angband_ef\\\\dawn_of_civilization.html\" | Measure-Object -Line\\).Lines)"
+    ]
+  }
+}
