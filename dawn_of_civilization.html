@@ -11,7 +11,6 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;overflow:hidden;}
 body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:flex;flex-direction:column;}
-/* HEADER */
 #header{background:var(--panel);border-bottom:2px solid var(--earth);padding:4px 10px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;flex-shrink:0;min-height:46px;}
 #title{font-size:.88em;color:var(--hi);letter-spacing:2px;text-shadow:0 0 12px rgba(240,192,80,.45);white-space:nowrap;flex-shrink:0;}
 .res-bar{display:flex;gap:6px;flex:1;flex-wrap:wrap;align-items:center;}
@@ -25,6 +24,8 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
 .food-days.crit{border-color:#7a1010;color:#c04040;}
 .crisis-badge{background:#4a1010;border:1px solid #c04040;color:#e06060;font-size:.68em;padding:1px 5px;border-radius:2px;display:none;}
 .crisis-badge.show{display:inline;}
+.auto-badge{background:#0a2040;border:1px solid #4080c0;color:#80c0f0;font-size:.68em;padding:1px 5px;border-radius:2px;display:none;cursor:pointer;}
+.auto-badge.show{display:inline;}
 #time-wrap{color:#c09050;font-size:.72em;white-space:nowrap;text-align:right;line-height:1.5;flex-shrink:0;}
 #era-tag{color:#b090e0;font-style:italic;}
 .spd-controls{display:flex;gap:2px;flex-shrink:0;align-items:center;}
@@ -34,9 +35,10 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
 .save-controls{display:flex;gap:2px;flex-shrink:0;}
 .save-btn{background:#1a2010;border:1px solid #3a5020;color:#7ab050;padding:2px 6px;font-size:.7em;cursor:pointer;font-family:Georgia,serif;border-radius:2px;}
 .save-btn:hover{background:#243018;}
-/* MAIN LAYOUT */
+.auto-btn{background:#0e1a28;border:1px solid #2a4060;color:#6090b0;padding:2px 6px;font-size:.7em;cursor:pointer;font-family:Georgia,serif;border-radius:2px;}
+.auto-btn:hover{background:#1a2838;}
+.auto-btn.on{background:#162030;border-color:#4080c0;color:#80c0f0;}
 #main{display:flex;flex:1;overflow:hidden;}
-/* SIDEBAR */
 #sidebar{width:192px;background:var(--panel);border-right:2px solid var(--earth);overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
 .sb-section h3{color:var(--hi);font-size:.68em;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--earth);padding-bottom:2px;margin-bottom:4px;}
 .bld-cats{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:4px;}
@@ -53,14 +55,12 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
 #remove-btn{width:100%;background:#2a0e0e;border:1px solid #7a3030;color:#d06060;padding:4px;cursor:pointer;font-family:Georgia,serif;font-size:.72em;border-radius:2px;margin-top:2px;}
 #remove-btn:hover{background:#3a1818;}
 #remove-btn.active{background:#4a1010;border-color:#c04040;}
-/* WORLD CANVAS AREA */
 #world{flex:1;position:relative;overflow:hidden;background:#050403;}
 #terrain-canvas,#game-canvas{position:absolute;top:0;left:0;}
 #terrain-canvas{z-index:1;}
 #game-canvas{z-index:2;}
 #minimap-canvas{position:absolute;bottom:8px;right:8px;z-index:20;border:1px solid var(--earth);cursor:crosshair;opacity:.85;}
 #minimap-canvas:hover{opacity:1;}
-/* INSPECTOR */
 #inspector{width:238px;background:var(--panel);border-left:2px solid var(--earth);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
 .info-tabs{display:flex;border-bottom:1px solid var(--earth);flex-shrink:0;flex-wrap:wrap;}
 .itab{flex:1;min-width:0;background:none;border:none;border-right:1px solid var(--earth);color:#907040;font-family:Georgia,serif;font-size:.62em;padding:4px 1px;cursor:pointer;transition:background .12s;white-space:nowrap;}
@@ -105,6 +105,8 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
 .debug-label{color:#9a8050;}.debug-val{color:var(--hi);}
 .ai-actor-card{background:var(--bg);border:1px solid #2a2010;border-radius:2px;padding:3px 5px;font-size:.68em;margin-bottom:3px;}
 .ai-goal{color:#60b090;}.ai-top-task{color:var(--hi);font-weight:bold;}
+.site-card{background:var(--bg);border:1px solid #2a3010;border-radius:2px;padding:3px 5px;font-size:.68em;margin-bottom:3px;}
+.site-state-ok{color:#7ab050;}.site-state-wait{color:#c09030;}.site-state-block{color:#c04040;}
 #log-section{flex-shrink:0;border-top:1px solid var(--earth);padding:5px;max-height:160px;display:flex;flex-direction:column;gap:3px;}
 #log{overflow-y:auto;flex:1;}
 .log-line{padding:1px 0;border-bottom:1px solid #1e1508;font-size:.7em;color:#907040;line-height:1.3;}
@@ -127,6 +129,7 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
     <span class="food-days" id="food-days-badge">5d food</span>
     <span class="crisis-badge" id="crisis-badge">⚠ Crisis</span>
     <span class="crisis-badge" id="threat-badge" style="border-color:#e06030;color:#e08050;">☠ Threat</span>
+    <span class="auto-badge" id="auto-badge" onclick="toggleAutoMode()" title="Auto mode active — click to disable">⚙ AUTO</span>
   </div>
   <div id="time-wrap">
     <div id="era-tag">Nomadic Band</div>
@@ -143,6 +146,7 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
     <button class="save-btn" onclick="saveGame()">💾</button>
     <button class="save-btn" onclick="loadGame()">📂</button>
     <button class="save-btn" onclick="resetGame()">↺</button>
+    <button class="auto-btn" id="auto-toggle-btn" onclick="toggleAutoMode()">AUTO</button>
   </div>
 </div>
 <div id="main">
@@ -201,6 +205,7 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
     </div>
     <div class="tab-content hidden" id="tab-debug">
       <div id="debug-panel"></div>
+      <div id="site-debug-panel"></div>
       <div id="ai-panel"></div>
     </div>
     <div id="log-section">
@@ -222,14 +227,12 @@ const SEASON_DAYS=20;
 const FOOD_PER_S=0.08;
 const WATER_PER_S=0.04;
 const VIS_RADIUS=9;
-const CW=COLS*TP,CH=ROWS*TP; // world pixel size: 1200×840
-
-// Hunger thresholds (days of food)
+const CW=COLS*TP,CH=ROWS*TP;
 const HUNGER={FED:7,HUNGRY:3,STARVING:1,GRACE_DAYS:2};
+const AFK_THRESHOLD=30000; // ms of real-time inactivity before AUTO mode
 
 // ── BUILDINGS ──────────────────────────────────────────────────────────────────
 const BUILDINGS={
-  // FOOD category
   firePit:      {name:'Fire Pit',        icon:'🔥',cat:'food',   cost:{wood:8,stone:4},       popCap:0, mod:{morale:5},           effect:'Warmth & community. Actors gather here.',moraleBonus:5,req:[],era:0},
   huntingBlind: {name:'Hunting Blind',   icon:'🏹',cat:'food',   cost:{wood:10},               popCap:0, mod:{huntYield:1.5,fearReduce:0.5},effect:'Hunters disturb herds less; yield ×1.5.',req:[],era:0},
   foragingPatch:{name:'Foraging Patch',  icon:'🌿',cat:'food',   cost:{wood:5},                popCap:0, mod:{forageYield:1.4},    effect:'Foragers gather 40% more nearby.',req:[],era:0},
@@ -239,7 +242,6 @@ const BUILDINGS={
   smokehouse:   {name:'Smokehouse',      icon:'🏠',cat:'food',   cost:{wood:20,stone:15},      popCap:0, mod:{spoilRate:0.3,meatYield:1.3},effect:'Smoke-preserves meat/fish; spoilage ×0.3.',req:['foodPreservation'],era:2},
   huntingCamp:  {name:'Hunting Camp',    icon:'🏕️',cat:'food',   cost:{wood:15,stone:5},       popCap:0, mod:{huntYield:1.4},      effect:'Hunters stage from here; yield ×1.4.',req:[],era:0},
   rootCellar:   {name:'Root Cellar',     icon:'🥕',cat:'food',   cost:{stone:15,wood:8},       popCap:0, mod:{spoilRate:0.5},      effect:'Underground storage halves plant-food spoilage.',req:[],era:1},
-  // INFRA category
   flintKnapping:{name:'Knapping Site',   icon:'⚒️',cat:'infra',  cost:{stone:10},              popCap:0, mod:{stoneYield:1.3},     effect:'Knappers work 30% more efficiently.',req:[],era:0},
   lumberCamp:   {name:'Lumber Camp',     icon:'🪓',cat:'infra',  cost:{wood:10,stone:5},       popCap:0, mod:{woodYield:1.5},      effect:'Woodcutters yield 50% more timber.',req:[],era:0,onForest:true},
   mine:         {name:'Stone Mine',      icon:'⛏️',cat:'infra',  cost:{wood:20,stone:10},      popCap:0, mod:{stoneYield:1.8},     effect:'Miners extract 80% more stone.',req:['toolMaking'],era:1,onRock:true},
@@ -247,17 +249,13 @@ const BUILDINGS={
   potteryKiln:  {name:'Pottery Kiln',    icon:'🫙',cat:'infra',  cost:{wood:20,stone:25},      popCap:0, mod:{waterYield:1.3},     effect:'Better vessels; water yield +30%.',req:['pottery'],era:2},
   wellShaft:    {name:'Deep Well',       icon:'💧',cat:'infra',  cost:{stone:40,wood:15},      popCap:0, mod:{waterYield:2.0},     effect:'Deep aquifer; water yield ×2.',req:['pottery'],era:3},
   pasture:      {name:'Animal Pasture',  icon:'🐂',cat:'infra',  cost:{wood:20,stone:10},      popCap:0, mod:{huntYield:2.0},      effect:'Domesticated animals; herder yield ×2.',req:['animalHusbandry'],era:3},
-  // STORAGE category
   storagePit:   {name:'Storage Pit',     icon:'🏺',cat:'storage',cost:{wood:18,stone:12},      popCap:0, mod:{},                  effect:'+200 resource capacity.',req:[],era:1},
   granary:      {name:'Granary',         icon:'🌽',cat:'storage',cost:{wood:35,stone:20},      popCap:0, mod:{spoilRate:0.4},      effect:'+200 food cap. Spoilage ×0.4.',req:['agriculture'],era:2},
-  // CULTURE category
   shrine:       {name:'Sacred Shrine',   icon:'🗿',cat:'culture',cost:{stone:35},              popCap:0, mod:{},                  effect:'+20 morale.',moraleBonus:20,req:[],era:1},
   market:       {name:'Barter Market',   icon:'🏪',cat:'culture',cost:{wood:40,stone:30},      popCap:0, mod:{},                  effect:'+15 morale.',moraleBonus:15,req:['pottery','toolMaking'],era:3},
   greatHall:    {name:'Great Hall',      icon:'🏛️',cat:'culture',cost:{wood:80,stone:60},      popCap:15,mod:{morale:10},         effect:'+15 pop. Inspires all.',moraleBonus:10,req:['architecture'],era:4},
-  // DEFENCE category
   palisade:     {name:'Palisade Wall',   icon:'🛡️',cat:'defence',cost:{wood:30,stone:20},      popCap:0, mod:{},                  effect:'+10 morale. Deters threats.',moraleBonus:10,req:['toolMaking'],era:2},
   watchPost:    {name:'Watch Post',      icon:'🗼',cat:'defence',cost:{wood:25,stone:30},      popCap:0, mod:{},                  effect:'Detects threats. +5 morale.',moraleBonus:5,req:['toolMaking'],era:2},
-  // HOUSING category
   leanTo:       {name:'Lean-to',         icon:'⛺',cat:'housing',cost:{wood:12},               popCap:3, mod:{},                  effect:'+3 pop capacity.',req:[],era:0},
   earthLodge:   {name:'Earthen Lodge',   icon:'🛖',cat:'housing',cost:{wood:30,stone:15},      popCap:6, mod:{},                  effect:'+6 pop capacity.',req:[],era:1},
   longhouse:    {name:'Longhouse',       icon:'🏠',cat:'housing',cost:{wood:50,stone:25},      popCap:10,mod:{},                  effect:'+10 pop capacity.',req:['toolMaking'],era:2},
@@ -305,7 +303,7 @@ const ACTOR_NAMES=['Og','Mara','Keth','Thorn','Ash','Bryn','Flin','Grit','Rook',
 const APT_KEYS=['hunter','builder','forager','shaman','crafter','carrier','generalist'];
 const ROLE_COLOR={hunter:'#e08040',builder:'#c0a060',forager:'#50b060',shaman:'#b060e0',crafter:'#4090e0',carrier:'#e0b030',generalist:'#909090'};
 const ROLE_ICON={hunter:'🏹',builder:'🔨',forager:'🌿',shaman:'🌀',crafter:'⚒️',carrier:'🎒',generalist:'👤'};
-const STATE_LBL={idle:'idle',moving_to_resource:'→ node',gathering:'gathering',moving_to_storage:'→ store',depositing:'depositing',moving_to_construction:'→ site',delivering_to_construction:'delivering',building:'building',resting:'resting',exploring:'exploring',surveying:'surveying',hunting:'→ hunt',performing_hunt:'hunting!',fishing:'fishing',maintaining:'→ repair',performing_maintenance:'repairing',demolishing:'demolishing',fleeing:'fleeing!'};
+const STATE_LBL={idle:'idle',resting:'resting',moving_to_resource:'→ node',gathering:'gathering',moving_to_storage:'→ store',depositing:'depositing',moving_to_construction:'→ site',delivering_to_construction:'delivering',building:'building',exploring:'exploring',surveying:'surveying',hunting:'→ hunt',performing_hunt:'hunting!',fishing:'fishing',maintaining:'→ repair',performing_maintenance:'repairing',demolishing:'demolishing',fleeing:'fleeing!'};
 
 const ALL_TRAITS=['curious','cautious','industrious','spiritual','practical','restless','careful','social','patient'];
 const TRAIT_FX={
@@ -368,56 +366,46 @@ let usedNames=[];
 let mouseWorldX=0,mouseWorldY=0;
 let hoveredTile=null;
 
+// AFK / auto mode
+let autoMode=false;
+let lastInteractionTime=Date.now();
+let autoBuilderTimer=0;
+
 // ── CAMERA ────────────────────────────────────────────────────────────────────
 const cam={
-  wx:0,wy:0,  // world pixel of top-left
+  wx:0,wy:0,
   zoom:1.5,
-  vw:800,vh:600, // viewport size (set on init/resize)
+  vw:800,vh:600,
   minZoom:0.4,maxZoom:4,
   dragging:false,dragStartX:0,dragStartY:0,dragStartWX:0,dragStartWY:0,
   followActor:null,
 };
 
-function worldToScreen(wx,wy){
-  return{x:(wx-cam.wx)*cam.zoom,y:(wy-cam.wy)*cam.zoom};
-}
-function screenToWorld(sx,sy){
-  return{x:sx/cam.zoom+cam.wx,y:sy/cam.zoom+cam.wy};
-}
+function worldToScreen(wx,wy){return{x:(wx-cam.wx)*cam.zoom,y:(wy-cam.wy)*cam.zoom};}
+function screenToWorld(sx,sy){return{x:sx/cam.zoom+cam.wx,y:sy/cam.zoom+cam.wy};}
 function clampCamera(){
   const maxWX=CW-cam.vw/cam.zoom;const maxWY=CH-cam.vh/cam.zoom;
-  cam.wx=Math.max(0,Math.min(maxWX,cam.wx));
-  cam.wy=Math.max(0,Math.min(maxWY,cam.wy));
+  cam.wx=Math.max(0,Math.min(maxWX,cam.wx));cam.wy=Math.max(0,Math.min(maxWY,cam.wy));
 }
-function centerCameraOn(wx,wy){
-  cam.wx=wx-cam.vw/cam.zoom/2;cam.wy=wy-cam.vh/cam.zoom/2;clampCamera();
-}
+function centerCameraOn(wx,wy){cam.wx=wx-cam.vw/cam.zoom/2;cam.wy=wy-cam.vh/cam.zoom/2;clampCamera();}
 function resizeCanvases(){
   const world=document.getElementById('world');
   cam.vw=world.clientWidth;cam.vh=world.clientHeight;
-  const tc=document.getElementById('terrain-canvas');
-  const gc=document.getElementById('game-canvas');
-  tc.width=cam.vw;tc.height=cam.vh;
-  gc.width=cam.vw;gc.height=cam.vh;
+  const tc=document.getElementById('terrain-canvas');const gc=document.getElementById('game-canvas');
+  tc.width=cam.vw;tc.height=cam.vh;gc.width=cam.vw;gc.height=cam.vh;
 }
 
 // ── TERRAIN OFFSCREEN ─────────────────────────────────────────────────────────
 let terrainOffscreen=null;
 let terrainDirty=true;
 
-function makeTerrainOffscreen(){
-  terrainOffscreen=document.createElement('canvas');
-  terrainOffscreen.width=CW;terrainOffscreen.height=CH;
-}
-
+function makeTerrainOffscreen(){terrainOffscreen=document.createElement('canvas');terrainOffscreen.width=CW;terrainOffscreen.height=CH;}
 function tileNoise(tx,ty){return(((tx*2803+ty*1999)^(tx*997+ty*461))&0xff)/255;}
 
 function drawTileToOffscreen(ctx,tile,tx,ty){
   const px=tx*TP,py=ty*TP;
   const n=tileNoise(tx,ty);
-  if(!tile.explored){
-    ctx.fillStyle=`hsl(240,25%,${2+n*2}%)`;ctx.fillRect(px,py,TP,TP);return;
-  }
+  if(!tile.explored){ctx.fillStyle=`hsl(240,25%,${2+n*2}%)`;ctx.fillRect(px,py,TP,TP);return;}
   switch(tile.type){
     case'grass':{
       ctx.fillStyle=n>0.6?'#2a4a1a':n>0.3?'#304e1e':'#375524';ctx.fillRect(px,py,TP,TP);
@@ -447,75 +435,82 @@ function drawTileToOffscreen(ctx,tile,tx,ty){
       ctx.fillStyle='#191816';ctx.fillRect(px,py,TP,TP);
       ctx.fillStyle='#282624';
       ctx.beginPath();ctx.moveTo(px+TP/2,py+1);ctx.lineTo(px+TP-1,py+TP-1);ctx.lineTo(px+1,py+TP-1);ctx.fill();
-      if(n>0.82){ctx.fillStyle='rgba(220,220,240,0.28)';ctx.fillRect(px+3,py+1,4,3);}
+      ctx.fillStyle='#3a3835';ctx.beginPath();ctx.moveTo(px+TP/2,py+1);ctx.lineTo(px+TP/2+2,py+4);ctx.lineTo(px+TP/2-2,py+4);ctx.fill();
       break;}
     case'sand':{
-      ctx.fillStyle=n>0.6?'#3a3320':'#443c28';ctx.fillRect(px,py,TP,TP);
-      ctx.fillStyle='rgba(190,170,90,0.18)';
-      for(let i=0;i<4;i++){ctx.fillRect(px+((n*255+i*37)&0xf)/1.4,py+((n*255+i*53)>>4)/1.4,1,1);}
+      ctx.fillStyle=n>0.6?'#3a3520':'#2e2a16';ctx.fillRect(px,py,TP,TP);
+      if(n&0x18){ctx.fillStyle='rgba(80,70,30,0.3)';ctx.fillRect(px+3,py+5,3,1);}
       break;}
     case'marsh':{
-      ctx.fillStyle=n>0.5?'#1e3028':'#263835';ctx.fillRect(px,py,TP,TP);
-      if(n&0x10){ctx.fillStyle='rgba(18,55,75,0.5)';ctx.fillRect(px+2,py+4,4,3);}
-      ctx.fillStyle='#2a4a2c';if(n&0x08){ctx.fillRect(px+7,py+2,2,4);}
+      ctx.fillStyle=n>0.5?'#1e3028':'#182820';ctx.fillRect(px,py,TP,TP);
+      ctx.fillStyle='rgba(40,100,60,0.4)';
+      if(n&0x08){ctx.fillRect(px+2,py+1,1,4);}if(n&0x10){ctx.fillRect(px+6,py+4,1,3);}
       break;}
     case'hills':{
-      ctx.fillStyle=n>0.5?'#3a4228':'#444c30';ctx.fillRect(px,py,TP,TP);
-      ctx.fillStyle=n>0.6?'#2a3020':'#323822';
-      ctx.beginPath();ctx.ellipse(px+TP/2,py+TP*0.7,TP*0.45,TP*0.3,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=n>0.5?'#3a4228':'#323820';ctx.fillRect(px,py,TP,TP);
+      ctx.fillStyle='rgba(60,70,40,0.5)';
+      ctx.beginPath();ctx.ellipse(px+TP/2,py+TP*0.6,TP*0.4,TP*0.3,0,0,Math.PI*2);ctx.fill();
       break;}
-    default:{ctx.fillStyle='#181410';ctx.fillRect(px,py,TP,TP);}
+    default:ctx.fillStyle='#202018';ctx.fillRect(px,py,TP,TP);
   }
-  ctx.fillStyle='rgba(0,0,0,0.12)';ctx.fillRect(px,py,TP,1);ctx.fillRect(px,py,1,TP);
 }
 
 function rebuildTerrain(){
   if(!terrainOffscreen) makeTerrainOffscreen();
   const ctx=terrainOffscreen.getContext('2d');
-  ctx.fillStyle='#080605';ctx.fillRect(0,0,CW,CH);
-  for(let ty=0;ty<ROWS;ty++) for(let tx=0;tx<COLS;tx++){
-    drawTileToOffscreen(ctx,state.grid[ty*COLS+tx],tx,ty);
-  }
+  for(let ty=0;ty<ROWS;ty++) for(let tx=0;tx<COLS;tx++) drawTileToOffscreen(ctx,state.grid[ty*COLS+tx],tx,ty);
   terrainDirty=false;
 }
-
 function renderTerrain(){
   if(terrainDirty) rebuildTerrain();
   const tc=document.getElementById('terrain-canvas');
+  if(!tc) return;
   const tctx=tc.getContext('2d');
-  tctx.clearRect(0,0,cam.vw,cam.vh);
-  tctx.save();
   tctx.setTransform(cam.zoom,0,0,cam.zoom,-cam.wx*cam.zoom,-cam.wy*cam.zoom);
   tctx.drawImage(terrainOffscreen,0,0);
-  tctx.restore();
 }
 
-// ── GAME RENDERER ─────────────────────────────────────────────────────────────
+// ── BUILDING COLORS ───────────────────────────────────────────────────────────
 const BLD_COLORS={
-  firePit:'#8a3a10',huntingBlind:'#4a5a1a',foragingPatch:'#2a5a1a',waterHole:'#1a4060',
-  fishingSpot:'#1a3a60',dryingRack:'#5a4a20',smokehouse:'#4a3a2a',huntingCamp:'#4a5a20',
-  rootCellar:'#3a3018',flintKnapping:'#4a4a3a',lumberCamp:'#3a5a20',mine:'#3a3835',
-  field:'#3a6020',potteryKiln:'#6a4a20',wellShaft:'#1a3a5a',pasture:'#3a6028',
-  storagePit:'#5a4a28',granary:'#6a5a20',shrine:'#4a3a68',market:'#5a4818',
-  greatHall:'#8a6828',palisade:'#3a3020',watchPost:'#4a4028',leanTo:'#5a4a30',
-  earthLodge:'#4a3a28',longhouse:'#5a4030',
+  firePit:'#8a4010',huntingBlind:'#5a4a28',foragingPatch:'#2a5a18',waterHole:'#1a4060',fishingSpot:'#1a3850',
+  dryingRack:'#6a5020',smokehouse:'#4a3828',huntingCamp:'#5a4820',rootCellar:'#4a3a20',
+  flintKnapping:'#4a4838',lumberCamp:'#3a5a20',mine:'#3a3828',field:'#3a5a28',potteryKiln:'#7a5828',
+  wellShaft:'#2a4060',pasture:'#385028',storagePit:'#4a4028',granary:'#6a5a20',
+  shrine:'#5a3870',market:'#5a4828',greatHall:'#8a6828',palisade:'#3a3020',watchPost:'#4a4028',
+  leanTo:'#5a4a30',earthLodge:'#4a3a28',longhouse:'#5a4030',
 };
 
+// ── GAME RENDERER ─────────────────────────────────────────────────────────────
 function renderGame(){
-  const gc=document.getElementById('game-canvas');
+  const gc=document.getElementById('game-canvas');if(!gc) return;
   const ctx=gc.getContext('2d');
   ctx.clearRect(0,0,cam.vw,cam.vh);
-
   ctx.save();
   ctx.setTransform(cam.zoom,0,0,cam.zoom,-cam.wx*cam.zoom,-cam.wy*cam.zoom);
 
-  // Viewport culling bounds
   const tx0=Math.max(0,Math.floor(cam.wx/TP));
   const ty0=Math.max(0,Math.floor(cam.wy/TP));
   const tx1=Math.min(COLS-1,Math.ceil((cam.wx+cam.vw/cam.zoom)/TP));
   const ty1=Math.min(ROWS-1,Math.ceil((cam.wy+cam.vh/cam.zoom)/TP));
 
-  // Draw hover tile highlight
+  // Placement heatmap when building selected
+  if(state.selected){
+    for(let ty2=ty0;ty2<=ty1;ty2++) for(let tx2=tx0;tx2<=tx1;tx2++){
+      const tileId=ty2*COLS+tx2;
+      const tile=state.grid[tileId];
+      if(!tile.explored) continue;
+      const info=getPlacementInfo(state.selected,tileId);
+      if(!info.valid){
+        ctx.fillStyle='rgba(200,50,50,0.16)';
+      } else {
+        const g=Math.min(1,info.score/100);
+        ctx.fillStyle=`rgba(${Math.round(50+g*40)},${Math.round(120+g*80)},${Math.round(30+g*20)},${0.08+g*0.18})`;
+      }
+      ctx.fillRect(tx2*TP,ty2*TP,TP,TP);
+    }
+  }
+
+  // Hover highlight
   if(hoveredTile){
     const htx=hoveredTile.id%COLS,hty=Math.floor(hoveredTile.id/COLS);
     if(htx>=tx0&&htx<=tx1&&hty>=ty0&&hty<=ty1){
@@ -524,25 +519,21 @@ function renderGame(){
     }
   }
 
-  // Building placement preview
-  if(state.selected){
-    const pTile=hoveredTile;
-    if(pTile&&pTile.explored){
-      const canB=canBuildHere(state.selected,pTile);
-      ctx.fillStyle=canB?'rgba(100,200,80,0.18)':'rgba(200,60,60,0.18)';
-      ctx.fillRect((pTile.id%COLS)*TP,(Math.floor(pTile.id/COLS))*TP,TP,TP);
-    }
+  // Specific placement preview on hover
+  if(state.selected&&hoveredTile&&hoveredTile.explored){
+    const canB=canBuildHere(state.selected,hoveredTile);
+    ctx.fillStyle=canB?'rgba(100,200,80,0.18)':'rgba(200,60,60,0.18)';
+    ctx.fillRect((hoveredTile.id%COLS)*TP,(Math.floor(hoveredTile.id/COLS))*TP,TP,TP);
   }
 
   // Resource nodes
   for(const node of sim.nodes){
     if(!node.discovered){const tile=state.grid[node.tileId];if(!tile.explored) continue;}
     const tile=state.grid[node.tileId];if(!tile.explored) continue;
-    const r=Math.max(0,node.amount/node.maxAmount);
     if(node.depleted) continue;
+    const r=Math.max(0,node.amount/node.maxAmount);
     const cols={wood:'#3a7a20',stone:'#707878',food:'#c08030',water:'#2060c0'};
-    ctx.globalAlpha=0.35+r*0.55;
-    ctx.fillStyle=cols[node.type]||'#888';
+    ctx.globalAlpha=0.35+r*0.55;ctx.fillStyle=cols[node.type]||'#888';
     ctx.beginPath();ctx.arc(node.px,node.py,3+r*2,0,Math.PI*2);ctx.fill();
     ctx.globalAlpha=0.6;ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=0.7;ctx.stroke();
     ctx.globalAlpha=1;
@@ -558,7 +549,6 @@ function renderGame(){
     ctx.strokeStyle='rgba(240,192,80,0.6)';ctx.lineWidth=1;
     const ang=-Math.PI/2+site.progress*Math.PI*2;
     ctx.beginPath();ctx.arc(px+TP/2,py+TP/2,TP/2-1.5,-Math.PI/2,ang);ctx.stroke();
-    // Scaffold lines
     ctx.strokeStyle='rgba(180,140,60,0.4)';ctx.lineWidth=0.7;
     ctx.beginPath();ctx.moveTo(px+1,py+TP/2);ctx.lineTo(px+TP-1,py+TP/2);ctx.stroke();
     ctx.beginPath();ctx.moveTo(px+TP/2,py+1);ctx.lineTo(px+TP/2,py+TP-1);ctx.stroke();
@@ -582,12 +572,12 @@ function renderGame(){
   // Predators
   for(const pred of sim.predators){
     if(!pred.known) continue;
-    const sx=pred.tileX*TP+TP/2,sy=pred.tileY*TP+TP/2;
     if(pred.tileX<tx0||pred.tileX>tx1) continue;
+    const sx=pred.tileX*TP+TP/2,sy=pred.tileY*TP+TP/2;
     ctx.globalAlpha=0.8+Math.sin(t*2)*0.2;
     ctx.fillStyle=pred.alert?'#ff3030':'#e05020';
     ctx.beginPath();ctx.arc(sx,sy,4,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(255,50,0,0.3)';ctx.beginPath();ctx.arc(sx,sy,pred.territory*TP,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,50,0,0.15)';ctx.beginPath();ctx.arc(sx,sy,pred.territory*TP,0,Math.PI*2);ctx.fill();
     ctx.globalAlpha=1;
   }
 
@@ -601,8 +591,7 @@ function renderGame(){
 
   // Particles
   for(const p of sim.particles){
-    ctx.globalAlpha=p.life/p.maxLife;
-    ctx.fillStyle=p.color;
+    ctx.globalAlpha=p.life/p.maxLife;ctx.fillStyle=p.color;
     ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
     ctx.globalAlpha=1;
   }
@@ -616,9 +605,24 @@ function renderGame(){
   }
 
   ctx.restore();
-
-  // Watch post range overlays (screen space)
   drawWatchCoverage(ctx);
+
+  // Placement tooltip (screen-space overlay)
+  if(state.selected&&hoveredTile&&hoveredTile.explored){
+    const info=getPlacementInfo(state.selected,hoveredTile.id);
+    const htx=hoveredTile.id%COLS,hty=Math.floor(hoveredTile.id/COLS);
+    const scr=worldToScreen(htx*TP+TP/2,hty*TP);
+    const bname=BUILDINGS[state.selected].name;
+    const statusLine=!info.valid?('✗ '+info.blockers[0]):`✓ Score:${info.score} ${info.reasons[0]||''}`;
+    const warnLine=info.valid&&info.warnings[0]?('⚠ '+info.warnings[0]):'';
+    const tx2=Math.max(5,Math.min(cam.vw-185,scr.x+8));
+    const ty2=Math.max(5,scr.y-52);
+    ctx.fillStyle='rgba(0,0,0,0.82)';ctx.fillRect(tx2,ty2,180,warnLine?44:28);
+    ctx.font='bold 10px Georgia';ctx.fillStyle='#f0c050';ctx.fillText(bname,tx2+5,ty2+13);
+    ctx.font='9px Georgia';ctx.fillStyle=info.valid?'#7ab050':'#e06060';
+    ctx.fillText(statusLine.slice(0,28),tx2+5,ty2+24);
+    if(warnLine){ctx.fillStyle='#c09030';ctx.fillText(warnLine.slice(0,28),tx2+5,ty2+36);}
+  }
 }
 
 function drawBuilding(ctx,tile,tx,ty){
@@ -627,30 +631,19 @@ function drawBuilding(ctx,tile,tx,ty){
   const meta=sim.bldMeta[tile.id];
   const cond=meta?meta.condition:100;
   const baseColor=BLD_COLORS[tile.building]||'#5a4a30';
-
-  // Condition affects opacity
   ctx.globalAlpha=0.55+cond/250;
-  ctx.fillStyle=baseColor;
-  ctx.fillRect(px+1,py+1,TP-2,TP-2);
+  ctx.fillStyle=baseColor;ctx.fillRect(px+1,py+1,TP-2,TP-2);
   ctx.globalAlpha=1;
-
-  // Condition bar (if damaged)
   if(cond<80){
     const barColor=cond<30?'#c04040':cond<55?'#c07030':'#a09030';
     ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(px+1,py+TP-3,TP-2,2);
     ctx.fillStyle=barColor;ctx.fillRect(px+1,py+TP-3,Math.max(1,(TP-2)*cond/100),2);
   }
-
-  // Abandoned/demolish indicator
   if(meta?.abandoned){ctx.fillStyle='rgba(200,60,60,0.3)';ctx.fillRect(px,py,TP,TP);}
-
-  // Activity indicator for fire/smokehouse (glow)
   if(tile.building==='firePit'||tile.building==='smokehouse'){
     const glow=0.15+Math.sin(sim.gameTime*2)*0.08;
     ctx.fillStyle=`rgba(255,150,30,${glow})`;ctx.fillRect(px,py,TP,TP);
   }
-
-  // Storage fullness dot
   const inv=sim.bldInv[tile.id];
   if(inv){
     const tot=(['food','wood','stone','water'].reduce((s,r)=>s+(inv[r]||0),0));
@@ -660,33 +653,23 @@ function drawBuilding(ctx,tile,tx,ty){
       if(f>0.1){ctx.fillStyle=`rgba(120,180,80,${0.2+f*0.5})`;ctx.beginPath();ctx.arc(px+TP-2,py+2,1.5,0,Math.PI*2);ctx.fill();}
     }
   }
-
-  // Building icon
   ctx.font=`${TP-1}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(b.icon,px+TP/2,py+TP/2);
 }
 
 function drawActor(ctx,actor,t){
   const r=4;
-  // Shadow
   ctx.fillStyle='rgba(0,0,0,0.25)';
   ctx.beginPath();ctx.ellipse(actor.px+1,actor.py+2,r+1,r*0.55,0,0,Math.PI*2);ctx.fill();
-
-  // Body
-  ctx.fillStyle=actor.color||'#909090';
+  const isResting=actor.state==='resting'||actor.restTimer>0;
+  ctx.fillStyle=isResting?'#606060':(actor.color||'#909090');
   ctx.beginPath();ctx.arc(actor.px,actor.py,r,0,Math.PI*2);ctx.fill();
-
-  // Slight head marker
-  ctx.fillStyle=lightenColor(actor.color||'#909090',25);
+  ctx.fillStyle=lightenColor(isResting?'#606060':(actor.color||'#909090'),25);
   ctx.beginPath();ctx.arc(actor.px,actor.py-r*0.45,r*0.55,0,Math.PI*2);ctx.fill();
-
-  // Fatigue glow
   if(actor.fatigue>65){
     ctx.strokeStyle=`rgba(255,100,30,${(actor.fatigue-65)/55})`;ctx.lineWidth=1.2;
     ctx.beginPath();ctx.arc(actor.px,actor.py,r+1.5,0,Math.PI*2);ctx.stroke();
   }
-
-  // Selection ring
   if(selectedActor?.id===actor.id){
     ctx.strokeStyle='#f0c050';ctx.lineWidth=1.5;
     ctx.beginPath();ctx.arc(actor.px,actor.py,r+3,0,Math.PI*2);ctx.stroke();
@@ -694,15 +677,11 @@ function drawActor(ctx,actor,t){
     ctx.strokeStyle=`rgba(240,192,80,${pulse})`;ctx.lineWidth=0.7;
     ctx.beginPath();ctx.arc(actor.px,actor.py,r+6,0,Math.PI*2);ctx.stroke();
   }
-
-  // Task state icon (small)
   if(actor.state!=='idle'&&actor.state!=='resting'){
     const icons={gathering:'⛏',hunting:'🏹',performing_hunt:'💥',fishing:'🎣',building:'🔨',maintaining:'🔧',performing_maintenance:'🔧',exploring:'👁',surveying:'🔍',delivering_to_construction:'📦',demolishing:'💣',fleeing:'💨'};
     const icon=icons[actor.state];
     if(icon){ctx.font=`${TP-3}px serif`;ctx.textAlign='center';ctx.fillText(icon,actor.px,actor.py-r-3);}
   }
-
-  // Carrying indicator
   if(actor.inv?.amount>0){
     const resCols={food:'#c08030',wood:'#4a7a20',stone:'#707878',water:'#2060c0'};
     ctx.fillStyle=resCols[actor.inv.type]||'#888';
@@ -715,20 +694,17 @@ function drawWildlife(ctx,wg,t){
   const popFrac=Math.max(0,wg.population/wg.maxPopulation);
   const n=Math.max(1,Math.round(popFrac*5));
   const col=wg.aquatic?'#3080b0':'#8a6030';
-  ctx.globalAlpha=0.55+popFrac*0.4;
-  ctx.fillStyle=col;
+  ctx.globalAlpha=0.55+popFrac*0.4;ctx.fillStyle=col;
   for(let i=0;i<n;i++){
     const ang=(i/n)*Math.PI*2+t*(wg.aquatic?0.5:0.15);
     const rd=2.5+i*0.6;
     ctx.beginPath();ctx.arc(px+Math.cos(ang)*rd,py+Math.sin(ang)*rd*0.65,1.3,0,Math.PI*2);ctx.fill();
   }
-  // Fear indicator
   if(wg.fear>40){ctx.globalAlpha=(wg.fear-40)/80;ctx.fillStyle='#ff6030';ctx.beginPath();ctx.arc(px,py-5,2,0,Math.PI*2);ctx.fill();}
   ctx.globalAlpha=1;
 }
 
 function drawWatchCoverage(ctx){
-  // Watch posts emit faint detection range in screen space
   ctx.save();
   ctx.setTransform(cam.zoom,0,0,cam.zoom,-cam.wx*cam.zoom,-cam.wy*cam.zoom);
   for(const tile of state.grid){
@@ -746,7 +722,7 @@ const MM_TILE_W=MM_COLS/COLS,MM_TILE_H=MM_ROWS/ROWS;
 const MINIMAP_COLORS={grass:'#2a4a1a',plains:'#3a5228',forest:'#162c10',water:'#0c2535',rock:'#232320',mountain:'#191816',sand:'#3a3320',marsh:'#1e3028',hills:'#3a4228'};
 
 function renderMinimap(){
-  const mc=document.getElementById('minimap-canvas');
+  const mc=document.getElementById('minimap-canvas');if(!mc) return;
   const mctx=mc.getContext('2d');
   mctx.fillStyle='#080605';mctx.fillRect(0,0,MM_COLS,MM_ROWS);
   for(let ty=0;ty<ROWS;ty++) for(let tx=0;tx<COLS;tx++){
@@ -754,24 +730,20 @@ function renderMinimap(){
     mctx.fillStyle=tile.explored?(MINIMAP_COLORS[tile.type]||'#1a1a10'):'#050403';
     mctx.fillRect(tx*MM_TILE_W,ty*MM_TILE_H,MM_TILE_W,MM_TILE_H);
   }
-  // Buildings
   for(const [tid] of Object.entries(sim.bldInv)){
     const tx=(+tid)%COLS,ty=Math.floor((+tid)/COLS);
     mctx.fillStyle='#f0c050';mctx.fillRect(tx*MM_TILE_W,ty*MM_TILE_H,MM_TILE_W+1,MM_TILE_H+1);
   }
-  // Actors
   mctx.fillStyle='#80e080';
   for(const a of sim.actors){
     const ax=Math.floor(a.px/TP)*MM_TILE_W,ay=Math.floor(a.py/TP)*MM_TILE_H;
     mctx.fillRect(ax,ay,MM_TILE_W,MM_TILE_H);
   }
-  // Predators
   for(const p of sim.predators){
     if(!p.known) continue;
     mctx.fillStyle='#e04020';
     mctx.fillRect(p.tileX*MM_TILE_W,p.tileY*MM_TILE_H,MM_TILE_W+1,MM_TILE_H+1);
   }
-  // Viewport box
   const vpx=(cam.wx/TP)*MM_TILE_W,vpy=(cam.wy/TP)*MM_TILE_H;
   const vpw=(cam.vw/cam.zoom/TP)*MM_TILE_W,vph=(cam.vh/cam.zoom/TP)*MM_TILE_H;
   mctx.strokeStyle='rgba(240,192,80,0.7)';mctx.lineWidth=1;
@@ -779,14 +751,14 @@ function renderMinimap(){
 }
 
 function minimapClick(e){
+  trackInteraction();
   const rect=e.target.getBoundingClientRect();
   const mx=e.clientX-rect.left,my=e.clientY-rect.top;
-  const wtx=mx/MM_TILE_W,wty=my/MM_TILE_H;
-  centerCameraOn(wtx*TP,wty*TP);
+  centerCameraOn((mx/MM_TILE_W)*TP,(my/MM_TILE_H)*TP);
 }
 
 function lightenColor(hex,amt){
-  let c=parseInt(hex.replace('#',''),16);
+  let c=parseInt((hex||'#808080').replace('#',''),16);
   const r=Math.min(255,((c>>16)&0xff)+amt);
   const g=Math.min(255,((c>>8)&0xff)+amt);
   const b=Math.min(255,(c&0xff)+amt);
@@ -800,7 +772,6 @@ function generateMap(){
   const rand=rng(Date.now()&0xffff);
   const grid=[];
   for(let i=0;i<COLS*ROWS;i++) grid.push({type:rand()<0.35?'plains':'grass',building:null,constrSiteId:null,id:i,explored:false,surveyed:false,nodeId:null});
-  // Borders
   for(let x=0;x<COLS;x++){
     const h=1+Math.floor(rand()*3);for(let y=0;y<h;y++) grid[y*COLS+x].type='mountain';
     const hS=1+Math.floor(rand()*3);for(let y=ROWS-hS;y<ROWS;y++) grid[y*COLS+x].type='mountain';
@@ -809,13 +780,11 @@ function generateMap(){
     const w=Math.floor(rand()*2);for(let x=0;x<w;x++) grid[y*COLS+x].type='mountain';
     const wE=Math.floor(rand()*2);for(let x=COLS-wE;x<COLS;x++) grid[y*COLS+x].type='mountain';
   }
-  // Mountain clusters
   const mC=Array.from({length:8},()=>({cx:5+Math.floor(rand()*(COLS-10)),cy:3+Math.floor(rand()*(ROWS-6)),r:1+Math.floor(rand()*4)}));
   for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
     const t=grid[y*COLS+x];if(t.type!=='grass'&&t.type!=='plains') continue;
     for(const m of mC) if(Math.abs(x-m.cx)+Math.abs(y-m.cy)<=m.r&&rand()>0.3){t.type='mountain';break;}
   }
-  // Rivers
   const usedX=[];
   for(let ri=0;ri<2+Math.floor(rand()*2);ri++){
     let rx=Math.floor(COLS*(0.15+rand()*0.7)),tries=0;
@@ -828,19 +797,16 @@ function generateMap(){
       if(rx+2<COLS&&grid[y*COLS+(rx+2)].type!=='water') grid[y*COLS+(rx+2)].type='sand';
     }
   }
-  // Forests (larger belts)
   const fC=Array.from({length:20},()=>({cx:Math.floor(rand()*COLS),cy:Math.floor(rand()*ROWS),r:2+Math.floor(rand()*6)}));
   for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
     const t=grid[y*COLS+x];if(t.type!=='grass'&&t.type!=='plains') continue;
     for(const f of fC) if(Math.abs(x-f.cx)+Math.abs(y-f.cy)<=f.r&&rand()>0.2){t.type='forest';break;}
   }
-  // Rock patches
   const rC=Array.from({length:14},()=>({cx:Math.floor(rand()*COLS),cy:Math.floor(rand()*ROWS)}));
   for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
     const t=grid[y*COLS+x];if(t.type!=='grass'&&t.type!=='plains') continue;
     for(const c of rC) if(Math.abs(x-c.cx)+Math.abs(y-c.cy)<=2&&rand()>0.35){t.type='rock';break;}
   }
-  // Hills near mountains
   for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
     const t=grid[y*COLS+x];if(t.type!=='rock') continue;
     for(let dy=-2;dy<=2;dy++) for(let dx=-2;dx<=2;dx++){
@@ -849,7 +815,6 @@ function generateMap(){
       if((nt.type==='grass'||nt.type==='plains')&&rand()>0.65) nt.type='hills';
     }
   }
-  // Marshes near water
   for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
     const t=grid[y*COLS+x];if(t.type!=='water') continue;
     for(const [dx,dy] of[[2,0],[-2,0],[0,2],[0,-2],[2,1],[-2,1]]){
@@ -874,6 +839,18 @@ function updateVisibility(){
   terrainDirty=true;
 }
 
+// ── WATER HELPERS ─────────────────────────────────────────────────────────────
+function isValidWaterSourceTile(tileId){
+  const t=state.grid[tileId];if(!t) return false;
+  if(t.type==='water'||t.type==='marsh') return true;
+  const tx=tileId%COLS,ty=Math.floor(tileId/COLS);
+  for(const[dx,dy] of[[-1,0],[1,0],[0,-1],[0,1]]){
+    const nx=tx+dx,ny=ty+dy;if(nx<0||nx>=COLS||ny<0||ny>=ROWS) continue;
+    if(state.grid[ny*COLS+nx].type==='water') return true;
+  }
+  return false;
+}
+
 // ── RESOURCE NODES ─────────────────────────────────────────────────────────────
 function placeResourceNodes(){
   sim.nodes=[];
@@ -881,27 +858,52 @@ function placeResourceNodes(){
   const startTile=state.grid.find(t=>t.building==='firePit');
   if(!startTile) return;
   const sx=startTile.id%COLS,sy=Math.floor(startTile.id/COLS);
-  // Guaranteed near-start nodes (explored, surveyed, known food/water/wood)
+  const usedTiles=new Set([startTile.id]);
+
+  function makeNode(tileId,rtype,discovered){
+    const nx=tileId%COLS,ny=Math.floor(tileId/COLS);
+    const amt=rtype==='water'?280:rtype==='food'?150:200;
+    const regen={wood:.008,food:.028,water:.018,stone:0}[rtype]||0;
+    return{id:sim.nextId++,tileId,type:rtype,tileX:nx,tileY:ny,px:nx*TP+TP/2,py:ny*TP+TP/2,amount:amt,maxAmount:amt,gatherRate:1,maxWorkers:rtype==='water'?3:4,assignedActors:[],depleted:false,regenRate:regen,overHarvestCount:0,discovered,harvestDifficulty:1};
+  }
+
+  // Guaranteed near-start nodes for food/wood/stone (use fixed offsets)
   const nearSlots=[
     {dx:4,dy:0,type:'wood'},{dx:-4,dy:1,type:'wood'},{dx:3,dy:3,type:'wood'},
     {dx:0,dy:4,type:'food'},{dx:-3,dy:-4,type:'food'},{dx:5,dy:2,type:'food'},{dx:-5,dy:3,type:'food'},{dx:2,dy:-4,type:'food'},
     {dx:3,dy:-4,type:'stone'},{dx:-5,dy:0,type:'stone'},
-    {dx:1,dy:5,type:'water'},{dx:-1,dy:-5,type:'water'},{dx:5,dy:-3,type:'water'},
     {dx:7,dy:1,type:'wood'},{dx:-7,dy:3,type:'food'},{dx:8,dy:-1,type:'stone'},
   ];
-  const usedTiles=new Set([startTile.id]);
   for(const slot of nearSlots){
     const nx=Math.max(2,Math.min(COLS-3,sx+slot.dx)),ny=Math.max(2,Math.min(ROWS-3,sy+slot.dy));
     const tileId=ny*COLS+nx;
     if(usedTiles.has(tileId)) continue;
     const tile=state.grid[tileId];if(tile.type==='mountain') continue;
     usedTiles.add(tileId);tile.explored=true;tile.surveyed=true;
-    const amt=slot.type==='water'?280:slot.type==='food'?150:200;
-    const regen={wood:.008,food:.028,water:.018,stone:0}[slot.type]||0;
-    const node={id:sim.nextId++,tileId,type:slot.type,tileX:nx,tileY:ny,px:nx*TP+TP/2,py:ny*TP+TP/2,amount:amt,maxAmount:amt,gatherRate:1,maxWorkers:slot.type==='water'?3:4,assignedActors:[],depleted:false,regenRate:regen,overHarvestCount:0,discovered:true,harvestDifficulty:1};
+    const node=makeNode(tileId,slot.type,true);
     sim.nodes.push(node);tile.nodeId=node.id;
   }
-  // Scatter more nodes
+
+  // Guaranteed near-start WATER nodes — must be on actual water/marsh/bank tiles
+  const waterCandidates=[];
+  for(let dy=-14;dy<=14;dy++) for(let dx=-14;dx<=14;dx++){
+    const nx=Math.max(1,Math.min(COLS-2,sx+dx)),ny=Math.max(1,Math.min(ROWS-2,sy+dy));
+    const tileId=ny*COLS+nx;
+    if(usedTiles.has(tileId)) continue;
+    if(isValidWaterSourceTile(tileId)) waterCandidates.push({tileId,dist:Math.abs(dx)+Math.abs(dy)});
+  }
+  waterCandidates.sort((a,b)=>a.dist-b.dist);
+  const waterCount=Math.min(3,waterCandidates.length);
+  for(let i=0;i<waterCount;i++){
+    const wc=waterCandidates[i];
+    const tile=state.grid[wc.tileId];
+    usedTiles.add(wc.tileId);tile.explored=true;tile.surveyed=true;
+    const node=makeNode(wc.tileId,'water',true);
+    sim.nodes.push(node);tile.nodeId=node.id;
+  }
+  if(waterCount===0) addLog('Warning: No water source found near start!','warn');
+
+  // Scatter more nodes — water ONLY on water-valid tiles
   const types={wood:0,stone:0,food:0,water:0};
   const targets={wood:8,stone:6,food:10,water:5};
   const cands=[];
@@ -911,7 +913,13 @@ function placeResourceNodes(){
   }
   cands.sort(()=>rand()-.5);
   for(const t of cands){
-    const terrainOdds={water:{water:0.6,grass:0.0,forest:0.12,plains:0.15,rock:0.0,marsh:0.08},wood:{forest:0.45,grass:0.1,plains:0.1,marsh:0.08},stone:{rock:0.5,hills:0.3,mountain:0.0,grass:0.05},food:{grass:0.2,plains:0.25,forest:0.18,marsh:0.2}};
+    // Water nodes ONLY on water/sand/marsh tiles (no random grass/forest)
+    const terrainOdds={
+      water:{water:0.7,sand:0.35,marsh:0.25},
+      wood:{forest:0.45,grass:0.1,plains:0.1,marsh:0.08},
+      stone:{rock:0.5,hills:0.3,grass:0.05},
+      food:{grass:0.2,plains:0.25,forest:0.18,marsh:0.2}
+    };
     const candidates=[];
     for(const [rtype,odds] of Object.entries(terrainOdds)){
       const p=odds[t.type]||0;
@@ -919,6 +927,8 @@ function placeResourceNodes(){
     }
     if(candidates.length===0) continue;
     const rtype=candidates[Math.floor(rand()*candidates.length)];
+    // Extra validation for water nodes
+    if(rtype==='water'&&!isValidWaterSourceTile(t.id)) continue;
     types[rtype]++;
     const amt=rtype==='water'?200:rtype==='food'?100:150;
     const regen={wood:.006,food:.022,water:.014,stone:0}[rtype]||0;
@@ -941,7 +951,7 @@ function placeWildlife(){
   for(const cfg of wldCfg){
     const wt=WILDLIFE_TYPES[cfg.key];
     for(let i=0;i<cfg.n;i++){
-      for(let tries=0;tries<40;tries++){
+      for(let tries=0;tries<60;tries++){
         const tx=Math.floor(rand()*COLS),ty=Math.floor(rand()*ROWS);
         const dist=Math.abs(tx-sx)+Math.abs(ty-sy);
         if(dist<cfg.minDist) continue;
@@ -982,32 +992,23 @@ function placePredators(){
 }
 
 function updatePredators(sDt){
-  const pop=state.res.pop;
   const hasWatch=state.grid.some(t=>t.building==='watchPost');
   const watchMult=hasWatch?0.5:1;
   for(const pred of sim.predators){
-    // Check if any actors are in territory
     let nearActors=0;
     for(const a of sim.actors){
       const atx=Math.floor(a.px/TP),aty=Math.floor(a.py/TP);
-      const dist=Math.abs(atx-pred.tileX)+Math.abs(aty-pred.tileY);
-      if(dist<=pred.territory) nearActors++;
+      if(Math.abs(atx-pred.tileX)+Math.abs(aty-pred.tileY)<=pred.territory) nearActors++;
     }
-    if(nearActors>0){
-      pred.threat=Math.min(100,pred.threat+sDt*2*watchMult);
-    } else {
-      pred.threat=Math.max(0,pred.threat-sDt*1.5);
-    }
-    // Signs appear before full threat
+    if(nearActors>0){pred.threat=Math.min(100,pred.threat+sDt*2*watchMult);}
+    else{pred.threat=Math.max(0,pred.threat-sDt*1.5);}
     if(pred.threat>20&&!pred.signsSeen){
       pred.signsSeen=true;pred.known=true;
       addLog(`Signs of a ${pred.name} near (${pred.tileX},${pred.tileY})!`,'threat');
       addThreat({type:'predator',name:pred.name,id:pred.id,severity:'low',tileX:pred.tileX,tileY:pred.tileY,active:false});
     }
-    // Attack when threat high and cooldown passed
     if(pred.threat>70&&(sim.gameTime-pred.lastAttack)>pred.attackCooldown){
       pred.lastAttack=sim.gameTime;pred.alert=true;
-      // Try to attack a nearby actor
       const victims=sim.actors.filter(a=>{
         const atx=Math.floor(a.px/TP),aty=Math.floor(a.py/TP);
         return Math.abs(atx-pred.tileX)+Math.abs(aty-pred.tileY)<=pred.territory;
@@ -1015,48 +1016,36 @@ function updatePredators(sDt){
       if(victims.length>0){
         const v=victims[Math.floor(Math.random()*victims.length)];
         v.fatigue=Math.min(100,v.fatigue+pred.power*15);
-        if(Math.random()<0.3) v.state='fleeing';
+        if(Math.random()<0.3){v.state='fleeing';v.lastStateChange=sim.gameTime;}
         addLog(`${pred.name} attacks ${v.name}! They flee injured.`,'threat');
-        // Steal some food too if near storage
         const foodLoss=Math.floor(pred.power*5);
         consumeRes('food',foodLoss);
-        if(foodLoss>0) addLog(`${pred.name} steals ${foodLoss} food from stores.`,'warn');
+        if(foodLoss>0) addLog(`${pred.name} steals ${foodLoss} food.`,'warn');
       }
       updateThreat(pred.id,'medium');
       setTimeout(()=>pred.alert=false,3000);
-    }
-    // Move periodically
-    pred.moveTimer=(pred.moveTimer||20)-sDt;
-    if(pred.moveTimer<=0){
-      pred.moveTimer=30+Math.random()*40;
-      const dx=Math.floor(Math.random()*3)-1,dy=Math.floor(Math.random()*3)-1;
-      const nx=Math.max(2,Math.min(COLS-3,pred.tileX+dx));
-      const ny=Math.max(2,Math.min(ROWS-3,pred.tileY+dy));
-      const nt=state.grid[ny*COLS+nx];
-      if(nt&&nt.type!=='mountain'&&nt.type!=='water'){pred.tileX=nx;pred.tileY=ny;}
     }
   }
 }
 
 function addThreat(t){sim.threats.push({...t,time:sim.gameTime});renderThreats();}
 function updateThreat(predId,severity){
-  const t=sim.threats.find(th=>th.id===predId);
-  if(t){t.severity=severity;t.active=true;renderThreats();}
+  const t=sim.threats.find(t=>t.id===predId);
+  if(t){t.severity=severity;t.active=severity!=='low';}
+  else sim.threats.push({type:'predator',id:predId,severity,active:severity!=='low',time:sim.gameTime});
+  renderThreats();
 }
 function renderThreats(){
   const el=document.getElementById('threats-panel');if(!el) return;
   if(sim.threats.length===0){el.innerHTML='<div style="color:#6a5030;font-size:.75em">No known threats.</div>';return;}
-  el.innerHTML=sim.threats.map(t=>{
-    const sev={low:'🟡',medium:'🟠',high:'🔴'}[t.severity]||'🟡';
-    return`<div class="threat-item"><div class="threat-type">${t.icon||'☠'} ${t.name} ${sev}</div><div class="threat-loc">Near (${t.tileX},${t.tileY})</div><div class="threat-sev ${t.active?'neg':'neu'}">${t.active?'Active':'Signs seen'}</div></div>`;
-  }).join('');
+  el.innerHTML=sim.threats.map(t=>`<div class="threat-item"><div class="threat-type">${t.name||t.type}</div><div class="threat-loc">${t.tileX!=null?`Tile (${t.tileX},${t.tileY})`:''}</div><div class="threat-sev" style="color:${t.active?'#e04040':'#c07030'}">${t.severity} ${t.active?'⚠':''}</div></div>`).join('');
 }
 
-// ── BUILDING INVENTORY ────────────────────────────────────────────────────────
+// ── INVENTORY / STORAGE ────────────────────────────────────────────────────────
 function initInv(tileId,bldKey,init){
   const cap=getBldCap(bldKey);
-  sim.bldInv[tileId]={food:0,wood:0,stone:0,water:0,cap,bldKey};
-  if(init) for(const [k,v] of Object.entries(init)) sim.bldInv[tileId][k]=Math.min(v,cap[k]||999);
+  sim.bldInv[tileId]={food:0,wood:0,stone:0,water:0,cap};
+  for(const [k,v] of Object.entries(init)) if(cap[k]) sim.bldInv[tileId][k]=Math.min(v,cap[k]);
 }
 function storageBlds(){return Object.entries(sim.bldInv).map(([id,inv])=>({tileId:+id,inv,tile:state.grid[+id]})).filter(b=>b.tile&&b.tile.building);}
 function nearestStorage(px,py,resType){
@@ -1138,7 +1127,12 @@ function createSite(tileId,bldKey){
   tile.constrSiteId=sim.nextId;
   const tx=tileId%COLS,ty=Math.floor(tileId/COLS);
   const site={id:sim.nextId++,tileId,bldKey,required:{...b.cost},delivered:{},progress:0,buildWork:0,totalWork:Object.values(b.cost).reduce((s,v)=>s+v,0)*1.5+10,complete:false,px:tx*TP+TP/2,py:ty*TP+TP/2};
-  sim.sites.push(site);return site;
+  sim.sites.push(site);
+  // Deduct cost immediately when creating site
+  for(const [r,v] of Object.entries(b.cost)) consumeRes(r,v);
+  // Pre-fill delivered to reflect the consumed resources
+  for(const [r,v] of Object.entries(b.cost)) site.delivered[r]=v;
+  return site;
 }
 function siteNeedsRes(site){for(const [k,v] of Object.entries(site.required)) if((site.delivered[k]||0)<v) return k;return null;}
 function siteMet(site){return Object.keys(site.required).every(k=>(site.delivered[k]||0)>=site.required[k]);}
@@ -1164,6 +1158,8 @@ class Actor{
     this.lastDecisions=[];this.goal='';
     this.exp={hunter:0,builder:0,forager:0,shaman:0,crafter:0,carrier:0,generalist:0};
     this.decisionTimer=Math.random()*2.5;this.taskAge=0;
+    this.lastStateChange=0;this.stuckLog='';
+    this.idleTimer=0;
   }
   hasTrait(t){return this.traits.includes(t);}
   traitFx(field,def=0){let v=def;for(const t of this.traits){const f=TRAIT_FX[t];if(f&&f[field]!==undefined) v+=f[field];}return v;}
@@ -1194,10 +1190,7 @@ function spawnActor(tileId,name){
   const a=new Actor(sim.nextId++,n,px,py);
   sim.actors.push(a);return a;
 }
-
-function spawnInitialActors(tileId,n){
-  for(let i=0;i<n;i++) spawnActor(tileId);
-}
+function spawnInitialActors(tileId,n){for(let i=0;i<n;i++) spawnActor(tileId);}
 
 // ── UTILITY AI ─────────────────────────────────────────────────────────────────
 const SUSTAIN={
@@ -1210,13 +1203,10 @@ function foodDays(){
   if(pop<=0) return 99;
   return f/(pop*FOOD_PER_S*DAY_SECONDS);
 }
-
 function hungerStage(){
   const d=foodDays();
-  if(d>=HUNGER.FED) return'fed';
-  if(d>=HUNGER.HUNGRY) return'hungry';
-  if(d>=HUNGER.STARVING) return'starving';
-  return'collapse';
+  if(d>=HUNGER.FED) return'fed';if(d>=HUNGER.HUNGRY) return'hungry';
+  if(d>=HUNGER.STARVING) return'starving';return'collapse';
 }
 
 function detectCrisis(){
@@ -1239,7 +1229,7 @@ function computeIntents(){
   if(fd<7) intents.push('increase food production');
   if(water<pop*3) intents.push('secure water sources');
   if(wood<40) intents.push('gather more timber');
-  if(sim.sites.length>0) intents.push('complete active construction');
+  if(sim.sites.filter(s=>!s.complete).length>0) intents.push('complete active construction');
   const critBlds=Object.entries(sim.bldMeta).filter(([,m])=>m.condition<40&&!m.abandoned);
   if(critBlds.length>0) intents.push('repair deteriorating buildings');
   if(!sim.nodes.every(n=>n.discovered)) intents.push('explore new territory');
@@ -1262,6 +1252,16 @@ function runSettlementPlanner(){
       if(actor.task&&(actor.task.type==='maintain'||actor.task.type==='demolish')) clearTask(actor);
     }
     addLog('⚠ Starvation risk! Refocusing on food.','warn');
+  }
+  // Force-wake idle actors who've been doing nothing
+  for(const actor of sim.actors){
+    if(actor.state==='idle'&&actor.restTimer<=0){
+      actor.idleTimer=(actor.idleTimer||0)+8;
+      if(actor.idleTimer>16){
+        actor.idleTimer=0;
+        evalAndAssignTask(actor);
+      }
+    } else actor.idleTimer=0;
   }
 }
 
@@ -1292,6 +1292,7 @@ function generateCandidates(actor){
   const cands=[];
   const inCrisis=sim.crisisMode==='food'||sim.crisisMode==='starvation';
   const thresh=inCrisis?SUSTAIN.crisis:SUSTAIN.normal;
+
   // Gather from nodes
   for(const node of sim.nodes){
     if(!node.discovered||node.depleted||actor.avoidNodes.has(node.id)) continue;
@@ -1308,7 +1309,7 @@ function generateCandidates(actor){
     if(assignedCount('hunt',wg.id)>=(inCrisis?4:2)) continue;
     cands.push({type:'hunt',wg});
   }
-  // Fish (only if fishing spot exists or tech known)
+  // Fish
   const hasFishingSpot=state.grid.some(t=>t.building==='fishingSpot');
   if(hasFishingSpot||state.techs.tracking){
     for(const wg of sim.wildlife){
@@ -1318,21 +1319,14 @@ function generateCandidates(actor){
       cands.push({type:'fish',wg});
     }
   }
-  // Construction delivery
+  // Construction — materials already consumed on createSite, so all sites can immediately build
   for(const site of sim.sites){
     if(site.complete) continue;
-    const need=siteNeedsRes(site);if(!need) continue;
-    const needed=(site.required[need]||0)-(site.delivered[need]||0);if(needed<=0) continue;
-    const stor=nearestStorage(actor.px,actor.py,need);
-    if(!stor||(stor.inv[need]||0)<1) continue;
-    if(assignedCount('deliver',site.id)>=2) continue;
-    cands.push({type:'deliver',site,need,stor});
-  }
-  // Build
-  for(const site of sim.sites){
-    if(site.complete||!siteMet(site)) continue;
-    if(assignedCount('build',site.id)>=2) continue;
-    cands.push({type:'build',site});
+    if(siteMet(site)){
+      // Ready to build
+      if(assignedCount('build',site.id)>=3) continue;
+      cands.push({type:'build',site});
+    }
   }
   // Maintain
   if(state.autoMaintain){
@@ -1359,7 +1353,7 @@ function generateCandidates(actor){
       cands.push({type:'demolish',tid:+tid});
     }
   }
-  // Emergency scrub forage (when collapsing - find ANY food in explored area)
+  // Emergency forage
   if(sim.crisisMode==='starvation'&&cands.filter(c=>c.type==='gather'&&c.node.type==='food').length===0){
     cands.push({type:'emergencyForage'});
   }
@@ -1376,7 +1370,7 @@ function urgency(res){
 
 function utilityScore(actor,cand){
   const fu=urgency('food'),wu=urgency('wood'),su=urgency('stone');
-  const fatPen=actor.fatigue*0.08;const crisis=sim.crisisMode;
+  const fatPen=actor.fatigue*0.06;const crisis=sim.crisisMode;
   let score=0;const reasons=[];
   if(cand.type==='gather'){
     const node=cand.node;const urg=urgency(node.type);
@@ -1397,29 +1391,24 @@ function utilityScore(actor,cand){
     if(state.techs.tracking){score+=8;reasons.push('tracking');}
     if(crisis==='starvation'){score+=30;reasons.push('starvation');}
     else if(crisis==='food'){score+=18;reasons.push('food low');}
-    reasons.push('hunter:'+actor.apt.hunter);reasons.push('herd '+Math.floor(popFrac*100)+'%');
+    reasons.push('hunter:'+actor.apt.hunter);
   } else if(cand.type==='fish'){
     const wg=cand.wg;const apt=actor.aptB('forager');const dist=actor.dist(wg.px,wg.py);
     score+=fu*9+apt*22-dist*0.005-fatPen;
     if(crisis==='food'||crisis==='starvation') score+=(crisis==='starvation'?28:14);
     reasons.push('forager:'+actor.apt.forager);
-  } else if(cand.type==='deliver'){
-    const stor=cand.stor;const apt=actor.aptB('carrier');
-    const storPx=(stor.tileId%COLS)*TP+TP/2,storPy=Math.floor(stor.tileId/COLS)*TP+TP/2;
-    const dist=actor.dist(storPx,storPy);
-    score+=28+apt*20-dist*0.004+state.priorities.build*6;
-    reasons.push('deliver '+cand.need+' → '+BUILDINGS[cand.site.bldKey]?.name.split(' ')[0]);
-    if(apt>0.6) reasons.push('carrier');
   } else if(cand.type==='build'){
     const site=cand.site;const apt=actor.aptB('builder');const dist=actor.dist(site.px,site.py);
-    score+=18+apt*28-dist*0.004-fatPen+state.priorities.build*5+actor.traitFx('buildScore')*15;
-    if(apt<0.25) score-=12;reasons.push('builder:'+actor.apt.builder);
+    score+=32+apt*32-dist*0.004-fatPen*0.5+state.priorities.build*8+actor.traitFx('buildScore')*15;
+    if(apt<0.25) score-=8;
+    reasons.push('builder:'+actor.apt.builder);
+    reasons.push('build '+BUILDINGS[site.bldKey]?.name.split(' ')[0]);
   } else if(cand.type==='maintain'){
     const meta=cand.meta;const tid=cand.tid;const apt=actor.aptB('builder');
     const dist=actor.dist((tid%COLS)*TP+TP/2,Math.floor(tid/COLS)*TP+TP/2);
     const condUrg=meta.condition<25?38:meta.condition<50?18:6;
     score+=condUrg+apt*18-dist*0.003+actor.traitFx('maintainScore')*14;
-    reasons.push('condition '+Math.floor(meta.condition)+'%');if(apt>0.6) reasons.push('builder');
+    reasons.push('condition '+Math.floor(meta.condition)+'%');
   } else if(cand.type==='demolish'){
     score+=8+actor.aptB('builder')*10+actor.traitFx('recoveryBonus')*12;
     reasons.push('reclaim materials');
@@ -1438,7 +1427,6 @@ function taskLabel(cand){
   if(cand.type==='gather') return'Gather '+cand.node.type;
   if(cand.type==='hunt') return'Hunt '+cand.wg.name;
   if(cand.type==='fish') return'Fish '+cand.wg.name;
-  if(cand.type==='deliver') return'Deliver '+cand.need+' → '+BUILDINGS[cand.site.bldKey]?.name.split(' ')[0];
   if(cand.type==='build') return'Build '+BUILDINGS[cand.site.bldKey]?.name.split(' ')[0];
   if(cand.type==='maintain') return'Repair '+(BUILDINGS[cand.bk]?.name.split(' ')[0]||'building');
   if(cand.type==='demolish') return'Demolish building';
@@ -1448,6 +1436,7 @@ function taskLabel(cand){
 }
 
 function assignTaskFromCandidate(actor,cand){
+  actor.lastStateChange=sim.gameTime;
   if(cand.type==='gather'){
     const n=cand.node;n.assignedActors.push(actor.id);
     actor.task={type:'gather',nodeId:n.id,resType:n.type};actor.state='moving_to_resource';
@@ -1459,11 +1448,7 @@ function assignTaskFromCandidate(actor,cand){
   } else if(cand.type==='fish'){
     const wg=cand.wg;actor.task={type:'fish',wildlifeId:wg.id};actor.state='fishing';
     actor.tx=wg.px;actor.ty=wg.py;actor.goal='Fish '+wg.name;
-  } else if(cand.type==='deliver'){
-    const site=cand.site;const stor=cand.stor;
-    actor.task={type:'pickup_for_site',siteId:site.id,resType:cand.need,amount:Math.min(actor.inv.capacity,site.required[cand.need]-(site.delivered[cand.need]||0)),storageTileId:stor.tileId};
-    actor.state='moving_to_storage';actor.tx=(stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(stor.tileId/COLS)*TP+TP/2;
-    actor.goal='Deliver '+cand.need;
+    actor.timer=2.5+Math.random()*2;
   } else if(cand.type==='build'){
     const site=cand.site;actor.task={type:'build',siteId:site.id};actor.state='moving_to_construction';
     actor.tx=site.px;actor.ty=site.py;actor.goal='Build '+BUILDINGS[site.bldKey]?.name.split(' ')[0];
@@ -1474,7 +1459,6 @@ function assignTaskFromCandidate(actor,cand){
     actor.task={type:'demolish',demolishTileId:cand.tid};actor.state='demolishing';
     actor.tx=(cand.tid%COLS)*TP+TP/2;actor.ty=Math.floor(cand.tid/COLS)*TP+TP/2;actor.goal='Demolish';
   } else if(cand.type==='emergencyForage'){
-    // Find nearest explored non-mountain tile to forage from
     const atx=Math.floor(actor.px/TP),aty=Math.floor(actor.py/TP);
     let best=null,bestD=999;
     for(let r=1;r<=12;r++) for(let dy=-r;dy<=r;dy++) for(let dx=-r;dx<=r;dx++){
@@ -1506,13 +1490,14 @@ function assignTaskFromCandidate(actor,cand){
 }
 
 function evalAndAssignTask(actor){
-  const cands=generateCandidates(actor);if(cands.length===0) return;
+  const cands=generateCandidates(actor);if(cands.length===0) return false;
   const scored=cands.map(c=>{const{score,reasons}=utilityScore(actor,c);return{cand:c,score,reasons};});
   scored.sort((a,b)=>b.score-a.score);
-  const top=scored[0];if(top.score<=0) return;
+  const top=scored[0];if(top.score<=0) return false;
   actor.lastDecisions=scored.slice(0,3).map(s=>({label:taskLabel(s.cand),score:s.score,reasons:s.reasons}));
   assignTaskFromCandidate(actor,top.cand);
-  actor.decisionTimer=0.5+Math.random()*1.5;
+  actor.decisionTimer=0.4+Math.random()*1.0;
+  return true;
 }
 
 function assignTasks(){
@@ -1525,7 +1510,20 @@ function assignTasks(){
 function clearTask(actor){
   if(actor.task?.nodeId!=null){const n=sim.nodes.find(nd=>nd.id===actor.task.nodeId);if(n) n.assignedActors=n.assignedActors.filter(i=>i!==actor.id);}
   if(actor.task?.wildlifeId!=null){const wg=sim.wildlife.find(w=>w.id===actor.task.wildlifeId);if(wg) wg.assignedHunters=(wg.assignedHunters||[]).filter(i=>i!==actor.id);}
-  actor.task=null;actor.state='idle';actor.restTimer=0.3+Math.random()*0.5;
+  actor.task=null;
+  // Stay near current position when becoming idle (not drift back to spawn)
+  actor.idleX=actor.px;actor.idleY=actor.py;
+  // Fatigue-aware rest: if tired, rest longer before taking new tasks
+  const fatRest=actor.fatigue>65?Math.max(2,(actor.fatigue-50)/5):0;
+  if(fatRest>0){
+    actor.state='resting';
+    actor.restTimer=fatRest;
+  } else {
+    actor.state='idle';
+    actor.restTimer=0.3+Math.random()*0.5;
+  }
+  actor.lastStateChange=sim.gameTime;
+  actor.idleTimer=0;
 }
 
 function gatherDur(actor,node){return Math.max(0.6,2.2-actor.apt.forager*0.012);}
@@ -1535,28 +1533,58 @@ function updateActors(dt){
   for(const actor of sim.actors){
     const activeState=actor.state!=='idle'&&actor.state!=='resting';
     if(activeState){
-      const fatigueRate=actor.state==='building'||actor.state==='performing_hunt'?2.2:1.4;
-      actor.fatigue=Math.min(100,actor.fatigue+dt*fatigueRate*(actor.hasTrait('industrious')?0.7:1));
-      if(state.techs.medicine) actor.fatigue=Math.max(0,actor.fatigue-dt*0.15);
+      const fatigueRate=actor.state==='building'||actor.state==='performing_hunt'?2.0:1.2;
+      actor.fatigue=Math.min(100,actor.fatigue+dt*fatigueRate*(actor.hasTrait('industrious')?0.75:1));
+      if(state.techs.medicine) actor.fatigue=Math.max(0,actor.fatigue-dt*0.2);
     } else {
-      actor.fatigue=Math.max(0,actor.fatigue-dt*5);
+      actor.fatigue=Math.max(0,actor.fatigue-dt*6);
     }
     actor.taskAge=activeState?(actor.taskAge||0)+dt:0;
-    if(actor.restTimer>0){actor.restTimer-=dt;if(actor.restTimer<=0){actor.restTimer=0;actor.state='idle';}continue;}
+
+    // RestTimer handling — decrements while resting/idle, then clear
+    if(actor.restTimer>0){
+      actor.restTimer-=dt;
+      if(actor.restTimer<=0){
+        actor.restTimer=0;
+        if(actor.state==='resting') actor.state='idle';
+      }
+      continue;
+    }
+
+    // Anti-stuck guard: if actor is stuck in an active state for too long, force recovery
+    if(activeState){
+      const stuckLimits={moving_to_resource:50,gathering:35,moving_to_storage:50,depositing:20,moving_to_construction:50,delivering_to_construction:20,building:120,hunting:45,performing_hunt:25,fishing:120,exploring:70,surveying:20,maintaining:45,performing_maintenance:25,demolishing:60,fleeing:15};
+      const lim=stuckLimits[actor.state]||40;
+      if((sim.gameTime-actor.lastStateChange)>lim){
+        actor.stuckLog=`stuck:${actor.state}`;
+        clearTask(actor);
+        continue;
+      }
+    }
+
+    // Fatigue → rest (earlier threshold, skip moving to storage)
+    if(actor.fatigue>=88&&activeState){
+      if(actor.task?.nodeId!=null){const n=sim.nodes.find(nd=>nd.id===actor.task.nodeId);if(n) n.assignedActors=n.assignedActors.filter(i=>i!==actor.id);}
+      if(actor.task?.wildlifeId!=null){const wg=sim.wildlife.find(w=>w.id===actor.task.wildlifeId);if(wg) wg.assignedHunters=(wg.assignedHunters||[]).filter(i=>i!==actor.id);}
+      actor.task=null;actor.idleX=actor.px;actor.idleY=actor.py;
+      actor.state='resting';actor.restTimer=Math.max(5,(actor.fatigue-50)/6);
+      actor.lastStateChange=sim.gameTime;
+      continue;
+    }
 
     switch(actor.state){
       case'idle':{
         actor.timer-=dt;
         if(actor.timer<=0){
-          actor.timer=1+Math.random()*2;
-          actor.tx=actor.idleX+(Math.random()-0.5)*TP*4;actor.ty=actor.idleY+(Math.random()-0.5)*TP*4;
+          actor.timer=1.5+Math.random()*2;
+          // Wander near current position (not spawn)
+          actor.tx=actor.idleX+(Math.random()-0.5)*TP*5;actor.ty=actor.idleY+(Math.random()-0.5)*TP*5;
           actor.tx=Math.max(TP,Math.min(CW-TP,actor.tx));actor.ty=Math.max(TP,Math.min(CH-TP,actor.ty));
         }
         actor.move(actor.tx,actor.ty,dt);
         break;
       }
       case'fleeing':{
-        // Move away from nearest predator or threat
         let fx=actor.px+Math.random()*100-50,fy=actor.py+Math.random()*100-50;
         for(const pred of sim.predators){
           const pdx=pred.tileX*TP-actor.px,pdy=pred.tileY*TP-actor.py;
@@ -1564,8 +1592,8 @@ function updateActors(dt){
           if(pd<TP*8){fx=actor.px-pdx/pd*TP*10;fy=actor.py-pdy/pd*TP*10;}
         }
         fx=Math.max(TP,Math.min(CW-TP,fx));fy=Math.max(TP,Math.min(CH-TP,fy));
-        if(actor.move(fx,fy,dt)||actor.taskAge>5){actor.state='idle';actor.taskAge=0;}
-        actor.taskAge=(actor.taskAge||0)+dt;
+        if(actor.move(fx,fy,dt)||actor.taskAge>8){clearTask(actor);}
+        else actor.taskAge=(actor.taskAge||0)+dt;
         break;
       }
       case'moving_to_resource':{
@@ -1573,12 +1601,12 @@ function updateActors(dt){
         if(task?.type==='emergencyForage'){
           const tileId=task.tileId;
           const tx=(tileId%COLS)*TP+TP/2,ty=Math.floor(tileId/COLS)*TP+TP/2;
-          if(actor.move(tx,ty,dt)){actor.state='gathering';actor.timer=2.5;}
+          if(actor.move(tx,ty,dt)){actor.state='gathering';actor.timer=2.5;actor.lastStateChange=sim.gameTime;}
           break;
         }
         const node=sim.nodes.find(n=>n.id===task?.nodeId);
         if(!node||node.depleted){clearTask(actor);break;}
-        if(actor.move(node.px,node.py,dt)){actor.state='gathering';actor.timer=gatherDur(actor,node);}
+        if(actor.move(node.px,node.py,dt)){actor.state='gathering';actor.timer=gatherDur(actor,node);actor.lastStateChange=sim.gameTime;}
         break;
       }
       case'gathering':{
@@ -1592,7 +1620,7 @@ function updateActors(dt){
             const stor=nearestStorage(actor.px,actor.py,'food');
             if(stor&&actor.inv.amount>0){
               actor.state='moving_to_storage';actor.tx=(stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(stor.tileId/COLS)*TP+TP/2;
-              actor.task={...actor.task,storageTileId:stor.tileId};
+              actor.task={...actor.task,storageTileId:stor.tileId};actor.lastStateChange=sim.gameTime;
             } else clearTask(actor);
           }
           break;
@@ -1602,21 +1630,29 @@ function updateActors(dt){
         actor.timer-=dt;
         if(actor.timer<=0){
           let rate=node.gatherRate*(1+actor.aptB('forager')*0.5)*(1+(state.yieldBonus||0));
-          // Building yield modifiers
           const nearBldMod=getBuildingYieldMod(node.type,node.tileX,node.tileY);
           rate*=nearBldMod;
           const g=Math.min(rate,node.amount,actor.inv.capacity-actor.inv.amount);
           if(g>0){node.amount=Math.max(0,node.amount-g);actor.inv.type=node.type;actor.inv.amount+=g;}
           if(node.amount<=0){
             node.depleted=true;node.overHarvestCount++;
-            if(node.overHarvestCount>1) addLog(`${node.type} node depleted (over-harvested ${node.overHarvestCount}×).`,'warn');
+            if(node.overHarvestCount>1) addLog(`${node.type} node depleted.`,'warn');
             actor.memorizeDepletion(node.id);
           }
           actor.gainExp('forager',0.08);
           if(actor.inv.amount>=actor.inv.capacity*0.88||node.depleted){
             node.assignedActors=node.assignedActors.filter(i=>i!==actor.id);
-            const stor=nearestStorage(actor.px,actor.py,actor.inv.type);
-            if(stor){actor.state='moving_to_storage';actor.tx=(stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(stor.tileId/COLS)*TP+TP/2;actor.task={...actor.task,storageTileId:stor.tileId};}
+            // Find storage that has space for this resource
+            let stor=null;
+            for(const sb of storageBlds()){
+              if((sb.inv.cap[actor.inv.type]||0)===0) continue;
+              if((sb.inv[actor.inv.type]||0)>=(sb.inv.cap[actor.inv.type]||0)) continue;
+              if(!stor||actor.dist((sb.tileId%COLS)*TP+TP/2,Math.floor(sb.tileId/COLS)*TP+TP/2)<actor.dist((stor.tileId%COLS)*TP+TP/2,Math.floor(stor.tileId/COLS)*TP+TP/2)){
+                stor=sb;
+              }
+            }
+            if(!stor) stor=nearestStorage(actor.px,actor.py,actor.inv.type);
+            if(stor){actor.state='moving_to_storage';actor.tx=(stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(stor.tileId/COLS)*TP+TP/2;actor.task={...actor.task,storageTileId:stor.tileId};actor.lastStateChange=sim.gameTime;}
             else clearTask(actor);
           } else actor.timer=gatherDur(actor,node);
         }
@@ -1625,7 +1661,7 @@ function updateActors(dt){
       case'moving_to_storage':{
         const stid=actor.task?.storageTileId;if(stid==null){clearTask(actor);break;}
         const sx=(stid%COLS)*TP+TP/2,sy=Math.floor(stid/COLS)*TP+TP/2;
-        if(actor.move(sx,sy,dt)){actor.state='depositing';actor.timer=0.4;}
+        if(actor.move(sx,sy,dt)){actor.state='depositing';actor.timer=0.4;actor.lastStateChange=sim.gameTime;}
         break;
       }
       case'depositing':{
@@ -1637,22 +1673,14 @@ function updateActors(dt){
             actor.inv.amount=Math.max(0,actor.inv.amount-dep);
             if(actor.inv.amount<=0) actor.inv.type=null;
           }
-          if(actor.task?.type==='pickup_for_site'){
-            const stid2=actor.task.storageTileId;const res=actor.task.resType;
-            const avail=sim.bldInv[stid2]?.[res]||0;
-            const take=Math.min(actor.task.amount,actor.inv.capacity,avail);
-            if(take>0){
-              withdraw(stid2,res,take);touchBuilding(stid2);
-              actor.inv.type=res;actor.inv.amount=take;
-              const site=sim.sites.find(s=>s.id===actor.task.siteId);
-              if(site){actor.state='moving_to_construction';actor.tx=site.px;actor.ty=site.py;}
-              else clearTask(actor);
-            } else clearTask(actor);
-            break;
-          }
+          // After depositing, loop back to gather if possible
           const node=sim.nodes.find(n=>n.id===actor.task?.nodeId);
-          if(node&&!node.depleted&&actor.inv.amount===0){actor.state='moving_to_resource';actor.tx=node.px;actor.ty=node.py;node.assignedActors.push(actor.id);}
-          else clearTask(actor);
+          if(node&&!node.depleted&&actor.inv.amount===0&&(totalRes(node.type)<totalCap(node.type)*0.95||node.type==='food')){
+            if(assignedCount('gather',node.id)<node.maxWorkers){
+              node.assignedActors.push(actor.id);
+              actor.state='moving_to_resource';actor.tx=node.px;actor.ty=node.py;actor.lastStateChange=sim.gameTime;
+            } else clearTask(actor);
+          } else clearTask(actor);
         }
         break;
       }
@@ -1660,25 +1688,7 @@ function updateActors(dt){
         const site=sim.sites.find(s=>s.id===actor.task?.siteId);
         if(!site){clearTask(actor);break;}
         if(actor.move(site.px,site.py,dt)){
-          if(actor.task?.type==='pickup_for_site'){actor.state='delivering_to_construction';actor.timer=0.5;}
-          else{actor.state='building';actor.timer=0;}
-        }
-        break;
-      }
-      case'delivering_to_construction':{
-        actor.timer-=dt;
-        if(actor.timer<=0){
-          const site=sim.sites.find(s=>s.id===actor.task?.siteId);
-          if(!site){clearTask(actor);break;}
-          const res=actor.task.resType;const amt=actor.inv.amount;
-          if(actor.inv.type===res&&amt>0){
-            const needed=(site.required[res]||0)-(site.delivered[res]||0);
-            const deliver=Math.min(needed,amt);
-            site.delivered[res]=(site.delivered[res]||0)+deliver;
-            actor.inv.amount-=deliver;if(actor.inv.amount<=0) actor.inv.type=null;
-            actor.gainExp('carrier',0.06);
-          }
-          clearTask(actor);
+          actor.state='building';actor.timer=0;actor.lastStateChange=sim.gameTime;
         }
         break;
       }
@@ -1688,7 +1698,7 @@ function updateActors(dt){
         if(!siteMet(site)){clearTask(actor);break;}
         const buildRate=0.5+actor.aptB('builder')*0.8;
         site.buildWork+=dt*buildRate;site.progress=Math.min(1,site.buildWork/site.totalWork);
-        actor.gainExp('builder',0.04);touchBuilding(site.tileId)||void 0;
+        actor.gainExp('builder',0.04);
         if(site.buildWork>=site.totalWork){completeSite(site);}
         break;
       }
@@ -1696,7 +1706,7 @@ function updateActors(dt){
         const wg=sim.wildlife.find(w=>w.id===actor.task?.wildlifeId);
         if(!wg||wg.extinct){clearTask(actor);break;}
         wg.px=wg.tileX*TP+TP/2;wg.py=wg.tileY*TP+TP/2;
-        if(actor.move(wg.px,wg.py,dt)){actor.state='performing_hunt';actor.timer=2+Math.random()*2;}
+        if(actor.move(wg.px,wg.py,dt)){actor.state='performing_hunt';actor.timer=2+Math.random()*2;actor.lastStateChange=sim.gameTime;}
         break;
       }
       case'performing_hunt':{
@@ -1708,16 +1718,15 @@ function updateActors(dt){
           const successChance=0.4+apt*0.5+(state.techs.tracking?0.15:0);
           if(Math.random()<successChance){
             let yield_=(wt.yields?.food||1)*(1+(state.yieldBonus||0));
-            // Hunting blind nearby?
-            if(state.grid.some(t=>t.building==='huntingBlind'&&Math.abs((t.id%COLS)-wg.tileX)+Math.abs(Math.floor(t.id/COLS)-wg.tileY)<=5)){yield_*=1.5;}
+            if(state.grid.some(t=>t.building==='huntingBlind'&&Math.abs((t.id%COLS)-wg.tileX)+Math.abs(Math.floor(t.id/COLS)-wg.tileY)<=5)) yield_*=1.5;
             const take=Math.min(yield_*2,wg.population*0.12,actor.inv.capacity-actor.inv.amount);
             wg.population=Math.max(0,wg.population-take/2);
             actor.inv.type='food';actor.inv.amount+=take;
             wg.fear=Math.min(100,wg.fear+20*(1-(state.techs.tracking?0.3:0)));
-            if(wg.population<=1){wg.extinct=true;addLog(`${wg.name} has been driven to extinction!`,'warn');}
+            if(wg.population<=1){wg.extinct=true;addLog(`${wg.name} driven to extinction!`,'warn');}
             actor.gainExp('hunter',0.1);
             const stor=nearestStorage(actor.px,actor.py,'food');
-            if(stor){actor.state='moving_to_storage';actor.tx=(stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(stor.tileId/COLS)*TP+TP/2;actor.task={...actor.task,storageTileId:stor.tileId};}
+            if(stor){actor.state='moving_to_storage';actor.tx=(stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(stor.tileId/COLS)*TP+TP/2;actor.task={...actor.task,storageTileId:stor.tileId};actor.lastStateChange=sim.gameTime;}
             else clearTask(actor);
           } else {
             if(Math.random()<0.08) actor.memorizeHerd(wg.id);
@@ -1741,7 +1750,7 @@ function updateActors(dt){
               actor.inv.type='food';actor.inv.amount+=yield_;actor.gainExp('forager',0.06);
               if(actor.inv.amount>=actor.inv.capacity*0.85){
                 const stor=nearestStorage(actor.px,actor.py,'food');
-                if(stor){actor.state='moving_to_storage';actor.tx=(stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(stor.tileId/COLS)*TP+TP/2;actor.task={...actor.task,storageTileId:stor.tileId};}
+                if(stor){actor.state='moving_to_storage';actor.tx=(stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(stor.tileId/COLS)*TP+TP/2;actor.task={...actor.task,storageTileId:stor.tileId};actor.lastStateChange=sim.gameTime;}
                 else clearTask(actor);
               }
             }
@@ -1750,9 +1759,7 @@ function updateActors(dt){
         break;
       }
       case'exploring':{
-        if(actor.move(actor.tx,actor.ty,dt)){
-          actor.state='surveying';actor.timer=1.5+Math.random()*1.5;
-        }
+        if(actor.move(actor.tx,actor.ty,dt)){actor.state='surveying';actor.timer=1.5+Math.random()*1.5;actor.lastStateChange=sim.gameTime;}
         break;
       }
       case'surveying':{
@@ -1774,7 +1781,7 @@ function updateActors(dt){
         const tid=actor.task?.maintainTileId;
         if(tid==null){clearTask(actor);break;}
         const tx2=(tid%COLS)*TP+TP/2,ty2=Math.floor(tid/COLS)*TP+TP/2;
-        if(actor.move(tx2,ty2,dt)){actor.state='performing_maintenance';actor.timer=3+Math.random()*2;}
+        if(actor.move(tx2,ty2,dt)){actor.state='performing_maintenance';actor.timer=3+Math.random()*2;actor.lastStateChange=sim.gameTime;}
         break;
       }
       case'performing_maintenance':{
@@ -1812,7 +1819,7 @@ function updateActors(dt){
               if(primaryId){for(const [r,v] of Object.entries(refund)) deposit(+primaryId,r,v);}
               tile.building=null;tile.constrSiteId=null;
               delete sim.bldInv[+tid];delete sim.bldMeta[+tid];
-              addLog(`Unused ${b.name} demolished. Materials recovered.`,'warn');
+              addLog(`Unused ${b.name} demolished.`,'warn');
               renderSidebar();clearTask(actor);
             }
           }
@@ -1820,14 +1827,8 @@ function updateActors(dt){
         break;
       }
     }
-    // Fatigue cap: force rest
-    if(actor.fatigue>=95&&actor.state!=='idle'&&actor.state!=='resting'){
-      const stor=nearestStorage(actor.px,actor.py,null);
-      if(stor){actor.state='moving_to_storage';actor.tx=(stor.tileId%COLS)*TP+TP/2;actor.ty=Math.floor(stor.tileId/COLS)*TP+TP/2;actor.task={type:'rest',storageTileId:stor.tileId};}
-      else{clearTask(actor);actor.restTimer=6+Math.random()*4;}
-    }
   }
-  // Smoke particles from fire pit / smokehouse
+  // Smoke particles
   if(Math.random()<0.08){
     for(const tile of state.grid){
       if(tile.building!=='firePit'&&tile.building!=='smokehouse') continue;
@@ -1836,10 +1837,7 @@ function updateActors(dt){
       if(Math.random()<0.03) sim.particles.push({x:tx,y:ty,vx:(Math.random()-.5)*1,vy:-1-Math.random()*2,r:1.5+Math.random(),color:'rgba(150,130,100,0.6)',life:40+Math.random()*40,maxLife:80});
     }
   }
-  // Update particles
-  sim.particles=sim.particles.filter(p=>{
-    p.x+=p.vx;p.y+=p.vy;p.life--;return p.life>0;
-  });
+  sim.particles=sim.particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;return p.life>0;});
 }
 
 function getBuildingYieldMod(resType,tileX,tileY){
@@ -1904,7 +1902,7 @@ function discoverContent(actor,tile){
   for(const wg of sim.wildlife){
     if(wg.discovered) continue;
     const dist=Math.abs(wg.tileX-tile.id%COLS)+Math.abs(wg.tileY-Math.floor(tile.id/COLS));
-    if(dist<=(wg.aquatic?2:3)){wg.discovered=true;addLog(`${actor.name} found signs of a ${wg.name} nearby.`,'imp');}
+    if(dist<=(wg.aquatic?2:3)){wg.discovered=true;addLog(`${actor.name} found signs of a ${wg.name}.`,'imp');}
   }
   if(Math.random()<rareChance){
     const keys=Object.keys(RARE_RES);const key=keys[Math.floor(Math.random()*keys.length)];
@@ -1940,14 +1938,92 @@ function completeSite(site){
   renderSidebar();
 }
 
+// ── PLACEMENT SCORING API ─────────────────────────────────────────────────────
+function getPlacementInfo(key,tileId){
+  const tile=state.grid[tileId];const b=BUILDINGS[key];
+  if(!b||!tile) return{valid:false,score:0,reasons:[],warnings:[],blockers:['Invalid']};
+  const tx=tileId%COLS,ty=Math.floor(tileId/COLS);
+  const blockers=[],warnings=[],reasons=[];
+  if(tile.building) return{valid:false,score:0,reasons,warnings,blockers:['Occupied']};
+  if(tile.constrSiteId) return{valid:false,score:0,reasons,warnings,blockers:['Under construction']};
+  if(tile.type==='mountain') return{valid:false,score:0,reasons,warnings,blockers:['Impassable']};
+  if(!canAffordCheck(b.cost)) blockers.push('Insufficient resources');
+  if(!meetsReqs(b.req)) blockers.push('Missing tech: '+b.req.filter(r=>!state.techs[r]).join(', '));
+  if(b.nearWater&&!isNearWater(tile)) blockers.push('Must be near water');
+  if(b.onForest&&tile.type!=='forest') blockers.push('Must be on forest');
+  if(b.onRock&&tile.type!=='rock'&&tile.type!=='hills') blockers.push('Must be on rock/hills');
+  if(blockers.length>0) return{valid:false,score:0,reasons,warnings,blockers};
+  let score=40;
+  // Find nearest fire/storage
+  const fireTile=state.grid.find(t=>t.building==='firePit');
+  const fdist=fireTile?Math.abs((fireTile.id%COLS)-tx)+Math.abs(Math.floor(fireTile.id/COLS)-ty):50;
+  // Proximity to camp bonus (closer = slightly better for most buildings, except hunters)
+  if(key!=='huntingBlind'&&key!=='huntingCamp') score+=Math.max(0,15-fdist*0.5);
+  else score+=Math.max(0,fdist*0.8-5); // hunters prefer some distance
+
+  if(key==='foragingPatch'){
+    const nearFood=sim.nodes.filter(n=>n.type==='food'&&n.discovered&&!n.depleted&&Math.abs(n.tileX-tx)+Math.abs(n.tileY-ty)<=7);
+    score+=nearFood.length*15;
+    if(nearFood.length>0) reasons.push(nearFood.length+' food source(s) nearby');
+    else warnings.push('No known food nearby');
+    if(tile.type==='plains'||tile.type==='forest'||tile.type==='marsh') score+=12;
+  } else if(key==='huntingBlind'||key==='huntingCamp'){
+    const nearHerds=sim.wildlife.filter(w=>!w.aquatic&&w.discovered&&!w.extinct&&Math.abs(w.tileX-tx)+Math.abs(w.tileY-ty)<=12);
+    score+=nearHerds.length*20;
+    if(nearHerds.length>0) reasons.push(nearHerds.length+' herd(s) in range');
+    else warnings.push('No known herds nearby');
+    if(tile.type==='forest'||tile.type==='plains'||tile.type==='hills') score+=12;
+  } else if(key==='fishingSpot'){
+    if(!isNearWater(tile)){return{valid:false,score:0,reasons,warnings,blockers:['Must be on/near water']};}
+    const nearShoals=sim.wildlife.filter(w=>w.aquatic&&w.discovered&&!w.extinct&&Math.abs(w.tileX-tx)+Math.abs(w.tileY-ty)<=6);
+    score+=nearShoals.length*25;
+    if(nearShoals.length>0) reasons.push(nearShoals.length+' shoal(s) nearby');
+    else warnings.push('No known fish nearby');
+    if(tile.type==='water') score+=20;
+    else if(tile.type==='sand'||isValidWaterSourceTile(tileId)) score+=10;
+  } else if(key==='waterHole'){
+    if(!isNearWater(tile)){return{valid:false,score:0,reasons,warnings,blockers:['Must be near water']};}
+    const nearWater=sim.nodes.filter(n=>n.type==='water'&&n.discovered&&Math.abs(n.tileX-tx)+Math.abs(n.tileY-ty)<=5);
+    score+=nearWater.length*15;
+    if(tile.type==='water') score+=25;
+    else if(tile.type==='sand') score+=12;
+    reasons.push('Water access');
+  } else if(key==='lumberCamp'){
+    const nearWood=sim.nodes.filter(n=>n.type==='wood'&&n.discovered&&!n.depleted&&Math.abs(n.tileX-tx)+Math.abs(n.tileY-ty)<=6);
+    score+=nearWood.length*15;
+    if(nearWood.length>0) reasons.push(nearWood.length+' wood source(s) nearby');
+    if(tile.type==='forest') score+=20; else{
+      const adjForest=[[-1,0],[1,0],[0,-1],[0,1]].some(([dx,dy])=>{const nx=tx+dx,ny=ty+dy;return nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&state.grid[ny*COLS+nx].type==='forest';});
+      if(adjForest){score+=8;reasons.push('Adjacent to forest');}
+      else warnings.push('Not near forest — limited benefit');
+    }
+  } else if(key==='flintKnapping'||key==='mine'){
+    const nearStone=sim.nodes.filter(n=>n.type==='stone'&&n.discovered&&!n.depleted&&Math.abs(n.tileX-tx)+Math.abs(n.tileY-ty)<=6);
+    score+=nearStone.length*15;
+    if(tile.type==='rock'||tile.type==='hills') score+=20;
+  } else if(key==='leanTo'||key==='earthLodge'||key==='longhouse'){
+    score+=Math.max(0,20-fdist*0.8);
+    reasons.push('Housing near camp');
+  } else if(key==='storagePit'||key==='granary'){
+    score+=Math.max(0,20-fdist*0.6);
+    reasons.push('Storage near camp');
+  } else if(key==='watchPost'||key==='palisade'){
+    // Near camp, and near known threats
+    if(sim.threats.length>0){score+=20;reasons.push('Active threats — defence useful');}
+    score+=Math.max(0,15-fdist*0.5);
+  }
+  score=Math.max(0,Math.min(100,score));
+  return{valid:true,score,reasons,warnings,blockers:[]};
+}
+
 // ── GAME LOOP ──────────────────────────────────────────────────────────────────
 let keysHeld={};
 function updateCameraKeys(dt){
   const spd=TP*8/cam.zoom;
-  if(keysHeld['KeyW']||keysHeld['ArrowUp']) cam.wy-=spd*dt;
-  if(keysHeld['KeyS']||keysHeld['ArrowDown']) cam.wy+=spd*dt;
-  if(keysHeld['KeyA']||keysHeld['ArrowLeft']) cam.wx-=spd*dt;
-  if(keysHeld['KeyD']||keysHeld['ArrowRight']) cam.wx+=spd*dt;
+  if(keysHeld['KeyW']||keysHeld['ArrowUp']){cam.wy-=spd*dt;trackInteraction();}
+  if(keysHeld['KeyS']||keysHeld['ArrowDown']){cam.wy+=spd*dt;trackInteraction();}
+  if(keysHeld['KeyA']||keysHeld['ArrowLeft']){cam.wx-=spd*dt;trackInteraction();}
+  if(keysHeld['KeyD']||keysHeld['ArrowRight']){cam.wx+=spd*dt;trackInteraction();}
   clampCamera();
 }
 
@@ -1956,9 +2032,23 @@ function gameLoop(ts){
   const sDt=sim.paused?0:realDt*sim.speed;
   updateCameraKeys(realDt);
 
+  // AFK / auto mode check
+  if(!sim.paused){
+    const afkMs=Date.now()-lastInteractionTime;
+    if(!autoMode&&afkMs>AFK_THRESHOLD){
+      autoMode=true;
+      const badge=document.getElementById('auto-badge');if(badge) badge.classList.add('show');
+      const btn=document.getElementById('auto-toggle-btn');if(btn){btn.textContent='AUTO: ON';btn.classList.add('on');}
+      addLog('⚙ Settlement council acting autonomously (AFK auto mode).','imp');
+    }
+    if(autoMode){
+      autoBuilderTimer-=realDt;
+      if(autoBuilderTimer<=0){autoBuilderTimer=40+Math.random()*25;autoBuilderEvaluate();}
+    }
+  }
+
   if(sDt>0){
     sim.gameTime+=sDt;
-    // Day/season/year
     const totalDays=Math.floor(sim.gameTime/DAY_SECONDS);
     const newDay=(totalDays%SEASON_DAYS)+1;
     const newSeason=Math.floor(totalDays/SEASON_DAYS)%4;
@@ -1967,21 +2057,14 @@ function gameLoop(ts){
       const oldSeason=state.season;
       state.day=newDay;state.season=newSeason;state.year=newYear;
       if(newSeason!==oldSeason){
-        if(newSeason===0){addLog(`Year ${state.year} begins.`,'era');}
+        if(newSeason===0) addLog(`Year ${state.year} begins.`,'era');
         if(newSeason===3) addLog('Winter descends. Resources grow scarce.','warn');
         if(newSeason===1) addLog('Summer — the land is generous.','imp');
       }
     }
-    // Continuous consumption
     const pop=state.res.pop;
     const hs=hungerStage();
-    // Hunger debuffs
-    const hungryMult=hs==='hungry'?1.0:hs==='starving'?0.6:hs==='collapse'?0.3:1.0;
-    if(pop>0){
-      consumeRes('food',pop*FOOD_PER_S*sDt);
-      consumeRes('water',pop*WATER_PER_S*sDt);
-    }
-    // Hunger grace → death
+    if(pop>0){consumeRes('food',pop*FOOD_PER_S*sDt);consumeRes('water',pop*WATER_PER_S*sDt);}
     if(hs==='collapse'){
       state.hungerGrace=(state.hungerGrace||0)+sDt;
       if(state.hungerGrace>DAY_SECONDS*HUNGER.GRACE_DAYS&&pop>1){
@@ -1990,43 +2073,29 @@ function gameLoop(ts){
         else addLog('A life is lost to starvation.','warn');
         state.morale=Math.max(0,state.morale-20);
       }
-    } else {state.hungerGrace=Math.max(0,(state.hungerGrace||0)-sDt*0.5);}
-    // Food spoilage
+    } else{state.hungerGrace=Math.max(0,(state.hungerGrace||0)-sDt*0.5);}
     sim.spoilTimer-=sDt;if(sim.spoilTimer<=0){sim.spoilTimer=10;applyFoodSpoilage();}
-    // Population
     sim.popCheckTimer-=sDt;if(sim.popCheckTimer<=0){sim.popCheckTimer=60;checkPopDynamics();}
-    // Building decay
     sim.decayTimer-=sDt;if(sim.decayTimer<=0){sim.decayTimer=60;updateBuildingCondition();}
-    // Tech progress
     sim.techTimer-=sDt;if(sim.techTimer<=0){sim.techTimer=20;passiveTechProgress();}
-    // Events
     sim.eventTimer-=sDt;if(sim.eventTimer<=0){sim.eventTimer=45+Math.random()*30;triggerRandomEvent();}
-    // Predators
     sim.predatorTimer-=sDt;if(sim.predatorTimer<=0){sim.predatorTimer=8;updatePredators(40);}
-    // Morale + caps
     state.morale=computeMorale();
     state.cap={...computeStorageCaps(),pop:computePopCap()};
-    // Actor updates
     updateActors(sDt);updateNodes(sDt);updateWildlife(sDt);
-    taskTimer-=sDt;if(taskTimer<=0){taskTimer=0.65;assignTasks();}
+    taskTimer-=sDt;if(taskTimer<=0){taskTimer=0.45;assignTasks();}
     sim.plannerTimer-=sDt;if(sim.plannerTimer<=0){sim.plannerTimer=8;runSettlementPlanner();}
   }
 
   uiTimer-=realDt;
   if(uiTimer<=0){
     uiTimer=0.25;
-    renderTerrain();
-    renderGame();
-    renderMinimap();
-    updateSimTimeDisplay();
-    renderResources();
+    renderTerrain();renderGame();renderMinimap();
+    updateSimTimeDisplay();renderResources();
     if(infoTab==='people') renderActorPanel();
     if(infoTab==='tech') renderTechPanel();
     if(infoTab==='debug') renderDebugPanel();
-  } else {
-    renderTerrain();
-    renderGame();
-  }
+  } else{renderTerrain();renderGame();}
   requestAnimationFrame(gameLoop);
 }
 
@@ -2038,10 +2107,8 @@ function applyFoodSpoilage(){
   let rate=0.015;
   if(state.season===3) rate=0.025;
   if(state.foodPresBonus) rate*=0.7;
-  if(hasDrying) rate*=0.55;
-  if(hasSmoke) rate*=0.3;
-  if(hasGranary) rate*=0.4;
-  if(hasRootCellar) rate*=0.5;
+  if(hasDrying) rate*=0.55;if(hasSmoke) rate*=0.3;
+  if(hasGranary) rate*=0.4;if(hasRootCellar) rate*=0.5;
   rate=Math.max(0.001,rate);
   consumeRes('food',totalRes('food')*rate);
 }
@@ -2057,9 +2124,7 @@ function checkPopDynamics(){
     }
   } else if((starving||dehy)&&pop>1){
     state.starveTurns=(state.starveTurns||0)+1;
-    if(state.starveTurns>=3){
-      state.starveTurns=0;
-    } else if(state.starveTurns===1) addLog('Your people are hungry and thirsty!','warn');
+    if(state.starveTurns===1) addLog('Your people are hungry and thirsty!','warn');
   } else state.starveTurns=0;
   checkEra();updateVisibility();
 }
@@ -2084,8 +2149,7 @@ function triggerRandomEvent(){
 function computeMorale(){
   let m=50;
   for(const tile of state.grid) if(tile.building) m+=BUILDINGS[tile.building]?.moraleBonus||0;
-  const food=totalRes('food'),water=totalRes('water'),pop=state.res.pop;
-  const fd=foodDays();
+  const fd=foodDays(),water=totalRes('water'),pop=state.res.pop;
   if(fd>7) m+=15;else if(fd>3) m+=5;else if(fd<1) m-=25;else if(fd<2) m-=10;
   if(water>pop*5) m+=10;else if(water<pop) m-=15;
   if(pop>=state.cap.pop) m-=20;else if(pop>=state.cap.pop*0.9) m-=10;
@@ -2096,14 +2160,12 @@ function computeMorale(){
   if(hs==='starving') m-=15;if(hs==='collapse') m-=30;
   return Math.max(0,Math.min(100,m));
 }
-
 function computePopCap(){let c=5;for(const tile of state.grid) if(tile.building) c+=BUILDINGS[tile.building]?.popCap||0;return c;}
 function computeStorageCaps(){
   let food=0,wood=0,stone=0,water=0;
   for(const inv of Object.values(sim.bldInv)){food+=inv.cap.food||0;wood+=inv.cap.wood||0;stone+=inv.cap.stone||0;water+=inv.cap.water||0;}
   return{food:Math.max(food,200),wood:Math.max(wood,200),stone:Math.max(stone,150),water:Math.max(water,150)};
 }
-
 function computeProd(){
   const pop=state.res.pop;
   const foodGather=sim.actors.filter(a=>['gathering','hunting','performing_hunt','fishing'].includes(a.state)).length*0.25;
@@ -2112,18 +2174,15 @@ function computeProd(){
   const waterConsume=pop*WATER_PER_S;
   return{food:foodGather-foodConsume,water:waterGather-waterConsume,wood:sim.actors.filter(a=>a.task?.resType==='wood'&&a.state==='gathering').length*0.2,stone:sim.actors.filter(a=>a.task?.resType==='stone'&&a.state==='gathering').length*0.15};
 }
-
 function boostTech(key,amount){
   if(state.techs[key]) return;
   state.techProgress[key]=Math.min(100,(state.techProgress[key]||0)+amount);
   if(state.techProgress[key]>=100){state.techs[key]=true;addLog(`✦ ${TECHS[key].name} now researchable!`,'imp');}
 }
-
 function checkEra(){
   let ne=0;for(let i=ERAS.length-1;i>=0;i--){if(state.res.pop>=ERAS[i].pop){ne=i;break;}}
   if(ne>state.era){state.era=ne;addLog(`✦ Era: ${ERAS[ne].name}`,'era');document.getElementById('era-tag').textContent=ERAS[ne].name;renderSidebar();}
 }
-
 function randomEvent(){
   const pop=state.res.pop;const pid=Object.keys(sim.bldInv)[0];
   const ev=[
@@ -2143,15 +2202,93 @@ function randomEvent(){
   return null;
 }
 
+// ── AUTO BUILDER ──────────────────────────────────────────────────────────────
+function toggleAutoMode(){
+  autoMode=!autoMode;
+  lastInteractionTime=Date.now();
+  const badge=document.getElementById('auto-badge');
+  if(badge) badge.classList.toggle('show',autoMode);
+  const btn=document.getElementById('auto-toggle-btn');
+  if(btn){btn.textContent=autoMode?'AUTO: ON':'AUTO: OFF';btn.classList.toggle('on',autoMode);}
+  addLog(autoMode?'⚙ Auto mode enabled.':'⚙ Auto mode disabled.','imp');
+}
+function trackInteraction(){
+  lastInteractionTime=Date.now();
+  if(autoMode){
+    autoMode=false;
+    const badge=document.getElementById('auto-badge');if(badge) badge.classList.remove('show');
+    const btn=document.getElementById('auto-toggle-btn');if(btn){btn.textContent='AUTO: OFF';btn.classList.remove('on');}
+  }
+}
+
+function autoBuilderEvaluate(){
+  const activeSites=sim.sites.filter(s=>!s.complete).length;
+  if(activeSites>=3) return; // backlog limit
+
+  const fd=foodDays();
+  const waterAmt=totalRes('water');
+  const pop=state.res.pop;
+  const popCap=computePopCap();
+  const wood=totalRes('wood'),stone=totalRes('stone');
+
+  function hasBuilt(key){return state.grid.some(t=>t.building===key)||sim.sites.some(s=>!s.complete&&s.bldKey===key);}
+
+  function tryBuild(key){
+    const b=BUILDINGS[key];if(!b) return false;
+    if(!meetsReqs(b.req)) return false;
+    if(!canAffordCheck(b.cost)) return false;
+    // Find best valid tile
+    let best=null,bestScore=-1;
+    for(const tile of state.grid){
+      if(!tile.explored) continue;
+      const info=getPlacementInfo(key,tile.id);
+      if(info.valid&&info.score>bestScore){bestScore=info.score;best=tile;}
+    }
+    if(!best||bestScore<25) return false;
+    createSite(best.id,key);
+    addLog(`⚙ Auto: Constructing ${b.name}.`,'imp');
+    return true;
+  }
+
+  // Priority 1: Water access
+  if(waterAmt<pop*3&&!hasBuilt('waterHole')){
+    if(tryBuild('waterHole')) return;
+  }
+
+  // Priority 1: Emergency food
+  if(fd<4){
+    const hasFish=hasBuilt('fishingSpot');
+    const hasForage=hasBuilt('foragingPatch');
+    const hasHunt=hasBuilt('huntingBlind')||hasBuilt('huntingCamp');
+    const aquaticNearby=sim.wildlife.some(w=>w.aquatic&&w.discovered&&!w.extinct);
+    const herdNearby=sim.wildlife.some(w=>!w.aquatic&&w.discovered&&!w.extinct);
+    if(!hasFish&&aquaticNearby){if(tryBuild('fishingSpot')) return;}
+    if(!hasForage){if(tryBuild('foragingPatch')) return;}
+    if(!hasHunt&&herdNearby){if(tryBuild('huntingBlind')) return;}
+  }
+
+  // Priority 2: Storage when near cap
+  const foodFrac=totalRes('food')/Math.max(1,totalCap('food'));
+  if(foodFrac>0.88&&!hasBuilt('storagePit')){if(tryBuild('storagePit')) return;}
+
+  // Priority 3: Housing when near pop cap
+  if(pop>=popCap*0.9){if(tryBuild('leanTo')) return;}
+
+  // Priority 4: Food improvement if stable
+  if(fd>5&&activeSites===0){
+    if(!hasBuilt('dryingRack')&&wood>=14) if(tryBuild('dryingRack')) return;
+  }
+}
+
 // ── SPEED / PAUSE ─────────────────────────────────────────────────────────────
 function setSpeed(s){
-  sim.speed=s;sim.paused=false;
+  sim.speed=s;sim.paused=false;trackInteraction();
   document.querySelectorAll('.spd-btn').forEach(b=>b.classList.remove('active'));
   const pb=document.getElementById('spd-pause');if(pb) pb.textContent='⏸';
   const sb=document.getElementById('spd-'+s);if(sb) sb.classList.add('active');
 }
 function togglePause(){
-  sim.paused=!sim.paused;
+  sim.paused=!sim.paused;trackInteraction();
   const btn=document.getElementById('spd-pause');
   if(btn) btn.textContent=sim.paused?'▶':'⏸';
   if(sim.paused){document.querySelectorAll('.spd-btn:not(#spd-pause)').forEach(b=>b.classList.remove('active'));}
@@ -2160,7 +2297,7 @@ function togglePause(){
 
 // ── UI RENDERING ──────────────────────────────────────────────────────────────
 function updateSimTimeDisplay(){
-  document.getElementById('sim-time-tag').textContent=`${SEASONS[state.season]} · Day ${state.day} · Year ${state.year}${sim.paused?' · ⏸':''}`;
+  document.getElementById('sim-time-tag').textContent=`${SEASONS[state.season]} · Day ${state.day} · Year ${state.year}${sim.paused?' · ⏸':''}${autoMode?' · AUTO':''}`;
 }
 
 function renderResources(){
@@ -2182,16 +2319,12 @@ function renderResources(){
   const fdBadge=document.getElementById('food-days-badge');
   fdBadge.textContent=fd>99?'∞':fd.toFixed(1)+'d food';
   fdBadge.className='food-days '+(fd>7?'ok':fd>3?'warn':'crit');
-  // Crisis badge
   const cb=document.getElementById('crisis-badge');
   const crisis=sim.crisisMode;
-  if(crisis&&crisis!=='idle'){
-    cb.textContent='⚠ '+crisis.charAt(0).toUpperCase()+crisis.slice(1);cb.classList.add('show');
-  } else cb.classList.remove('show');
-  // Threat badge
+  if(crisis&&crisis!=='idle'){cb.textContent='⚠ '+crisis.charAt(0).toUpperCase()+crisis.slice(1);cb.classList.add('show');}
+  else cb.classList.remove('show');
   const tb=document.getElementById('threat-badge');
   tb.classList.toggle('show',sim.threats.some(t=>t.active));
-  // World tab updates
   if(infoTab==='world'){
     const pc=computePopCap();
     document.getElementById('pop-display').textContent=`${fmt(state.res.pop)} / ${pc}`;
@@ -2199,8 +2332,7 @@ function renderResources(){
     const mc=state.morale<30?'#c04040':state.morale<50?'#c07030':state.morale<70?'#a09030':'#7ab050';
     const fill=document.getElementById('morale-fill');fill.style.width=state.morale+'%';fill.style.background=mc;
     const hDisplay=document.getElementById('hunger-display');
-    hDisplay.textContent=hs.charAt(0).toUpperCase()+hs.slice(1);
-    hDisplay.className='hunger-'+hs;
+    hDisplay.textContent=hs.charAt(0).toUpperCase()+hs.slice(1);hDisplay.className='hunger-'+hs;
     const fdDetail=document.getElementById('food-days-detail');
     fdDetail.textContent=fd>99?'Surplus':fd.toFixed(1)+'d';
     fdDetail.className=fd>7?'pos':fd>3?'neu':'neg';
@@ -2213,7 +2345,6 @@ function renderResources(){
     else if(prod.food>=0&&prod.water>=0&&state.morale>=40){gt.textContent='Growing ▲';gt.className='pos';}
     else if(prod.food<-0.5||prod.water<-0.2){gt.textContent='Declining ▼';gt.className='neg';}
     else{gt.textContent='Stable';gt.className='neu';}
-    // Status
     const sm=document.getElementById('status-panel');
     if(sm){
       if(hs==='collapse') sm.textContent='⚠ Collapse! People are dying of starvation.';
@@ -2222,10 +2353,10 @@ function renderResources(){
       else if(crisis==='water') sm.textContent='Water shortage — find water sources.';
       else if(crisis==='maintenance') sm.textContent='Buildings deteriorating — send repairs.';
       else if(sim.threats.some(t=>t.active)) sm.textContent='☠ Active threat nearby!';
+      else if(autoMode) sm.textContent='⚙ Auto mode active — council managing settlement.';
       else if(sim.paused) sm.textContent='Simulation paused.';
       else sm.textContent='Settlement is stable.';
     }
-    // Alerts
     renderAlerts();
   }
 }
@@ -2240,13 +2371,18 @@ function renderAlerts(){
   for(const [tid,meta] of Object.entries(sim.bldMeta)){
     if(meta.condition<25&&!meta.abandoned) alerts.push({msg:`🔧 ${BUILDINGS[state.grid[+tid]?.building]?.name||'Building'} critical!`,tileId:+tid});
   }
+  // Construction site alerts
   for(const site of sim.sites){
-    if(!siteNeedsRes(site)&&siteMet(site)) continue;
-    const need=siteNeedsRes(site);
-    if(need&&totalRes(need)<5) alerts.push({msg:`🚧 ${BUILDINGS[site.bldKey]?.name} blocked — no ${need}!`});
+    if(site.complete) continue;
+    if(!siteMet(site)){
+      const bName=BUILDINGS[site.bldKey]?.name||site.bldKey;
+      alerts.push({msg:`🚧 ${bName}: awaiting build start`});
+    }
   }
   const idleN=sim.actors.filter(a=>a.state==='idle'&&a.restTimer<=0).length;
   if(idleN>=3) alerts.push({msg:`👤 ${idleN} actors idle`});
+  const stuckN=sim.actors.filter(a=>a.stuckLog).length;
+  if(stuckN>0) alerts.push({msg:`⚠ ${stuckN} actor(s) recovered from stuck state`});
   if(sim.threats.some(t=>t.active)) alerts.push({msg:'☠ Active predator threat!'});
   el.innerHTML=alerts.map(a=>`<div class="alert-item" onclick="${a.tileId?`focusTile(${a.tileId})`:''}">  ${a.msg}</div>`).join('');
 }
@@ -2264,7 +2400,7 @@ function renderSidebar(){
     const locked=!canAffordCheck(b.cost)||!meetsReqs(b.req);
     const btn=document.createElement('button');
     btn.className='bld-btn'+(locked?' locked':'')+(state.selected===key?' selected':'');
-    btn.onclick=()=>selectBuilding(key);
+    btn.onclick=()=>{selectBuilding(key);trackInteraction();};
     const costStr=Object.entries(b.cost).map(([r,v])=>`${RES_ICON[r]}${v}`).join(' ');
     btn.innerHTML=`<span class="bld-icon">${b.icon}</span><span class="bld-meta"><div class="bld-name">${b.name}</div><div class="bld-cost">${costStr}</div></span>`;
     list.appendChild(btn);
@@ -2277,17 +2413,20 @@ function renderActorPanel(){
   for(const actor of sim.actors){
     const card=document.createElement('div');
     card.className='actor-card'+(selectedActor?.id===actor.id?' selected':'');
-    card.onclick=()=>{selectedActor=selectedActor?.id===actor.id?null:actor;renderActorPanel();centerCameraOn(actor.px,actor.py);};
-    const traits=actor.traits.map(t=>`<span style="font-size:.72em;color:#a08060">${t}</span>`).join(' ');
-    const fd=`${Math.floor(actor.fatigue)}%🌡`;
-    card.innerHTML=`<div class="ac-name" style="color:${actor.color}">${actor.name} <span class="ac-role">[${actor.dominant}]</span></div><div class="ac-task">${STATE_LBL[actor.state]||actor.state} ${actor.inv.amount>0?'| carrying '+actor.inv.type:''}</div><div style="font-size:.68em;color:#7a8060">fatigue:${fd} ${traits}</div>`;
+    card.onclick=()=>{selectedActor=selectedActor?.id===actor.id?null:actor;renderActorPanel();centerCameraOn(actor.px,actor.py);trackInteraction();};
+    const stateStr=STATE_LBL[actor.state]||actor.state;
+    const isResting=actor.state==='resting'||actor.restTimer>0;
+    const stateColor=isResting?'#808080':actor.state==='idle'?'#707050':'#7a9a50';
+    card.innerHTML=`<div class="ac-name" style="color:${actor.color}">${actor.name} <span class="ac-role">[${actor.dominant}]</span></div><div class="ac-task" style="color:${stateColor}">${stateStr}${actor.inv.amount>0?' | '+actor.inv.type:''}</div><div style="font-size:.66em;color:#6a7050">fatigue:${Math.floor(actor.fatigue)}%${actor.stuckLog?' ⚠stuck':''}</div>`;
     el.appendChild(card);
   }
   if(selectedActor){
     const a=selectedActor;
     const div=document.createElement('div');div.style.cssText='background:var(--bg);border:1px solid var(--earth);padding:5px;font-size:.7em;border-radius:2px;margin-top:5px;';
-    div.innerHTML=`<div style="color:var(--hi);font-weight:bold">${a.name}</div><div style="color:#9a8050">Role: ${a.dominant} | Traits: ${a.traits.join(', ')||'—'}</div><div>Goal: <span style="color:#7ab050">${a.goal||'—'}</span></div><div>Task: ${STATE_LBL[a.state]||a.state}</div><div>Carrying: ${a.carrying}</div><div>Fatigue: ${Math.floor(a.fatigue)}%</div>`;
-    if(a.lastDecisions.length>0){div.innerHTML+=`<div style="color:#9a8050;margin-top:3px">Decisions:</div>`;for(const d of a.lastDecisions.slice(0,3)) div.innerHTML+=`<div style="font-size:.88em">${d.label}: <span style="color:var(--hi)">${d.score}</span> <span style="color:#6a8040">[${d.reasons.slice(0,2).join(', ')}]</span></div>`;}
+    const stuckStr=a.stuckLog?`<div style="color:#e04040">⚠ ${a.stuckLog}</div>`:'';
+    const idleReason=a.state==='idle'&&a.restTimer<=0&&!a.task?(a.lastDecisions.length===0?'No tasks found':'Awaiting task tick'):'';
+    div.innerHTML=`<div style="color:var(--hi);font-weight:bold">${a.name}</div><div>State: ${STATE_LBL[a.state]||a.state}${a.restTimer>0?` (rest ${a.restTimer.toFixed(1)}s)`:''}</div><div>Task: ${a.task?.type||'—'}</div><div>Carrying: ${a.carrying}</div><div>Fatigue: ${Math.floor(a.fatigue)}%</div>${stuckStr}${idleReason?`<div style="color:#9a6030">${idleReason}</div>`:''}`;
+    if(a.lastDecisions.length>0){div.innerHTML+=`<div style="color:#9a8050;margin-top:3px">Last decisions:</div>`;for(const d of a.lastDecisions.slice(0,3)) div.innerHTML+=`<div style="font-size:.88em">${d.label}: <span style="color:var(--hi)">${d.score}</span></div>`;}
     el.appendChild(div);
   }
 }
@@ -2304,10 +2443,9 @@ function renderTechPanel(){
     if(canAfford&&!done) row.onclick=()=>researchTech(key);
     const costStr=Object.entries(tech.cost).map(([r,v])=>`${RES_ICON[r]}${v}`).join(' ');
     const progBar=done?'':`<div class="tech-prog"><div class="tech-prog-fill" style="width:${prog}%"></div></div>`;
-    row.innerHTML=`<span class="tech-icon">${tech.icon}</span><div style="flex:1"><div class="tech-name">${tech.name}${done?' ✓':''}</div><div style="color:#7a8060;font-size:.85em">${tech.desc}</div><div class="tech-cost">${costStr}</div>${progBar}</div>`;
+    row.innerHTML=`<span>${tech.icon}</span><div style="flex:1"><div>${tech.name}${done?' ✓':''}</div><div style="color:#7a8060;font-size:.85em">${tech.desc}</div><div style="color:#807040">${costStr}</div>${progBar}</div>`;
     el.appendChild(row);
   }
-  // Discoveries
   if(state.discoveries.length>0){
     const h=document.createElement('h3');h.textContent='Discoveries';h.style.marginTop='8px';el.appendChild(h);
     for(const d of state.discoveries){
@@ -2320,14 +2458,53 @@ function renderTechPanel(){
 function renderDebugPanel(){
   const dp=document.getElementById('debug-panel');
   if(dp){
-    dp.innerHTML=`<div class="debug-section"><div class="debug-label">Crisis <span class="debug-val">${sim.crisisMode||'none'}</span> | Speed <span class="debug-val">${sim.speed}×</span> | GameTime <span class="debug-val">${sim.gameTime.toFixed(0)}s</span></div><div class="debug-label">Hunger: <span class="debug-val">${hungerStage()}</span> | Days: <span class="debug-val">${foodDays().toFixed(1)}</span></div><div class="debug-label">Intents: <span class="debug-val">${sim.intents.slice(0,2).join('; ')}</span></div><div class="debug-label">Predators: <span class="debug-val">${sim.predators.length}</span> | Known: <span class="debug-val">${sim.predators.filter(p=>p.known).length}</span></div></div>`;
+    const stuckActors=sim.actors.filter(a=>a.stuckLog);
+    const idleActors=sim.actors.filter(a=>a.state==='idle'&&a.restTimer<=0);
+    const restingActors=sim.actors.filter(a=>a.state==='resting'||a.restTimer>0);
+    dp.innerHTML=`<div class="debug-section">
+      <div class="debug-label">Crisis: <span class="debug-val">${sim.crisisMode||'none'}</span> | Speed: <span class="debug-val">${sim.speed}×</span> | Time: <span class="debug-val">${sim.gameTime.toFixed(0)}s</span></div>
+      <div class="debug-label">Hunger: <span class="debug-val">${hungerStage()}</span> | Food days: <span class="debug-val">${foodDays().toFixed(1)}</span></div>
+      <div class="debug-label">Idle: <span class="debug-val">${idleActors.length}</span> | Resting: <span class="debug-val">${restingActors.length}</span> | Stuck recovered: <span class="debug-val">${stuckActors.length}</span></div>
+      <div class="debug-label">Auto mode: <span class="debug-val">${autoMode?'ON':'OFF'}</span> | Sites: <span class="debug-val">${sim.sites.filter(s=>!s.complete).length}</span></div>
+      <div class="debug-label">Intents: <span class="debug-val">${sim.intents.slice(0,2).join('; ')}</span></div>
+    </div>`;
+  }
+  // Construction site debug
+  const sdp=document.getElementById('site-debug-panel');
+  if(sdp){
+    sdp.innerHTML='';
+    const activeSites=sim.sites.filter(s=>!s.complete);
+    if(activeSites.length>0){
+      const h=document.createElement('div');h.style.cssText='color:var(--hi);font-size:.68em;font-weight:bold;margin-bottom:3px';h.textContent='Construction Sites:';sdp.appendChild(h);
+      for(const site of activeSites){
+        const b=BUILDINGS[site.bldKey];
+        const builders=assignedCount('build',site.id);
+        const ready=siteMet(site);
+        const card=document.createElement('div');card.className='site-card';
+        const stateStr=ready?`ready (${builders} building)`:'materials delivered';
+        const stateClass=ready?'site-state-ok':'site-state-wait';
+        card.innerHTML=`<div><span style="color:var(--hi)">${b?.name||site.bldKey}</span> <span class="${stateClass}">${stateStr}</span></div>
+          <div style="color:#9a8050">Progress: ${Math.floor(site.progress*100)}%</div>`;
+        sdp.appendChild(card);
+      }
+    }
   }
   const ap=document.getElementById('ai-panel');if(!ap) return;
   ap.innerHTML='';
   for(const actor of sim.actors.slice(0,8)){
     const card=document.createElement('div');card.className='ai-actor-card';
     const top=actor.lastDecisions[0];
-    card.innerHTML=`<div style="display:flex;align-items:center;gap:4px"><span style="color:${actor.color};font-weight:bold">${actor.name}</span><span style="color:#9a8050;font-size:.85em">[${actor.dominant}]</span></div><div class="ai-goal">${actor.goal||'—'}</div>${top?`<div class="ai-top-task">${top.label} <span style="color:#9a8050">(${top.score})</span></div><div style="color:#6a8040;font-size:.88em">${top.reasons.slice(0,2).join(', ')}</div>`:'<div style="color:#5a4030">awaiting task</div>'}`;
+    const stateStr=STATE_LBL[actor.state]||actor.state;
+    const isResting=actor.state==='resting'||actor.restTimer>0;
+    const fatColor=actor.fatigue>80?'#e06030':actor.fatigue>50?'#c09030':'#6a8040';
+    card.innerHTML=`<div style="display:flex;align-items:center;gap:4px">
+      <span style="color:${actor.color};font-weight:bold">${actor.name}</span>
+      <span style="color:#9a8050;font-size:.85em">[${actor.dominant}]</span>
+      <span style="color:${fatColor};font-size:.8em">${Math.floor(actor.fatigue)}%🌡</span>
+    </div>
+    <div class="ai-goal">${actor.goal||isResting?'resting...':'—'}</div>
+    <div style="color:#7a8060;font-size:.85em">${stateStr}${actor.stuckLog?' ⚠'+actor.stuckLog:''}</div>
+    ${top?`<div class="ai-top-task">${top.label} <span style="color:#9a8050">(${top.score})</span></div>`:'<div style="color:#5a4030">no task scored</div>'}`;
     ap.appendChild(card);
   }
 }
@@ -2345,32 +2522,47 @@ function showTileInfo(tile){
   const el=document.getElementById('tile-info');if(!el) return;
   if(!tile.explored){el.innerHTML='<div class="ti-name">Unexplored</div><div class="ti-desc">Send an explorer.</div>';return;}
   let html=`<div class="ti-name">${tile.type.charAt(0).toUpperCase()+tile.type.slice(1)}</div><div class="ti-desc">${TILE_DESC[tile.type]||''}</div>`;
-  // Node
+  // Water source indicator
+  if(isValidWaterSourceTile(tile.id)) html+=`<div class="ti-prod" style="color:#4080c0">💧 Valid water source</div>`;
   const node=tile.nodeId!=null?sim.nodes.find(n=>n.id===tile.nodeId):null;
   if(node&&node.discovered){
     const pct=Math.round(node.amount/node.maxAmount*100);
-    html+=`<div class="ti-prod">${node.type} node: ${pct}% remaining${node.depleted?' (depleted)':''}</div>`;
+    html+=`<div class="ti-prod">${node.type} node: ${pct}%${node.depleted?' (depleted)':''}</div>`;
   }
   if(tile.building){
     const b=BUILDINGS[tile.building];const meta=sim.bldMeta[tile.id];const inv=sim.bldInv[tile.id];
     const condStr=meta?`<span class="${condClass(meta.condition)}">${condLabel(meta.condition)} (${Math.floor(meta.condition)}%)</span>${meta.abandoned?' <span class="cond-bad">ABANDONED</span>':meta.demolitionQueued?' <span class="cond-bad">DEMOLITION</span>':''}`:' ';
     const invStr=inv?['food','wood','stone','water'].filter(r=>(inv.cap[r]||0)>0).map(r=>`${RES_ICON[r]}${Math.floor(inv[r]||0)}/${inv.cap[r]}`).join(' '):'';
-    const mods=Object.entries(b.mod||{}).filter(([,v])=>typeof v==='number').map(([k,v])=>`${k}:${v}`).join(' ');
-    html+=`<div class="ti-name">${b.icon} ${b.name}</div><div class="ti-desc">${b.effect}</div>${mods?`<div class="ti-prod">${mods}</div>`:''}<div>${condStr}</div>`;
+    html+=`<div class="ti-name">${b.icon} ${b.name}</div><div class="ti-desc">${b.effect}</div><div>${condStr}</div>`;
     if(inv) html+=`<div class="ti-inv">Stored: ${invStr||'empty'}</div>`;
     if(meta){
       const maintCost=bldMaintenanceCost(tile.building);
-      if(meta.condition<80) html+=`<div style="color:#9a8050;font-size:.8em">Maintenance: ${Object.entries(maintCost).map(([r,v])=>`${v}${r}`).join(', ')}</div>`;
+      if(meta.condition<80) html+=`<div style="color:#9a8050;font-size:.8em">Repair cost: ${Object.entries(maintCost).map(([r,v])=>`${v}${r}`).join(', ')}</div>`;
       html+=`<div style="display:flex;gap:3px;margin-top:3px"><button class="maint-btn" onclick="manualMaintain(${tile.id})">🔨 Repair</button><button class="pin-btn" onclick="togglePin(${tile.id})">${meta.pinned?'📌 Unpin':'📌 Pin'}</button></div>`;
     }
   }
   if(tile.constrSiteId){
     const site=sim.sites.find(s=>s.id===tile.constrSiteId);
-    if(site){html+=`<div class="ti-prod">Building: ${BUILDINGS[site.bldKey]?.name} — ${Math.floor(site.progress*100)}%</div>`;}
+    if(site){
+      const ready=siteMet(site);
+      html+=`<div class="ti-prod">🚧 Building: ${BUILDINGS[site.bldKey]?.name} — ${Math.floor(site.progress*100)}%</div>`;
+      html+=`<div class="ti-prod">${ready?'✓ Ready to build':'Materials delivered'}</div>`;
+      const builders=assignedCount('build',site.id);
+      html+=`<div style="font-size:.75em;color:#9a8050">Builders assigned: ${builders}</div>`;
+    }
   }
-  // Wildlife at tile
   const wg=sim.wildlife.find(w=>w.tileX===tile.id%COLS&&w.tileY===Math.floor(tile.id/COLS)&&w.discovered);
   if(wg) html+=`<div class="ti-prod">${wg.icon} ${wg.name}: ${Math.floor(wg.population)}/${wg.maxPopulation} (${Math.floor(wg.population/wg.maxPopulation*100)}%)</div>`;
+  // Show placement guidance if a building is selected
+  if(state.selected&&state.selected!==tile.building){
+    const info=getPlacementInfo(state.selected,tile.id);
+    html+=`<div style="border-top:1px solid var(--earth);margin-top:4px;padding-top:4px;font-size:.75em">`;
+    html+=`<div style="color:${info.valid?'#7ab050':'#e06060'}">${BUILDINGS[state.selected].icon} ${BUILDINGS[state.selected].name}: ${info.valid?'✓ Valid (score:'+info.score+')':'✗ Invalid'}</div>`;
+    if(info.blockers.length>0) html+=`<div style="color:#e06060">${info.blockers[0]}</div>`;
+    if(info.warnings.length>0) html+=`<div style="color:#c09030">⚠ ${info.warnings[0]}</div>`;
+    if(info.reasons.length>0) html+=`<div style="color:#7a9050">${info.reasons[0]}</div>`;
+    html+=`</div>`;
+  }
   el.innerHTML=html;
 }
 
@@ -2387,6 +2579,7 @@ function setupInteraction(){
     if(tx>=0&&tx<COLS&&ty>=0&&ty<ROWS) hoveredTile=state.grid[ty*COLS+tx];
     else hoveredTile=null;
     if(cam.dragging){
+      trackInteraction();
       const dx=(e.clientX-cam.dragStartX)/cam.zoom;
       const dy=(e.clientY-cam.dragStartY)/cam.zoom;
       cam.wx=cam.dragStartWX-dx;cam.wy=cam.dragStartWY-dy;
@@ -2395,59 +2588,82 @@ function setupInteraction(){
   });
 
   gc.addEventListener('mousedown',e=>{
+    trackInteraction();
     if(e.button===1||(e.button===0&&e.altKey)){
-      cam.dragging=true;cam.dragStartX=e.clientX;cam.dragStartY=e.clientY;
-      cam.dragStartWX=cam.wx;cam.dragStartWY=cam.wy;e.preventDefault();
-    } else if(e.button===2){
-      cam.dragging=true;cam.dragStartX=e.clientX;cam.dragStartY=e.clientY;
-      cam.dragStartWX=cam.wx;cam.dragStartWY=cam.wy;e.preventDefault();
+      e.preventDefault();cam.dragging=true;
+      cam.dragStartX=e.clientX;cam.dragStartY=e.clientY;
+      cam.dragStartWX=cam.wx;cam.dragStartWY=cam.wy;
+    } else if(e.button===0){
+      cam.dragging=false;
+      cam.dragStartX=e.clientX;cam.dragStartY=e.clientY;
+      cam.dragStartWX=cam.wx;cam.dragStartWY=cam.wy;
+      cam._moved=false;
     }
   });
 
   gc.addEventListener('mouseup',e=>{
-    if(cam.dragging){
-      const moved=Math.abs(e.clientX-cam.dragStartX)+Math.abs(e.clientY-cam.dragStartY);
-      cam.dragging=false;
-      if(moved<5&&e.button!==2) handleCanvasClick(e);
-    } else if(!cam.dragging) handleCanvasClick(e);
+    if(cam.dragging){cam.dragging=false;return;}
+    if(e.button===0){
+      const dx=e.clientX-cam.dragStartX,dy=e.clientY-cam.dragStartY;
+      if(Math.sqrt(dx*dx+dy*dy)<5) handleCanvasClick(e);
+    }
   });
 
-  // Prevent context menu on right-click pan
-  gc.addEventListener('contextmenu',e=>e.preventDefault());
-
   gc.addEventListener('wheel',e=>{
-    e.preventDefault();
+    e.preventDefault();trackInteraction();
+    const zoomFactor=e.deltaY<0?1.15:0.87;
+    const newZoom=Math.max(cam.minZoom,Math.min(cam.maxZoom,cam.zoom*zoomFactor));
     const rect=gc.getBoundingClientRect();
     const sx=e.clientX-rect.left,sy=e.clientY-rect.top;
-    const w=screenToWorld(sx,sy);
-    const delta=e.deltaY>0?0.85:1.18;
-    cam.zoom=Math.max(cam.minZoom,Math.min(cam.maxZoom,cam.zoom*delta));
-    // Zoom around cursor
-    cam.wx=w.x-sx/cam.zoom;cam.wy=w.y-sy/cam.zoom;
-    clampCamera();terrainDirty=true;
+    cam.wx+=(sx/cam.zoom-sx/newZoom);
+    cam.wy+=(sy/cam.zoom-sy/newZoom);
+    cam.zoom=newZoom;clampCamera();terrainDirty=true;
   },{passive:false});
 
-  // Touch drag support
-  let lastTouch=null;
-  gc.addEventListener('touchstart',e=>{lastTouch=e.touches[0];});
-  gc.addEventListener('touchmove',e=>{
-    if(lastTouch&&e.touches.length===1){
-      const dx=(e.touches[0].clientX-lastTouch.clientX)/cam.zoom;
-      const dy=(e.touches[0].clientY-lastTouch.clientY)/cam.zoom;
-      cam.wx-=dx;cam.wy-=dy;clampCamera();lastTouch=e.touches[0];
+  // Touch support
+  let lastTouchDist=0;
+  gc.addEventListener('touchstart',e=>{
+    trackInteraction();
+    if(e.touches.length===1){
+      cam.dragging=true;
+      cam.dragStartX=e.touches[0].clientX;cam.dragStartY=e.touches[0].clientY;
+      cam.dragStartWX=cam.wx;cam.dragStartWY=cam.wy;cam._moved=false;
+    } else if(e.touches.length===2){
+      lastTouchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
     }
     e.preventDefault();
   },{passive:false});
+  gc.addEventListener('touchmove',e=>{
+    trackInteraction();
+    if(e.touches.length===1&&cam.dragging){
+      const dx=(e.touches[0].clientX-cam.dragStartX)/cam.zoom;
+      const dy=(e.touches[0].clientY-cam.dragStartY)/cam.zoom;
+      cam.wx=cam.dragStartWX-dx;cam.wy=cam.dragStartWY-dy;clampCamera();cam._moved=true;
+    } else if(e.touches.length===2){
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      if(lastTouchDist){const zf=d/lastTouchDist;cam.zoom=Math.max(cam.minZoom,Math.min(cam.maxZoom,cam.zoom*zf));clampCamera();terrainDirty=true;}
+      lastTouchDist=d;
+    }
+    e.preventDefault();
+  },{passive:false});
+  gc.addEventListener('touchend',e=>{
+    if(!cam._moved&&e.changedTouches.length===1){
+      const rect=gc.getBoundingClientRect();
+      const sx=e.changedTouches[0].clientX-rect.left,sy=e.changedTouches[0].clientY-rect.top;
+      handleCanvasClick({clientX:e.changedTouches[0].clientX,clientY:e.changedTouches[0].clientY});
+    }
+    cam.dragging=false;
+  });
 }
 
 function handleCanvasClick(e){
+  trackInteraction();
   const rect=document.getElementById('game-canvas').getBoundingClientRect();
   const sx=e.clientX-rect.left,sy=e.clientY-rect.top;
   const w=screenToWorld(sx,sy);
   const tx=Math.floor(w.x/TP),ty=Math.floor(w.y/TP);
   if(tx<0||tx>=COLS||ty<0||ty>=ROWS) return;
   const tile=state.grid[ty*COLS+tx];
-  // Actor selection
   for(const actor of sim.actors){
     const atx=Math.floor(actor.px/TP),aty=Math.floor(actor.py/TP);
     if(atx===tx&&aty===ty){selectedActor=selectedActor?.id===actor.id?null:actor;if(infoTab==='people') renderActorPanel();return;}
@@ -2485,8 +2701,8 @@ function clickTile(tile){
     if(!meetsReqs(b.req)){addLog('Missing prerequisite technology.','warn');return;}
     createSite(tile.id,state.selected);
     state.selected=null;renderSidebar();
-    document.getElementById('footer-hint').textContent='Construction site placed!';
-    setTimeout(()=>document.getElementById('footer-hint').textContent='Click map to select tile. Drag to pan. Scroll to zoom. Space=pause. WASD=pan.',3000);
+    document.getElementById('footer-hint').textContent='Construction site placed! Actors will build it.';
+    setTimeout(()=>document.getElementById('footer-hint').textContent='Click map to select tile. Drag to pan. Scroll to zoom. Space=pause. WASD=pan.',4000);
     return;
   }
   showTileInfo(tile);
@@ -2513,28 +2729,25 @@ function canBuildHere(key,tile){
   return true;
 }
 
-function canAffordCheck(cost){
-  for(const[r,v] of Object.entries(cost)) if(totalRes(r)<v) return false;return true;
-}
+function canAffordCheck(cost){for(const[r,v] of Object.entries(cost)) if(totalRes(r)<v) return false;return true;}
 function meetsReqs(reqs){return reqs.every(r=>state.techs[r]);}
 
 function selectBuilding(key){
   state.selected=(state.selected===key)?null:key;state.removing=false;
   document.getElementById('remove-btn').classList.remove('active');
   renderSidebar();
-  document.getElementById('footer-hint').textContent=state.selected?`Placing: ${BUILDINGS[key].name} — click a tile to build`:'';
+  if(state.selected) document.getElementById('footer-hint').textContent=`Placing: ${BUILDINGS[key].name} — green tiles are good spots, red are invalid`;
+  else document.getElementById('footer-hint').textContent='';
 }
-
 function setBldCat(cat){
   activeBldCat=cat;
   document.querySelectorAll('.cat-btn').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));
-  state.selected=null;renderSidebar();
+  state.selected=null;renderSidebar();trackInteraction();
 }
-
 function toggleRemove(){
   state.removing=!state.removing;state.selected=null;
   document.getElementById('remove-btn').classList.toggle('active',state.removing);
-  renderSidebar();
+  renderSidebar();trackInteraction();
   document.getElementById('footer-hint').textContent=state.removing?'Click a structure to remove it (refunds 50%).':'';
 }
 
@@ -2557,10 +2770,11 @@ function researchTech(key){
   for(const [r,v] of Object.entries(t.cost)) consumeRes(r,v);
   state.techs[key]=true;state.techProgress[key]=100;
   addLog(`✦ ${t.name} researched! ${t.desc}`,'era');renderSidebar();renderTechPanel();
+  trackInteraction();
 }
 
 function setInfoTab(tab){
-  infoTab=tab;
+  infoTab=tab;trackInteraction();
   document.querySelectorAll('.tab-content').forEach(el=>el.classList.add('hidden'));
   document.querySelectorAll('.itab').forEach(el=>el.classList.remove('active'));
   const tc=document.getElementById('tab-'+tab);if(tc) tc.classList.remove('hidden');
@@ -2576,14 +2790,14 @@ document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
   keysHeld[e.code]=true;
   if(e.key===' '){e.preventDefault();togglePause();}
-  if(e.key==='Escape'){state.selected=null;state.removing=false;selectedActor=null;document.getElementById('remove-btn').classList.remove('active');renderSidebar();}
+  if(e.key==='Escape'){state.selected=null;state.removing=false;selectedActor=null;document.getElementById('remove-btn').classList.remove('active');renderSidebar();trackInteraction();}
   if(e.key==='1') setInfoTab('world');
   if(e.key==='2') setInfoTab('people');
   if(e.key==='3') setInfoTab('tech');
   if(e.key==='4') setInfoTab('threats');
   if(e.key==='5') setInfoTab('debug');
-  if(e.key==='+'||e.key==='='){cam.zoom=Math.min(cam.maxZoom,cam.zoom*1.2);terrainDirty=true;}
-  if(e.key==='-'){cam.zoom=Math.max(cam.minZoom,cam.zoom/1.2);terrainDirty=true;}
+  if(e.key==='+'||e.key==='='){cam.zoom=Math.min(cam.maxZoom,cam.zoom*1.2);terrainDirty=true;trackInteraction();}
+  if(e.key==='-'){cam.zoom=Math.max(cam.minZoom,cam.zoom/1.2);terrainDirty=true;trackInteraction();}
 });
 document.addEventListener('keyup',e=>{delete keysHeld[e.code];});
 
@@ -2598,32 +2812,36 @@ function saveGame(){
       wildlife:sim.wildlife.map(w=>({...w})),
       predators:sim.predators.map(p=>({...p})),
       threats:sim.threats,
-    },version:4};
-    localStorage.setItem('doc_save_v4',JSON.stringify(save));
+      sites:sim.sites.map(s=>({...s})),
+    },version:5};
+    localStorage.setItem('doc_save_v5',JSON.stringify(save));
     addLog('Game saved.','imp');
   }catch(e){addLog('Save failed: '+e.message,'warn');}
 }
 function loadGame(){
   try{
-    const raw=localStorage.getItem('doc_save_v4');
-    if(!raw){addLog('No save found.','warn');return;}
-    const save=JSON.parse(raw);if(save.version!==4){addLog('Save version mismatch.','warn');return;}
+    const raw=localStorage.getItem('doc_save_v5');
+    if(!raw){addLog('No save found (v5).','warn');return;}
+    const save=JSON.parse(raw);if(save.version!==5){addLog('Save version mismatch.','warn');return;}
     Object.assign(state,save.state);
     sim.gameTime=save.sim.gameTime||0;sim.speed=save.sim.speed||1;sim.paused=save.sim.paused||false;
     sim.bldInv=save.sim.bldInv||{};sim.bldMeta=save.sim.bldMeta||{};sim.nextId=save.sim.nextId||0;
     sim.nodes=save.sim.nodes||[];sim.wildlife=save.sim.wildlife||[];
     sim.predators=save.sim.predators||[];sim.threats=save.sim.threats||[];
+    sim.sites=save.sim.sites||[];
     sim.actors=save.sim.actors.map(d=>{
       const a=new Actor(d.id,d.name,d.px,d.py);
       a.state=d.state||'idle';a.task=d.task||null;a.fatigue=d.fatigue||0;
       a.apt=d.apt||a.apt;a.dominant=d.dominant||a.dominant;a.color=d.color||a.color;
-      a.exp=d.exp||a.exp;a.goal=d.goal||'';a.traits=d.traits||[];a.inv=d.inv||a.inv;return a;
+      a.exp=d.exp||a.exp;a.goal=d.goal||'';a.traits=d.traits||[];a.inv=d.inv||a.inv;
+      a.lastStateChange=sim.gameTime;
+      return a;
     });
     terrainDirty=true;renderSidebar();renderResources();setSpeed(sim.speed);updateSimTimeDisplay();
     addLog('Game loaded.','imp');
   }catch(e){addLog('Load failed: '+e.message,'warn');}
 }
-function resetGame(){if(!confirm('Reset to a new game? All progress will be lost.')) return;localStorage.removeItem('doc_save_v4');location.reload();}
+function resetGame(){if(!confirm('Reset to a new game? All progress will be lost.')) return;localStorage.removeItem('doc_save_v5');location.reload();}
 
 // ── TEST HARNESS ──────────────────────────────────────────────────────────────
 function runSimulationTests(){
@@ -2634,11 +2852,39 @@ function runSimulationTests(){
   (f<=c)?pass('food within cap'):fail('food within cap',`${f}>${c}`);
   const fd=foodDays();
   (fd>0)?pass('food days positive'):fail('food days positive',`${fd}`);
-  for(const a of sim.actors){const valid=['idle','moving_to_resource','gathering','moving_to_storage','depositing','moving_to_construction','delivering_to_construction','building','resting','exploring','surveying','hunting','performing_hunt','fishing','maintaining','performing_maintenance','demolishing','fleeing'];valid.includes(a.state)?pass(`${a.name} valid state`):fail(`${a.name} valid state`,a.state);}
+  for(const a of sim.actors){
+    const valid=['idle','resting','moving_to_resource','gathering','moving_to_storage','depositing','moving_to_construction','delivering_to_construction','building','resting','exploring','surveying','hunting','performing_hunt','fishing','maintaining','performing_maintenance','demolishing','fleeing'];
+    valid.includes(a.state)?pass(`${a.name} valid state`):fail(`${a.name} valid state`,a.state);
+  }
   const ids=sim.actors.map(a=>a.id);new Set(ids).size===ids.length?pass('no duplicate IDs'):fail('no duplicate IDs','duplicates found');
   const exploredCount=state.grid.filter(t=>t.explored).length;
   (exploredCount>0)?pass('some tiles explored'):fail('some tiles explored','none explored');
   const bldCount=Object.keys(sim.bldInv).length;(bldCount>0)?pass('buildings exist'):fail('buildings exist','no buildings');
+  // Water node validation
+  let waterNodeErrors=0;
+  for(const node of sim.nodes){
+    if(node.type==='water'&&!isValidWaterSourceTile(node.tileId)){
+      waterNodeErrors++;
+      console.warn(`Water node ${node.id} at (${node.tileX},${node.tileY}) is NOT on a valid water source tile (type: ${state.grid[node.tileId]?.type})`);
+    }
+  }
+  waterNodeErrors===0?pass('all water nodes on valid tiles'):fail('water nodes on valid tiles',`${waterNodeErrors} invalid water nodes`);
+  // Fish shoal validation
+  let fishErrors=0;
+  for(const wg of sim.wildlife){
+    if(wg.aquatic&&state.grid[wg.tileY*COLS+wg.tileX]?.type!=='water') fishErrors++;
+  }
+  fishErrors===0?pass('all fish shoals on water'):fail('fish shoals on water',`${fishErrors} shoals off water`);
+  // Construction sites check
+  for(const site of sim.sites){
+    if(!site.complete){
+      const ready=siteMet(site);
+      if(ready){
+        const builders=assignedCount('build',site.id);
+        builders>0?pass(`site ${site.id} has builder`):fail(`site ${site.id} has builder`,`ready but no builder assigned`);
+      }
+    }
+  }
   console.table(results);console.log(`Tests: ${results.filter(r=>r.ok).length}/${results.length} passed`);return results;
 }
 
@@ -2655,7 +2901,6 @@ function init(){
   }
   if(!startTile) startTile=state.grid[cy*COLS+cx];
   startTile.building='firePit';
-  // Reveal start area
   const stx=startTile.id%COLS,sty=Math.floor(startTile.id/COLS);
   for(let dy=-VIS_RADIUS;dy<=VIS_RADIUS;dy++) for(let dx=-VIS_RADIUS;dx<=VIS_RADIUS;dx++){
     const nx=stx+dx,ny=sty+dy;if(nx<0||nx>=COLS||ny<0||ny>=ROWS) continue;
@@ -2673,10 +2918,10 @@ function init(){
   renderSidebar();renderResources();renderTechPanel();
   document.getElementById('era-tag').textContent=ERAS[0].name;
   setupInteraction();
-  // Center camera on start
   centerCameraOn(stx*TP+TP/2,sty*TP+TP/2);
-  addLog('Your band has found a new valley. Watch your people work — and keep them fed!','era');
-  setTimeout(()=>addLog(`Tip: Gather food first. ${foodDays().toFixed(0)} days of food stored.`,'imp'),1500);
+  addLog('Your band has found a new valley. Watch your people work — keep them fed!','era');
+  setTimeout(()=>addLog(`Tip: ${foodDays().toFixed(0)}d food. Select a building to see placement hints.`,'imp'),1500);
+  setTimeout(()=>addLog('Tip: Workers build automatically when you place a construction site.','imp'),4000);
   requestAnimationFrame(ts=>{lastTime=ts;requestAnimationFrame(gameLoop);});
 }
 
