@@ -119,6 +119,22 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
 .intent-p-hi{border-left-color:#d05030;}.intent-p-med{border-left-color:#c0a020;}.intent-p-lo{border-left-color:#5a8050;}
 .rel-friend{color:#78b8a0;}.rel-trusted{color:#88d8b8;font-weight:bold;}.rel-rival{color:#c07040;}.rel-disliked{color:#c05030;}.rel-familiar{color:#8898a8;}
 #footer{background:linear-gradient(180deg,#171208 0%,#0f0c06 100%);border-top:1px solid var(--border);padding:2px 12px;font-size:.64em;color:#5a4828;flex-shrink:0;}
+.err-badge{background:#3a0808;border:1px solid #a02020;color:#e05050;font-size:.67em;padding:2px 6px;border-radius:3px;display:none;cursor:pointer;}
+.test-btn{background:linear-gradient(180deg,#162014 0%,#0e1810 100%);border:1px solid #2a5020;color:#70a858;padding:3px 7px;font-size:.67em;cursor:pointer;font-family:Georgia,serif;border-radius:3px;margin:1px;box-shadow:var(--shadow-sm);transition:all .12s;}
+.test-btn:hover{background:linear-gradient(180deg,#1e2e1a 0%,#162410 100%);border-color:var(--pos);}
+.test-btn.danger{border-color:#5a2020;color:#c07060;}.test-btn.danger:hover{background:linear-gradient(180deg,#2a1410 0%,#1e0e0c 100%);}
+.test-result-row{padding:2px 4px;border-radius:2px;font-size:.66em;margin:1px 0;border-left:2px solid var(--border);}
+.test-result-pass{border-left-color:var(--pos);color:#4a8840;}
+.test-result-fail{border-left-color:var(--neg);color:#c05040;background:rgba(80,0,0,.1);}
+.test-result-warn{border-left-color:#b08020;color:#a08030;}
+.test-section-hdr{color:var(--hi);font-size:.68em;font-weight:bold;border-bottom:1px solid var(--border);padding-bottom:2px;margin:5px 0 3px;text-transform:uppercase;letter-spacing:1px;}
+.checklist-item{display:flex;align-items:flex-start;gap:4px;padding:2px 0;font-size:.68em;cursor:pointer;}
+.checklist-item input{flex-shrink:0;margin-top:1px;accent-color:var(--pos);}
+.checklist-item label{color:var(--text);cursor:pointer;line-height:1.4;}
+.checklist-item.done label{color:#4a5030;text-decoration:line-through;}
+.test-note{background:#10140a;border:1px solid #2a3810;color:#6a7848;font-size:.66em;padding:4px 6px;border-radius:3px;margin-top:5px;font-style:italic;}
+.test-summary{font-size:.7em;padding:3px 0;color:var(--neu);}
+.test-summary .ok{color:var(--pos);}.test-summary .bad{color:var(--neg);}
 </style>
 </head>
 <body>
@@ -135,6 +151,7 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
     <span class="crisis-badge" id="crisis-badge">⚠ Crisis</span>
     <span class="crisis-badge" id="threat-badge" style="border-color:#c05020;color:#d07040;">☠ Threat</span>
     <span class="auto-badge" id="auto-badge" onclick="toggleAutoMode()" title="Auto mode active">⚙ AUTO</span>
+    <span class="err-badge" id="err-badge" onclick="setInfoTab('test')" title="Runtime errors detected — click to view">⚠ Err</span>
   </div>
   <div id="time-wrap">
     <div id="era-tag">Nomadic Band</div>
@@ -182,6 +199,7 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
       <button class="itab" id="it-tech" onclick="setInfoTab('tech')">Tech</button>
       <button class="itab" id="it-threats" onclick="setInfoTab('threats')">Threats</button>
       <button class="itab" id="it-debug" onclick="setInfoTab('debug')">AI</button>
+      <button class="itab" id="it-test" onclick="setInfoTab('test')">Test</button>
     </div>
     <div class="tab-content" id="tab-world">
       <div><h3>Selected</h3><div id="tile-info">Click a tile on the map.</div></div>
@@ -213,6 +231,12 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
       <div id="site-debug-panel"></div>
       <div id="intent-panel"></div>
       <div id="ai-panel"></div>
+    </div>
+    <div class="tab-content hidden" id="tab-test">
+      <div id="test-runtime-panel"></div>
+      <div id="test-controls-panel"></div>
+      <div id="test-results-panel"></div>
+      <div id="test-checklist-panel"></div>
     </div>
     <div id="log-section">
       <h3>Event Log</h3>
@@ -3231,13 +3255,14 @@ function gameLoop(ts){
     sim.socialTimer-=sDt;if(sim.socialTimer<=0){sim.socialTimer=12+Math.random()*8;updateSocialInteractions();}
     state.morale=computeMorale();
     state.cap={...computeStorageCaps(),pop:computePopCap()};
-    updateActors(sDt);updateNodes(sDt);updateWildlife(sDt);
-    taskTimer-=sDt;if(taskTimer<=0){taskTimer=0.45;assignTasks();}
-    sim.plannerTimer-=sDt;if(sim.plannerTimer<=0){sim.plannerTimer=8;runSettlementPlanner();}
+    try{updateActors(sDt);}catch(e){_guardErr('updateActors',e);}
+    try{updateNodes(sDt);updateWildlife(sDt);}catch(e){_guardErr('updateNodes',e);}
+    taskTimer-=sDt;if(taskTimer<=0){taskTimer=0.45;try{assignTasks();}catch(e){_guardErr('assignTasks',e);}}
+    sim.plannerTimer-=sDt;if(sim.plannerTimer<=0){sim.plannerTimer=8;try{runSettlementPlanner();}catch(e){_guardErr('runSettlementPlanner',e);}}
   }
   uiTimer-=realDt;
   if(uiTimer<=0){
-    uiTimer=0.25;R.renderFrame(realDt);renderGameOverlay();renderMinimap();
+    uiTimer=0.25;try{R.renderFrame(realDt);}catch(e){_guardErr('renderFrame',e);}try{renderGameOverlay();}catch(e){_guardErr('renderGameOverlay',e);}renderMinimap();
     updateSimTimeDisplay();renderResources();
     if(infoTab==='people') renderActorPanel();
     if(infoTab==='tech') renderTechPanel();
@@ -3921,7 +3946,7 @@ function setInfoTab(tab){
   document.querySelectorAll('.itab').forEach(el=>el.classList.remove('active'));
   const tc=document.getElementById('tab-'+tab);if(tc) tc.classList.remove('hidden');
   const it=document.getElementById('it-'+tab);if(it) it.classList.add('active');
-  if(tab==='people') renderActorPanel();if(tab==='tech') renderTechPanel();if(tab==='debug') renderDebugPanel();if(tab==='threats') renderThreats();
+  if(tab==='people') renderActorPanel();if(tab==='tech') renderTechPanel();if(tab==='debug') renderDebugPanel();if(tab==='threats') renderThreats();if(tab==='test') renderTestPanel();
 }
 
 // ── KEYBOARD ──────────────────────────────────────────────────────────────────
@@ -3930,7 +3955,7 @@ document.addEventListener('keydown',e=>{
   keysHeld[e.code]=true;
   if(e.key===' '){e.preventDefault();togglePause();}
   if(e.key==='Escape'){state.selected=null;state.removing=false;selectedActor=null;document.getElementById('remove-btn').classList.remove('active');renderSidebar();trackInteraction();}
-  if(e.key==='1') setInfoTab('world');if(e.key==='2') setInfoTab('people');if(e.key==='3') setInfoTab('tech');if(e.key==='4') setInfoTab('threats');if(e.key==='5') setInfoTab('debug');
+  if(e.key==='1') setInfoTab('world');if(e.key==='2') setInfoTab('people');if(e.key==='3') setInfoTab('tech');if(e.key==='4') setInfoTab('threats');if(e.key==='5') setInfoTab('debug');if(e.key==='6') setInfoTab('test');
   if(e.key==='+'||e.key==='='){
     if(R.fallback){cam.zoom=Math.min(cam.maxZoom,cam.zoom*1.2);terrainDirty=true;}
     else{camera.distance=Math.max(camera.minDistance,camera.distance*0.85);}
@@ -4094,6 +4119,606 @@ function init(){
 
 window.addEventListener('resize',()=>{resizeCanvases();if(R&&!R.fallback) R.resize();terrainDirty=true;});
 init();
+
+// ── RUNTIME ERROR CAPTURE ─────────────────────────────────────────────────────
+const runtimeErrors=[];
+function _guardErr(name,e){
+  const entry={msg:name+': '+String(e),src:name,line:0,col:0,stack:e?.stack||'',time:sim.gameTime,ts:Date.now()};
+  runtimeErrors.push(entry);if(runtimeErrors.length>50)runtimeErrors.shift();
+  const b=document.getElementById('err-badge');if(b){b.style.display='inline';b.textContent='⚠ Err('+runtimeErrors.length+')';}
+  console.error('['+name+']',e);
+}
+window.onerror=function(msg,src,line,col,err){
+  const entry={msg:String(msg),src:src||'',line:line||0,col:col||0,stack:err?.stack||'',time:sim.gameTime,ts:Date.now()};
+  runtimeErrors.push(entry);if(runtimeErrors.length>50)runtimeErrors.shift();
+  const b=document.getElementById('err-badge');if(b){b.style.display='inline';b.textContent='⚠ Err('+runtimeErrors.length+')';}
+  return false;
+};
+window.onunhandledrejection=function(e){
+  const entry={msg:String(e.reason),src:'promise',line:0,col:0,stack:e.reason?.stack||'',time:sim.gameTime,ts:Date.now()};
+  runtimeErrors.push(entry);if(runtimeErrors.length>50)runtimeErrors.shift();
+  const b=document.getElementById('err-badge');if(b){b.style.display='inline';b.textContent='⚠ Err('+runtimeErrors.length+')';}
+};
+
+// ── CHECK RESULT HELPERS ──────────────────────────────────────────────────────
+let _lastTestResults=null;
+function _mkChk(name){return{name,passed:[],failed:[],warnings:[],durationMs:0,results:[]};}
+function _chkAdd(r,id,sev,ok,msg,eType,eId,hint,det){
+  r.results.push({id,severity:sev,passed:ok,message:msg,entityType:eType||'',entityId:eId??null,suggestedManualCheck:hint||'',details:det||{}});
+  if(ok)r.passed.push(id);else if(sev==='warn')r.warnings.push(id);else r.failed.push(id);
+}
+
+// ── VALIDATE WORLD STATE ──────────────────────────────────────────────────────
+function validateWorldState(){
+  const t0=performance.now(),r=_mkChk('validateWorldState');
+  _chkAdd(r,'grid_length','error',state.grid.length===COLS*ROWS,'Grid size correct','grid',null,'Check generateMap()');
+  for(let i=0;i<Math.min(state.grid.length,COLS*ROWS);i++){
+    const tile=state.grid[i];
+    if(!tile){_chkAdd(r,'tile_null','error',false,'Tile '+i+' is null','tile',i,'Reload game');continue;}
+    if(tile.id!==i)_chkAdd(r,'tile_id_'+i,'warn',false,'Tile '+i+' id='+tile.id,'tile',i,'Call repairWorldState()');
+    if(tile.building&&!BUILDINGS[tile.building])_chkAdd(r,'tile_bld_'+i,'error',false,'Tile '+i+' unknown building \''+tile.building+'\'','tile',i,'Remove building');
+    if(tile.constrSiteId!=null){const s=sim.sites.find(x=>x.id===tile.constrSiteId);if(!s)_chkAdd(r,'tile_site_'+i,'warn',false,'Tile '+i+' constrSiteId '+tile.constrSiteId+' missing','tile',i,'Call repairWorldState()');}
+    if(tile.nodeId!=null){const n=sim.nodes.find(x=>x.id===tile.nodeId);if(!n)_chkAdd(r,'tile_node_'+i,'warn',false,'Tile '+i+' nodeId '+tile.nodeId+' missing','tile',i,'Call repairWorldState()');}
+  }
+  const actorIds=new Set();
+  for(const a of sim.actors){
+    _chkAdd(r,'actor_px_'+a.id,'error',isFinite(a.px)&&isFinite(a.py),a.name+' non-finite position','actor',a.id,'');
+    _chkAdd(r,'actor_bounds_'+a.id,'warn',a.px>=0&&a.px<=CW&&a.py>=0&&a.py<=CH,a.name+' out of bounds ('+a.px.toFixed(0)+','+a.py.toFixed(0)+')','actor',a.id,'');
+    if(actorIds.has(a.id))_chkAdd(r,'actor_dup_'+a.id,'error',false,'Duplicate actor id '+a.id,'actor',a.id,'');
+    actorIds.add(a.id);
+    if(a.task){
+      if(a.task.siteId!=null&&!sim.sites.find(x=>x.id===a.task.siteId))_chkAdd(r,'actor_siteref_'+a.id,'warn',false,a.name+' task siteId '+a.task.siteId+' missing','actor',a.id,'Call repairWorldState()');
+      if(a.task.tileId!=null&&!state.grid[a.task.tileId])_chkAdd(r,'actor_tileref_'+a.id,'warn',false,a.name+' task tileId '+a.task.tileId+' invalid','actor',a.id,'Call repairWorldState()');
+      if(a.task.storageTileId!=null){const st=state.grid[a.task.storageTileId];if(!st||!st.building)_chkAdd(r,'actor_storref_'+a.id,'warn',false,a.name+' storageTileId '+a.task.storageTileId+' invalid','actor',a.id,'Call repairWorldState()');}
+    }
+  }
+  for(const res of['food','wood','stone','water']){
+    _chkAdd(r,res+'_nonneg','error',state.res[res]>=0,res+' is negative: '+state.res[res],'resource',null,'');
+    _chkAdd(r,res+'_cap','warn',state.res[res]<=state.cap[res]+1,res+' '+state.res[res].toFixed(1)+' > cap '+state.cap[res],'resource',null,'');
+    _chkAdd(r,res+'_finite','error',isFinite(state.res[res]),res+' non-finite','resource',null,'');
+  }
+  for(const tile of state.grid){
+    if(tile.building&&!sim.bldInv[tile.id])_chkAdd(r,'bld_no_inv_'+tile.id,'warn',false,'Building \''+tile.building+'\' at '+tile.id+' has no inventory','building',tile.id,'Call initInv');
+    if(tile.building&&!sim.bldMeta[tile.id])_chkAdd(r,'bld_no_meta_'+tile.id,'warn',false,'Building \''+tile.building+'\' at '+tile.id+' has no meta','building',tile.id,'Call initBldMeta');
+  }
+  for(const w of sim.wildlife){
+    if(w.tileX<0||w.tileX>=COLS||w.tileY<0||w.tileY>=ROWS)_chkAdd(r,'wl_bounds_'+w.id,'warn',false,'Wildlife '+w.id+' out of bounds','wildlife',w.id,'');
+    if(w.aquatic){const t=state.grid[w.tileY*COLS+w.tileX];if(t&&t.type!=='water')_chkAdd(r,'wl_aquatic_'+w.id,'warn',false,'Aquatic wildlife '+w.id+' not on water tile','wildlife',w.id,'');}
+  }
+  r.durationMs=performance.now()-t0;return r;
+}
+
+// ── REPAIR WORLD STATE ────────────────────────────────────────────────────────
+function repairWorldState(){
+  let fixed=0;
+  for(let i=0;i<state.grid.length;i++){if(state.grid[i]&&state.grid[i].id!==i){state.grid[i].id=i;fixed++;}}
+  const siteIds=new Set(sim.sites.map(s=>s.id));
+  const nodeIds=new Set(sim.nodes.map(n=>n.id));
+  for(const tile of state.grid){
+    if(tile.constrSiteId!=null&&!siteIds.has(tile.constrSiteId)){tile.constrSiteId=null;fixed++;}
+    if(tile.nodeId!=null&&!nodeIds.has(tile.nodeId)){tile.nodeId=null;fixed++;}
+  }
+  for(const a of sim.actors){
+    if(a.task){
+      let bad=false;
+      if(a.task.siteId!=null&&!siteIds.has(a.task.siteId)) bad=true;
+      if(a.task.tileId!=null&&!state.grid[a.task.tileId]) bad=true;
+      if(a.task.storageTileId!=null&&(!state.grid[a.task.storageTileId]||!state.grid[a.task.storageTileId].building)) bad=true;
+      if(bad){clearTask(a);fixed++;}
+    }
+    if(!isFinite(a.px)){a.px=Math.floor(COLS/2)*TP;fixed++;}
+    if(!isFinite(a.py)){a.py=Math.floor(ROWS/2)*TP;fixed++;}
+    a.px=Math.max(0,Math.min(CW-1,a.px));
+    a.py=Math.max(0,Math.min(CH-1,a.py));
+  }
+  for(const res of['food','wood','stone','water']){
+    if(!isFinite(state.res[res])){state.res[res]=0;fixed++;}
+    if(state.res[res]<0){state.res[res]=0;fixed++;}
+    if(state.res[res]>state.cap[res]){state.res[res]=state.cap[res];fixed++;}
+  }
+  for(const tile of state.grid){
+    if(tile.building){
+      if(!sim.bldInv[tile.id]){initInv(tile.id,tile.building,{});fixed++;}
+      if(!sim.bldMeta[tile.id]){initBldMeta(tile.id,tile.building);fixed++;}
+    }
+  }
+  const msg='repairWorldState: '+fixed+' issues fixed.';console.log(msg);addLog(msg,'imp');
+  if(R&&!R.fallback){R.tileDirty=true;}terrainDirty=true;
+  return{fixed};
+}
+
+// ── ACTOR STUCK SCAN ─────────────────────────────────────────────────────────
+function runActorStuckScan(){
+  const t0=performance.now(),r=_mkChk('runActorStuckScan');
+  const now=sim.gameTime;
+  if(sim.actors.length===0){_chkAdd(r,'no_actors','error',false,'No actors present','','','Check spawnInitialActors');r.durationMs=performance.now()-t0;return r;}
+  for(const a of sim.actors){
+    const hasCarry=a.inv&&Object.values(a.inv).some(v=>v>0);
+    if(a.state==='idle'&&a.restTimer<=0){
+      const hasCands=sim.sites.some(s=>!s.complete&&siteMet(s));
+      const hasResNode=sim.nodes.some(n=>n.amount>0&&!n.depleted);
+      if(hasCands||hasResNode)_chkAdd(r,'idle_work_'+a.id,'warn',false,a.name+' idle but work exists','actor',a.id,'Check assignTasks()',{state:a.state});
+    }
+    if(hasCarry&&!a.task?.storageTileId&&a.state!=='depositing'&&a.state!=='moving_to_storage')
+      _chkAdd(r,'carry_nodest_'+a.id,'warn',false,a.name+' carrying with no storage dest','actor',a.id,'',{inv:a.inv,state:a.state});
+    if(a.task?.tileId!=null&&!state.grid[a.task.tileId])
+      _chkAdd(r,'bad_tile_'+a.id,'error',false,a.name+' task tileId '+a.task.tileId+' invalid','actor',a.id,'Call repairWorldState()');
+    if(a.task?.tileId!=null&&sim.bldMeta[a.task.tileId]?.abandoned)
+      _chkAdd(r,'task_abandon_'+a.id,'warn',false,a.name+' targeting abandoned building','actor',a.id,'Call repairWorldState()');
+    if(a.lastStateChange&&(now-a.lastStateChange)>120){
+      const longStates=['gathering','building','performing_maintenance','hunting','performing_hunt','fishing','surveying'];
+      if(longStates.includes(a.state))_chkAdd(r,'stuck_long_'+a.id,'warn',false,a.name+' in \''+a.state+'\' for '+(now-a.lastStateChange).toFixed(0)+'s','actor',a.id,'Monitor or call repairWorldState()',{duration:now-a.lastStateChange});
+    }
+    if(a.stuckLog)_chkAdd(r,'stuck_log_'+a.id,'warn',false,a.name+': '+a.stuckLog,'actor',a.id,'',{stuckLog:a.stuckLog});
+    if(a.state==='fleeing'&&a.lastStateChange&&(now-a.lastStateChange)>30)
+      _chkAdd(r,'flee_stuck_'+a.id,'warn',false,a.name+' fleeing for '+(now-a.lastStateChange).toFixed(0)+'s','actor',a.id,'Check predator removal');
+    if(a.ai?.stress>90)_chkAdd(r,'stress_'+a.id,'warn',false,a.name+' stress='+a.ai.stress.toFixed(0)+'%','actor',a.id,'Check morale buildings exist',{stress:a.ai.stress});
+    else _chkAdd(r,'actor_ok_'+a.id,'',true,a.name+' ok','actor',a.id,'');
+  }
+  r.durationMs=performance.now()-t0;return r;
+}
+
+// ── ECONOMY CHECKS ────────────────────────────────────────────────────────────
+function runEconomyChecks(){
+  const t0=performance.now(),r=_mkChk('runEconomyChecks');
+  for(const res of['food','wood','stone','water']){
+    let sum=0;for(const inv of Object.values(sim.bldInv)) sum+=(inv[res]||0);
+    const hdr=state.res[res],diff=Math.abs(hdr-sum);
+    _chkAdd(r,res+'_match','warn',diff<5,res+' header='+hdr.toFixed(1)+' sum='+sum.toFixed(1)+' diff='+diff.toFixed(1),'economy',null,'',{header:hdr,sum,diff});
+    _chkAdd(r,res+'_nonneg','error',hdr>=0,res+' is negative','economy',null,'');
+    _chkAdd(r,res+'_cap','warn',hdr<=state.cap[res]+1,res+' '+hdr.toFixed(1)+' exceeds cap '+state.cap[res],'economy',null,'');
+    _chkAdd(r,res+'_finite','error',isFinite(hdr),res+' non-finite','economy',null,'');
+  }
+  for(const [tid,inv] of Object.entries(sim.bldInv)){
+    for(const res of['food','wood','stone','water']){
+      if((inv.cap[res]||0)>0){
+        if((inv[res]||0)<0)_chkAdd(r,'inv_neg_'+tid+'_'+res,'error',false,'Building '+tid+' '+res+' negative','building',+tid,'');
+        if((inv[res]||0)>inv.cap[res]+1)_chkAdd(r,'inv_cap_'+tid+'_'+res,'warn',false,'Building '+tid+' '+res+' over cap','building',+tid,'');
+      }
+    }
+  }
+  _chkAdd(r,'pop_match','warn',state.res.pop===sim.actors.length,'pop='+state.res.pop+' actors='+sim.actors.length,'economy',null,'',{pop:state.res.pop,actors:sim.actors.length});
+  _chkAdd(r,'cap_pos','error',state.cap.food>0&&state.cap.water>0,'Storage caps are positive','economy',null,'');
+  r.durationMs=performance.now()-t0;return r;
+}
+
+// ── CONSTRUCTION CHECKS ───────────────────────────────────────────────────────
+function runConstructionChecks(){
+  const t0=performance.now(),r=_mkChk('runConstructionChecks');
+  const activeSites=sim.sites.filter(s=>!s.complete);
+  _chkAdd(r,'sites_count','',true,activeSites.length+' active sites','construction',null,'');
+  for(const site of activeSites){
+    const bk=BUILDINGS[site.bldKey];
+    _chkAdd(r,'site_key_'+site.id,'error',!!bk,'Site '+site.id+' bldKey \''+site.bldKey+'\' valid','site',site.id,'');
+    const tile=state.grid[site.tileId];
+    _chkAdd(r,'site_tile_'+site.id,'error',!!tile,'Site '+site.id+' tileId '+site.tileId+' valid','site',site.id,'Call repairWorldState()');
+    if(tile)_chkAdd(r,'site_tile_match_'+site.id,'warn',tile.constrSiteId===site.id,'Tile constrSiteId matches site '+site.id,'site',site.id,'');
+    const ready=siteMet(site),builders=assignedCount('build',site.id);
+    if(ready){
+      _chkAdd(r,'site_builder_'+site.id,'warn',builders>0,'Site '+site.id+' ready, builders='+builders,'site',site.id,'Verify assignTasks() runs',{builders});
+    } else {
+      const delivering=sim.actors.filter(a=>a.task?.siteId===site.id&&(a.state==='moving_to_construction'||a.state==='delivering_to_construction')).length;
+      if(sim.actors.length>1)_chkAdd(r,'site_delivery_'+site.id,'warn',delivering>0,'Site '+site.id+' waiting materials, '+delivering+' delivering','site',site.id,'Check inventory and actor availability',{delivering});
+      if(bk&&site.required){
+        for(const [res,needed] of Object.entries(site.required)){
+          const stillNeeded=needed-(site.delivered[res]||0);
+          if(stillNeeded>0)_chkAdd(r,'site_res_'+site.id+'_'+res,'warn',totalRes(res)>=stillNeeded,'Site '+site.id+' needs '+stillNeeded+' more '+res+', have '+totalRes(res).toFixed(0),'site',site.id,'Gather more resources',{needed:stillNeeded,avail:totalRes(res)});
+        }
+      }
+    }
+    if(site.progress>0&&site.progress<1&&builders>0&&site.lastProgressTime&&(sim.gameTime-site.lastProgressTime)>60)
+      _chkAdd(r,'site_frozen_'+site.id,'warn',false,'Site '+site.id+' progress frozen at '+(site.progress*100).toFixed(0)+'%','site',site.id,'');
+  }
+  r.durationMs=performance.now()-t0;return r;
+}
+
+// ── ROUTING CHECKS ────────────────────────────────────────────────────────────
+function runRoutingChecks(){
+  const t0=performance.now(),r=_mkChk('runRoutingChecks');
+  const stors=storageBlds();
+  _chkAdd(r,'storage_exists','error',stors.length>0,'At least one storage building exists','routing',null,'Build a Fire Pit or Storage Pit');
+  for(const a of sim.actors){
+    if(a.task?.storageTileId!=null){
+      const sid=a.task.storageTileId,smeta=sim.bldMeta[sid],inv=sim.bldInv[sid];
+      _chkAdd(r,'route_abandon_'+a.id,'warn',!smeta?.abandoned,a.name+' routing to abandoned storage '+sid,'actor',a.id,'Call repairWorldState()');
+      _chkAdd(r,'route_demol_'+a.id,'warn',!smeta?.demolitionQueued,a.name+' routing to demolition-queued building '+sid,'actor',a.id,'Call repairWorldState()');
+      if(inv&&a.task.resource){
+        const res=a.task.resource,cap=inv.cap[res]||0,cur=inv[res]||0;
+        _chkAdd(r,'route_cap_'+a.id,'warn',cap>0&&cur<cap-0.5,a.name+' routing to full/zero-cap storage ('+res+' '+cur.toFixed(0)+'/'+cap+')','actor',a.id,'',{res,cur,cap});
+      }
+      if(a.task.resource){
+        const best=nearestStorage(a.px,a.py,a.task.resource);
+        if(best&&best.tileId!==sid){
+          const cd=a.dist((sid%COLS)*TP+TP/2,Math.floor(sid/COLS)*TP+TP/2);
+          const bd=a.dist((best.tileId%COLS)*TP+TP/2,Math.floor(best.tileId/COLS)*TP+TP/2);
+          if(bd<cd*0.5)_chkAdd(r,'route_subopt_'+a.id,'warn',false,a.name+' routing suboptimally (chosen='+cd.toFixed(0)+' better='+bd.toFixed(0)+')','actor',a.id,'',{cd,bd});
+          else _chkAdd(r,'route_ok_'+a.id,'',true,a.name+' route ok','actor',a.id,'');
+        } else _chkAdd(r,'route_ok_'+a.id,'',true,a.name+' route ok','actor',a.id,'');
+      }
+    }
+  }
+  r.durationMs=performance.now()-t0;return r;
+}
+
+// ── MAINTENANCE CHECKS ────────────────────────────────────────────────────────
+function runMaintenanceChecks(){
+  const t0=performance.now(),r=_mkChk('runMaintenanceChecks');
+  const CRITICAL=['firePit','storagePit','granary','waterHole','fishingSpot'];
+  for(const [tid,meta] of Object.entries(sim.bldMeta)){
+    const tile=state.grid[+tid];if(!tile?.building) continue;
+    const bk=tile.building,isCrit=CRITICAL.includes(bk),bname=BUILDINGS[bk]?.name||bk;
+    if(meta.lifecycleState==='under_review'||meta.lifecycleState==='neglected'){
+      const hasMaint=assignedCount('maintain',+tid)>0;
+      if((meta.usefulness||0)>=20&&!hasMaint&&!meta.pinned)
+        _chkAdd(r,'maint_need_'+tid,'warn',false,bname+' at '+tid+' in \''+meta.lifecycleState+'\' no maintenance actor','building',+tid,'Check autoMaintain logic',{lc:meta.lifecycleState,useful:meta.usefulness});
+    }
+    if(isCrit&&meta.abandoned)
+      _chkAdd(r,'maint_crit_'+tid,'error',false,'Critical building '+bname+' is abandoned','building',+tid,'Call manualMaintain('+tid+') or repairWorldState()');
+    if(meta.demolitionQueued&&assignedCount('maintain',+tid)>0)
+      _chkAdd(r,'maint_demol_'+tid,'warn',false,'Building '+tid+' queued for demolition but has maintenance actor','building',+tid,'');
+    _chkAdd(r,'maint_range_'+tid,'error',meta.condition>=0&&meta.condition<=100,'Building '+tid+' condition out of range: '+meta.condition,'building',+tid,'Call repairWorldState()');
+    if(meta.condition>=80&&!meta.abandoned)_chkAdd(r,'maint_ok_'+tid,'',true,bname+' healthy ('+meta.condition.toFixed(0)+'%)','building',+tid,'');
+  }
+  r.durationMs=performance.now()-t0;return r;
+}
+
+// ── FOOD / WATER CHECKS ───────────────────────────────────────────────────────
+function runFoodWaterChecks(){
+  const t0=performance.now(),r=_mkChk('runFoodWaterChecks');
+  const fd=foodDays();
+  _chkAdd(r,'food_days_pos','error',fd>0,'Food days positive','food',null,'',{fd:fd.toFixed(2)});
+  _chkAdd(r,'food_days_ok','warn',fd>2,'At least 2 days of food','food',null,'Prioritize gathering or hunting',{fd:fd.toFixed(2)});
+  _chkAdd(r,'water_pos','error',totalRes('water')>0,'Water stock positive','water',null,'',{water:totalRes('water').toFixed(1)});
+  const foodNodes=sim.nodes.filter(n=>n.type!=='water'&&n.amount>0&&!n.depleted);
+  _chkAdd(r,'food_nodes','warn',foodNodes.length>0,'Food resource nodes exist','food',null,'Check placeResourceNodes()',{count:foodNodes.length});
+  const waterTiles=state.grid.filter(t=>t.explored&&isValidWaterSourceTile(t.id));
+  _chkAdd(r,'water_sources','error',waterTiles.length>0,'At least one explored water tile','water',null,'',{count:waterTiles.length});
+  if(fd<2){
+    const hasUrgent=sim.strategicIntents.some(i=>i.type==='ensure_food'||i.type==='gather_food'||i.type==='hunt');
+    _chkAdd(r,'low_food_intent','warn',hasUrgent,'Low food but no food-related strategic intent','food',null,'Verify buildStrategicIntents() includes food crisis',{fd:fd.toFixed(2)});
+  }
+  const hunters=sim.actors.filter(a=>a.dominant==='hunter'||(a.apt?.hunter||0)>1);
+  if(hunters.length>0){
+    const wl=sim.wildlife.filter(w=>!w.aquatic&&w.population>0);
+    _chkAdd(r,'wildlife_avail','warn',wl.length>0,'Non-aquatic wildlife present for hunters','food',null,'',{count:wl.length});
+  }
+  const hasDrying=state.grid.some(t=>t.building==='dryingRack'),hasSmoke=state.grid.some(t=>t.building==='smokehouse');
+  if(state.season===3&&!hasDrying&&!hasSmoke)
+    _chkAdd(r,'winter_preserve','warn',false,'Winter with no food preservation building','food',null,'Build a Drying Rack');
+  else _chkAdd(r,'winter_preserve_ok','',true,'Food preservation adequate','food',null,'');
+  r.durationMs=performance.now()-t0;return r;
+}
+
+// ── PLACEMENT CHECKS ─────────────────────────────────────────────────────────
+function runPlacementChecks(){
+  const t0=performance.now(),r=_mkChk('runPlacementChecks');
+  const explored=state.grid.filter(t=>t.explored&&!t.building&&t.type!=='mountain');
+  for(const key of Object.keys(BUILDINGS)){
+    let tested=false;
+    for(const tile of explored.slice(0,200)){
+      try{
+        const info=getPlacementInfo(key,tile.id);
+        _chkAdd(r,'place_api_'+key,'',true,'getPlacementInfo(\''+key+'\') returns object','placement',null,'',{valid:info.valid,score:info.score});
+        _chkAdd(r,'place_fields_'+key,'error',typeof info.valid==='boolean'&&Array.isArray(info.blockers)&&Array.isArray(info.warnings)&&Array.isArray(info.reasons),'getPlacementInfo fields valid','placement',null,'');
+        tested=true;break;
+      }catch(e){_chkAdd(r,'place_crash_'+key,'error',false,'getPlacementInfo(\''+key+'\') threw: '+e.message,'placement',null,'',{error:e.message});tested=true;break;}
+    }
+    if(!tested)_chkAdd(r,'place_notile_'+key,'warn',false,'No explored tile to test \''+key+'\'','placement',null,'Explore more of the map');
+  }
+  const mtTile=state.grid.find(t=>t.type==='mountain');
+  if(mtTile){
+    const info=getPlacementInfo('firePit',mtTile.id);
+    _chkAdd(r,'place_mountain','error',!info.valid,'Mountain tiles correctly blocked','placement',null,'',{valid:info.valid});
+  }
+  const nonWaterTile=explored.find(t=>t.type!=='water'&&!isNearWater(t));
+  if(nonWaterTile){
+    for(const key of['waterHole','fishingSpot']){
+      const info=getPlacementInfo(key,nonWaterTile.id);
+      _chkAdd(r,'place_water_req_'+key,'warn',!info.valid,key+' correctly invalid on non-water tile','placement',null,'',{valid:info.valid});
+    }
+  }
+  r.durationMs=performance.now()-t0;return r;
+}
+
+// ── RENDERER CHECKS ───────────────────────────────────────────────────────────
+function runRendererChecks(){
+  const t0=performance.now(),r=_mkChk('runRendererChecks');
+  _chkAdd(r,'renderer_init','error',R.gl!=null||R.fallback,'Renderer initialized','renderer',null,'Check browser WebGL2 support');
+  _chkAdd(r,'renderer_prog','warn',R.fallback||R.prog!=null,'Shader program compiled','renderer',null,'Check GLSL shaders');
+  _chkAdd(r,'renderer_vao','warn',R.fallback||R.vao!=null,'VAO created','renderer',null,'');
+  _chkAdd(r,'renderer_tex','warn',R.fallback||R.tex!=null,'Tile texture created','renderer',null,'');
+  if(!R.fallback){
+    _chkAdd(r,'cam_finite','error',isFinite(camera.targetX)&&isFinite(camera.targetZ)&&isFinite(camera.distance),'Camera parameters finite','renderer',null,'',{tx:camera.targetX,tz:camera.targetZ,d:camera.distance});
+    _chkAdd(r,'cam_pitch','warn',camera.pitch>0&&camera.pitch<Math.PI/2,'Camera pitch in valid range ('+camera.pitch.toFixed(3)+')','renderer',null,'');
+    try{
+      const s=worldToScreen(CW/2,10,CH/2);
+      _chkAdd(r,'w2s_finite','error',isFinite(s.x)&&isFinite(s.y),'worldToScreen returns finite coords','renderer',null,'',{x:s.x.toFixed(1),y:s.y.toFixed(1)});
+    }catch(e){_chkAdd(r,'w2s_crash','error',false,'worldToScreen threw: '+e.message,'renderer',null,'');}
+    try{
+      pickTile(camera.vw/2,camera.vh/2);
+      _chkAdd(r,'picktile_safe','',true,'pickTile(center) did not throw','renderer',null,'');
+    }catch(e){_chkAdd(r,'picktile_crash','error',false,'pickTile threw: '+e.message,'renderer',null,'');}
+  } else {
+    _chkAdd(r,'fallback_mode','warn',false,'Using 2D canvas fallback (WebGL2 unavailable)','renderer',null,'');
+    try{
+      const s=worldToScreen(CW/2,10,CH/2);
+      _chkAdd(r,'fallback_w2s','error',isFinite(s.x)&&isFinite(s.y),'Fallback worldToScreen finite','renderer',null,'');
+    }catch(e){_chkAdd(r,'fallback_w2s_crash','error',false,'Fallback worldToScreen threw: '+e.message,'renderer',null,'');}
+  }
+  const gc=document.getElementById('gl-canvas'),oc=document.getElementById('overlay-canvas');
+  _chkAdd(r,'canvas_size','error',gc&&gc.width>0&&gc.height>0,'Canvas has positive dimensions','renderer',null,'',{w:gc?.width,h:gc?.height});
+  _chkAdd(r,'overlay_size','error',oc&&oc.width>0&&oc.height>0,'Overlay canvas has positive dimensions','renderer',null,'');
+  r.durationMs=performance.now()-t0;return r;
+}
+
+// ── SAVE / LOAD ROUNDTRIP ─────────────────────────────────────────────────────
+function runSaveLoadRoundtrip(){
+  const t0=performance.now(),r=_mkChk('runSaveLoadRoundtrip');
+  const prePop=state.res.pop,preActors=sim.actors.length;
+  try{saveGame();_chkAdd(r,'save_ok','',true,'saveGame() succeeded','saveload',null,'');}
+  catch(e){_chkAdd(r,'save_crash','error',false,'saveGame() threw: '+e.message,'saveload',null,'',{error:e.message});r.durationMs=performance.now()-t0;return r;}
+  try{loadGame();_chkAdd(r,'load_ok','',true,'loadGame() succeeded','saveload',null,'');}
+  catch(e){_chkAdd(r,'load_crash','error',false,'loadGame() threw: '+e.message,'saveload',null,'',{error:e.message});r.durationMs=performance.now()-t0;return r;}
+  _chkAdd(r,'load_pop','warn',state.res.pop===prePop,'Population preserved ('+prePop+'→'+state.res.pop+')','saveload',null,'');
+  _chkAdd(r,'load_actors','warn',sim.actors.length===preActors,'Actor count preserved ('+preActors+'→'+sim.actors.length+')','saveload',null,'');
+  _chkAdd(r,'load_grid','error',state.grid.length===COLS*ROWS,'Grid intact after load','saveload',null,'');
+  const v=validateWorldState();
+  _chkAdd(r,'load_validate','warn',v.failed.length===0,'World validation after load: '+v.failed.length+' errors','saveload',null,'Call validateWorldState()',{failures:v.failed.length});
+  try{
+    const savedPaused=sim.paused;sim.paused=false;
+    const STEP=0.1;
+    for(let t=0;t<30;t+=STEP){
+      sim.gameTime+=STEP;updateActors(STEP);updateNodes(STEP);updateWildlife(STEP);
+      taskTimer-=STEP;if(taskTimer<=0){taskTimer=0.45;assignTasks();}
+    }
+    sim.paused=savedPaused;
+    _chkAdd(r,'sim_30s','',true,'30s accelerated sim post-load succeeded','saveload',null,'');
+    const vAfter=validateWorldState();
+    _chkAdd(r,'sim_30s_validate','warn',vAfter.failed.length===0,'Post-sim validate: '+vAfter.failed.length+' errors','saveload',null,'',{failures:vAfter.failed.length});
+  }catch(e){_chkAdd(r,'sim_30s_crash','error',false,'Accelerated sim threw: '+e.message,'saveload',null,'',{error:e.message});}
+  r.durationMs=performance.now()-t0;return r;
+}
+
+// ── ACCELERATED SIMULATION ────────────────────────────────────────────────────
+function runAcceleratedSimulation(seconds){
+  seconds=seconds||300;
+  const t0=performance.now(),r=_mkChk('runAcceleratedSimulation');
+  const prePaused=sim.paused,preActors=sim.actors.length;
+  sim.paused=false;
+  let simErrors=0,stuckCount=0,deadlockCount=0;
+  const STEP=0.5;
+  try{
+    for(let elapsed=0;elapsed<seconds;elapsed+=STEP){
+      sim.gameTime+=STEP;
+      try{updateActors(STEP);}catch(e){simErrors++;}
+      try{updateNodes(STEP);updateWildlife(STEP);}catch(e){simErrors++;}
+      taskTimer-=STEP;if(taskTimer<=0){taskTimer=0.45;try{assignTasks();}catch(e){simErrors++;}}
+      if(elapsed%8<STEP){try{runSettlementPlanner();}catch(e){simErrors++;}}
+      if(elapsed%60<STEP){try{updateBuildingCondition();}catch(e){simErrors++;};try{checkPopDynamics();}catch(e){simErrors++;}}
+      if(elapsed%10<STEP){try{applyFoodSpoilage();}catch(e){simErrors++;}}
+    }
+    stuckCount=sim.actors.filter(a=>a.stuckLog).length;
+    for(const site of sim.sites.filter(s=>!s.complete)){
+      const ready=siteMet(site);
+      const delivering=sim.actors.filter(a=>a.task?.siteId===site.id).length;
+      const hasMats=siteMet(site);
+      if(!ready&&!delivering&&!hasMats) deadlockCount++;
+    }
+    _chkAdd(r,'accel_done','',true,seconds+'s simulation completed','sim',null,'',{seconds,simErrors,stuckCount,deadlockCount});
+    _chkAdd(r,'accel_errors','warn',simErrors===0,simErrors+' errors during accelerated sim','sim',null,'',{simErrors});
+    _chkAdd(r,'accel_stuck','warn',stuckCount===0,stuckCount+' stuck actors after '+seconds+'s','sim',null,'',{stuckCount});
+    _chkAdd(r,'accel_deadlock','warn',deadlockCount===0,deadlockCount+' construction deadlocks','sim',null,'',{deadlockCount});
+    _chkAdd(r,'accel_survived','warn',sim.actors.length>0,sim.actors.length+' actors survived (started: '+preActors+')','sim',null,'',{survivors:sim.actors.length,started:preActors});
+    const finalFd=foodDays();
+    _chkAdd(r,'accel_food','warn',finalFd>0,'Food days after '+seconds+'s: '+finalFd.toFixed(1),'sim',null,'',{foodDays:finalFd.toFixed(2)});
+  }catch(e){_chkAdd(r,'accel_crash','error',false,'Accelerated sim threw: '+e.message,'sim',null,'',{error:e.message});}
+  sim.paused=prePaused;
+  r.durationMs=performance.now()-t0;return r;
+}
+
+// ── SMOKE CHECKS ─────────────────────────────────────────────────────────────
+function runSmokeChecks(){
+  const t0=performance.now();
+  const fns=[validateWorldState,runActorStuckScan,runEconomyChecks,runConstructionChecks,runRoutingChecks,runMaintenanceChecks,runFoodWaterChecks,runPlacementChecks,runRendererChecks];
+  const all=fns.map(fn=>{try{return fn();}catch(e){return{name:fn.name,passed:[],failed:['CRASHED'],warnings:[],durationMs:0,results:[{id:'crash',severity:'error',passed:false,message:fn.name+' threw: '+e.message,entityType:'',entityId:null,suggestedManualCheck:'',details:{error:e.message}}]};}});
+  const tp=all.reduce((s,r)=>s+r.passed.length,0);
+  const tf=all.reduce((s,r)=>s+r.failed.length,0);
+  const tw=all.reduce((s,r)=>s+r.warnings.length,0);
+  const summary={name:'runSmokeChecks',passed:tp,failed:tf,warnings:tw,durationMs:performance.now()-t0,checks:all};
+  console.group('SmokeChecks');
+  all.forEach(r=>console.log(r.name,'✓'+r.passed.length+' ✗'+r.failed.length+' ⚠'+r.warnings.length));
+  console.log('Total: ✓'+tp+' ✗'+tf+' ⚠'+tw);
+  console.groupEnd();
+  _lastTestResults=summary;renderTestPanel();return summary;
+}
+
+function runStateValidationChecks(){return validateWorldState();}
+
+// ── EXPORT DEBUG REPORT ───────────────────────────────────────────────────────
+function exportDebugReport(){
+  const report={
+    timestamp:new Date().toISOString(),
+    gameTime:sim.gameTime,year:state.year,season:SEASONS[state.season],day:state.day,era:ERAS[state.era]?.name,
+    runtimeErrors:runtimeErrors.slice(),
+    resources:{...state.res},caps:{...state.cap},
+    actors:sim.actors.map(a=>({id:a.id,name:a.name,state:a.state,px:a.px,py:a.py,task:a.task,fatigue:a.fatigue,stress:a.ai?.stress||0,stuckLog:a.stuckLog||null})),
+    buildings:Object.keys(sim.bldInv).map(tid=>({tileId:+tid,key:state.grid[+tid]?.building,meta:sim.bldMeta[tid]})),
+    sites:sim.sites.filter(s=>!s.complete).map(s=>({...s})),
+    strategicIntents:sim.strategicIntents,crisisMode:sim.crisisMode,checks:null,
+  };
+  try{
+    report.checks={validate:validateWorldState(),actors:runActorStuckScan(),economy:runEconomyChecks(),construction:runConstructionChecks(),routing:runRoutingChecks(),maintenance:runMaintenanceChecks(),foodwater:runFoodWaterChecks(),renderer:runRendererChecks()};
+  }catch(e){report.checksError=e.message;}
+  const blob=new Blob([JSON.stringify(report,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='doc_debug_'+Date.now()+'.json';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  addLog('Debug report exported.','imp');return report;
+}
+
+// ── DETERMINISTIC TEST WORLD ──────────────────────────────────────────────────
+function startDeterministicTestWorld(){
+  if(!confirm('Start a deterministic test world? Current game will be lost.')) return;
+  state.grid=[];
+  const halfC=Math.floor(COLS/2),halfR=Math.floor(ROWS/2);
+  for(let ty=0;ty<ROWS;ty++) for(let tx=0;tx<COLS;tx++){
+    const id=ty*COLS+tx;const dx=tx-halfC,dy=ty-halfR,dist=Math.sqrt(dx*dx+dy*dy);
+    let type='grass';
+    if(dist>30) type='water';
+    else if(dist>22) type='forest';
+    else if(tx<halfC-8&&ty<halfR) type='plains';
+    else if(tx>halfC+8&&ty<halfR) type='rock';
+    else if(ty>halfR+8) type='marsh';
+    state.grid.push({id,tx,ty,type,building:null,nodeId:null,constrSiteId:null,explored:false});
+  }
+  const cx=halfC,cy=halfR;
+  for(let dy2=-VIS_RADIUS;dy2<=VIS_RADIUS;dy2++) for(let dx2=-VIS_RADIUS;dx2<=VIS_RADIUS;dx2++){const nx=cx+dx2,ny=cy+dy2;if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS) state.grid[ny*COLS+nx].explored=true;}
+  const fpTile=state.grid[cy*COLS+cx];fpTile.building='firePit';
+  sim.actors=[];sim.nodes=[];sim.wildlife=[];sim.predators=[];sim.threats=[];sim.sites=[];sim.bldInv={};sim.bldMeta={};sim.nextId=0;sim.gameTime=0;
+  sim.strategicIntents=[];sim.crisisMode=null;usedNames=[];
+  state.res={food:120,wood:50,stone:30,water:80,pop:5};
+  state.cap={food:300,wood:200,stone:150,water:200,pop:10};
+  state.year=1;state.season=0;state.day=1;state.era=0;state.morale=60;state.starveTurns=0;state.hungerGrace=0;
+  state.techs={toolMaking:false,tracking:false,foodPreservation:false,agriculture:false,pottery:false,animalHusbandry:false,medicine:false,ritualKnowledge:false,architecture:false,ironWorking:false};
+  state.techProgress={toolMaking:0,tracking:0,foodPreservation:0,agriculture:0,pottery:0,animalHusbandry:0,medicine:0,ritualKnowledge:0,architecture:0,ironWorking:0};
+  initInv(fpTile.id,'firePit',{food:80,wood:50,stone:30,water:50});initBldMeta(fpTile.id,'firePit');
+  const nodeDefs=[{type:'food',dx:-3,dy:2},{type:'wood',dx:3,dy:-2},{type:'water',dx:0,dy:4}];
+  for(const nd of nodeDefs){
+    const ntx=cx+nd.dx,nty=cy+nd.dy;
+    if(ntx<0||ntx>=COLS||nty<0||nty>=ROWS) continue;
+    const tile=state.grid[nty*COLS+ntx];
+    const nid=sim.nextId++;
+    sim.nodes.push({id:nid,tileId:tile.id,tileX:ntx,tileY:nty,type:nd.type,amount:200,maxAmount:200,depleted:false,discovered:true,regen:0.5});
+    tile.nodeId=nid;
+  }
+  placeWildlife();
+  const deterNames=['Og','Mara','Keth','Thorn','Ash'];
+  const deterTraits=[['brave','industrious'],['curious'],['careful'],['lazy'],['social']];
+  for(let i=0;i<5;i++){
+    const a=new Actor(sim.nextId++,deterNames[i],cx*TP+(i-2)*TP,cy*TP);
+    a.traits=deterTraits[i];a.ai=createActorAI();a.ai.specialistLabel=deriveSpecialistLabel(a);
+    sim.actors.push(a);usedNames.push(a.name);
+  }
+  state.res.pop=sim.actors.length;
+  sim.strategicIntents=buildStrategicIntents();sim.crisisMode=detectCrisis();
+  if(R&&!R.fallback){R.meshDirty=true;R.tileDirty=true;}terrainDirty=true;
+  renderSidebar();renderResources();renderTechPanel();
+  centerCameraOn(cx*TP+TP/2,cy*TP+TP/2);
+  addLog('Deterministic test world started. 5 actors, known resources, fixed layout.','era');
+}
+
+// ── MANUAL CHECKLIST ─────────────────────────────────────────────────────────
+const CHECKLIST_ITEMS=[
+  {id:'chk_gather',   text:'Actors gather food autonomously without getting stuck'},
+  {id:'chk_deposit',  text:'Actors deposit resources to nearest non-full storage'},
+  {id:'chk_construct',text:'Construction sites receive materials and complete'},
+  {id:'chk_maintain', text:'Building maintenance fires before abandonment threshold'},
+  {id:'chk_camera',   text:'Camera controls work (WASD/arrows, Q/E rotation, scroll zoom)'},
+  {id:'chk_webgl',    text:'WebGL2 terrain renders with correct tile colors and normals'},
+  {id:'chk_saveload', text:'Save/load preserves actor state, buildings, and resources'},
+  {id:'chk_hunger',   text:'Hunger crisis triggers reassignment of actors to food tasks'},
+  {id:'chk_planner',  text:'Strategic planner generates intents matching current crisis'},
+  {id:'chk_pop',      text:'Population growth occurs when food and morale conditions are met'},
+  {id:'chk_tech',     text:'Tech research unlocks correct buildings and modifiers'},
+  {id:'chk_wildlife', text:'Wildlife populations regenerate after hunting'},
+  {id:'chk_rarediscov',text:'Rare discovery effects apply correctly (tech boosts, morale)'},
+  {id:'chk_seasonal', text:'Seasonal changes affect terrain rendering and spoilage rates'},
+];
+function getChecklistState(){try{return JSON.parse(localStorage.getItem('doc_checklist')||'{}')}catch{return{};}}
+function setChecklistItem(id,val){const s=getChecklistState();s[id]=val;localStorage.setItem('doc_checklist',JSON.stringify(s));}
+
+// ── TEST TAB RENDER ───────────────────────────────────────────────────────────
+function renderTestPanel(){
+  const panel=document.getElementById('tab-test');if(!panel||panel.classList.contains('hidden')) return;
+  const rtp=document.getElementById('test-runtime-panel');
+  const tcp=document.getElementById('test-controls-panel');
+  const trp=document.getElementById('test-results-panel');
+  const ckp=document.getElementById('test-checklist-panel');
+  if(rtp){
+    if(runtimeErrors.length===0){
+      rtp.innerHTML='<div style="color:#4a8840;font-size:.69em;padding:3px 0">No runtime errors captured.</div>';
+    } else {
+      let h='<div class="test-section-hdr">Runtime Errors ('+runtimeErrors.length+')</div>';
+      for(const e of runtimeErrors.slice(-10)){
+        h+='<div class="test-result-row test-result-fail" title="'+e.stack.slice(0,300).replace(/"/g,"'")+'">'+e.msg.slice(0,90)+' — line '+e.line+'</div>';
+      }
+      h+='<button class="test-btn" onclick="runtimeErrors.length=0;const b=document.getElementById(\'err-badge\');if(b)b.style.display=\'none\';renderTestPanel()">Clear errors</button>';
+      rtp.innerHTML=h;
+    }
+  }
+  if(tcp){
+    tcp.innerHTML='<div class="test-section-hdr">Automated Checks</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:4px">'
+      +'<button class="test-btn" onclick="_lastTestResults=runSmokeChecks();renderTestPanel()">▶ Smoke All</button>'
+      +'<button class="test-btn" onclick="_lastTestResults=validateWorldState();renderTestPanel()">World</button>'
+      +'<button class="test-btn" onclick="_lastTestResults=runActorStuckScan();renderTestPanel()">Actors</button>'
+      +'<button class="test-btn" onclick="_lastTestResults=runEconomyChecks();renderTestPanel()">Economy</button>'
+      +'<button class="test-btn" onclick="_lastTestResults=runConstructionChecks();renderTestPanel()">Build</button>'
+      +'<button class="test-btn" onclick="_lastTestResults=runRoutingChecks();renderTestPanel()">Routes</button>'
+      +'<button class="test-btn" onclick="_lastTestResults=runMaintenanceChecks();renderTestPanel()">Maint</button>'
+      +'<button class="test-btn" onclick="_lastTestResults=runFoodWaterChecks();renderTestPanel()">Food</button>'
+      +'<button class="test-btn" onclick="_lastTestResults=runPlacementChecks();renderTestPanel()">Place</button>'
+      +'<button class="test-btn" onclick="_lastTestResults=runRendererChecks();renderTestPanel()">Render</button>'
+      +'<button class="test-btn" onclick="_lastTestResults=runSaveLoadRoundtrip();renderTestPanel()">Save/Load</button>'
+      +'<button class="test-btn" onclick="repairWorldState()">⚙ Repair</button>'
+      +'<button class="test-btn" onclick="exportDebugReport()">📥 Export</button>'
+      +'<button class="test-btn danger" onclick="startDeterministicTestWorld()">🧪 Test World</button>'
+      +'<button class="test-btn danger" onclick="if(confirm(\'Run 60s accelerated simulation?\')){_lastTestResults=runAcceleratedSimulation(60);renderTestPanel();}">⏩ Accel 60s</button>'
+      +'<button class="test-btn danger" onclick="if(confirm(\'Run 300s accelerated simulation? This may freeze the tab briefly.\')){_lastTestResults=runAcceleratedSimulation(300);renderTestPanel();}">⏩ Accel 300s</button>'
+      +'</div>'
+      +'<div class="test-note">Automated checks detect code and simulation defects. They do not replace human playtesting for balance, clarity, fun, or UX.</div>';
+  }
+  if(trp){
+    if(!_lastTestResults){trp.innerHTML='';} else {
+      let h='<div class="test-section-hdr">Results: '+(_lastTestResults.name||'checks')+'</div>';
+      const checkList=_lastTestResults.checks?_lastTestResults.checks:[_lastTestResults];
+      for(const chk of checkList){
+        if(!chk) continue;
+        const total=chk.passed.length+chk.failed.length+chk.warnings.length;
+        if(total===0) continue;
+        h+='<div class="test-summary"><span class="ok">✓'+chk.passed.length+'</span> <span class="bad">✗'+chk.failed.length+'</span> <span style="color:#a08030">⚠'+chk.warnings.length+'</span> <span style="color:#505040">'+(chk.name||'')+' ('+chk.durationMs.toFixed(0)+'ms)</span></div>';
+        const fails=chk.results.filter(x=>!x.passed).slice(0,10);
+        for(const res of fails){
+          const cls=res.severity==='error'?'test-result-fail':'test-result-warn';
+          h+='<div class="test-result-row '+cls+'" title="'+(res.suggestedManualCheck||'')+'">'+(res.id+': '+res.message).slice(0,90)+'</div>';
+        }
+      }
+      if(_lastTestResults.checks){
+        h+='<div class="test-summary" style="margin-top:4px;border-top:1px solid var(--border);padding-top:4px"><b>Total: <span class="ok">✓'+_lastTestResults.passed+'</span> <span class="bad">✗'+_lastTestResults.failed+'</span> ⚠'+_lastTestResults.warnings+'</b> in '+_lastTestResults.durationMs.toFixed(0)+'ms</div>';
+      }
+      trp.innerHTML=h;
+    }
+  }
+  if(ckp){
+    const cs=getChecklistState();
+    let h='<div class="test-section-hdr">Manual Playtesting Checklist</div>';
+    for(const item of CHECKLIST_ITEMS){
+      const checked=!!cs[item.id];
+      h+='<div class="checklist-item'+(checked?' done':'')+'"><input type="checkbox" id="'+item.id+'" '+(checked?'checked':'')+' onchange="setChecklistItem(\''+item.id+'\',this.checked);renderTestPanel()"><label for="'+item.id+'">'+item.text+'</label></div>';
+    }
+    const doneCount=CHECKLIST_ITEMS.filter(i=>cs[i.id]).length;
+    h+='<div style="font-size:.68em;color:#6a7040;margin-top:4px">'+doneCount+'/'+CHECKLIST_ITEMS.length+' items checked</div>';
+    ckp.innerHTML=h;
+  }
+}
+
+// ── CONSOLE EXPOSURES ─────────────────────────────────────────────────────────
+window.validateWorldState=validateWorldState;
+window.repairWorldState=repairWorldState;
+window.runSmokeChecks=runSmokeChecks;
+window.runStateValidationChecks=runStateValidationChecks;
+window.runActorStuckScan=runActorStuckScan;
+window.runEconomyChecks=runEconomyChecks;
+window.runConstructionChecks=runConstructionChecks;
+window.runRoutingChecks=runRoutingChecks;
+window.runMaintenanceChecks=runMaintenanceChecks;
+window.runFoodWaterChecks=runFoodWaterChecks;
+window.runPlacementChecks=runPlacementChecks;
+window.runRendererChecks=runRendererChecks;
+window.runSaveLoadRoundtrip=runSaveLoadRoundtrip;
+window.runAcceleratedSimulation=runAcceleratedSimulation;
+window.exportDebugReport=exportDebugReport;
+window.startDeterministicTestWorld=startDeterministicTestWorld;
 </script>
 </body>
 </html>
