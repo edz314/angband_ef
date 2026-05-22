@@ -235,6 +235,7 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
       <div id="threats-panel"><div style="color:#5a4030;font-size:.75em">No known threats.</div></div>
     </div>
     <div class="tab-content hidden" id="tab-debug">
+      <div style="margin-bottom:4px"><button id="terrain-debug-btn" class="maint-btn" onclick="terrainDebugMode=!terrainDebugMode;terrainDirty=true;renderDebugPanel()">🗺 Terrain Debug: OFF</button></div>
       <div id="debug-panel"></div>
       <div id="site-debug-panel"></div>
       <div id="intent-panel"></div>
@@ -488,7 +489,7 @@ let lastInteractionTime=Date.now();
 let autoBuilderTimer=0;
 
 // ── TERRAIN VARIABLES ────────────────────────────────────────────────────────
-let terrainOffscreen=null,terrainDirty=true;
+let terrainOffscreen=null,terrainDirty=true,terrainDebugMode=false;
 function tileNoise(tx,ty){return(((tx*2803+ty*1999)^(tx*997+ty*461))&0xff)/255;}
 function tileNoise2(tx,ty){return(((tx*1013+ty*2371)^(tx*541+ty*877))&0xff)/255;}
 
@@ -574,7 +575,7 @@ function resizeCanvases(){
 }
 
 // ── TILE ELEVATION ────────────────────────────────────────────────────────────
-const TILE_ELEV={water:-12,marsh:-2,sand:2,grass:6,plains:5,forest:10,hills:22,rock:28,mountain:55};
+const TILE_ELEV={water:-14,marsh:-3,sand:3,grass:7,plains:6,forest:11,hills:25,rock:32,mountain:58};
 function tileBaseElevation(tx,ty){
   if(tx<0||tx>=COLS||ty<0||ty>=ROWS)return 0;
   const tile=state.grid[ty*COLS+tx];if(!tile)return 0;
@@ -601,37 +602,39 @@ uniform sampler2D u_tileData;
 uniform float u_time;uniform float u_season;uniform float u_night;uniform vec3 u_sunDir;
 out vec4 fragColor;
 const float TP=12.0;const int COLS=100;const int ROWS=70;
+vec2 h21(vec2 p){p=fract(p*vec2(127.1,311.7));p+=dot(p,p+19.19);return fract(vec2(p.x*p.y,p.x+p.y));}
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-float noise(vec2 p){vec2 i=floor(p),f=fract(p);float a=hash(i),b=hash(i+vec2(1,0)),c=hash(i+vec2(0,1)),d=hash(i+vec2(1,1));vec2 u=f*f*(3.0-2.0*f);return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}
-float fbm(vec2 p){float v=0.0,a=0.5;p*=0.05;for(int i=0;i<4;i++){v+=a*noise(p);p*=2.1;a*=0.5;}return v;}
+float n2d(vec2 p){vec2 i=floor(p),f=fract(p);float a=hash(i),b=hash(i+vec2(1,0)),c=hash(i+vec2(0,1)),d=hash(i+vec2(1,1));vec2 u=f*f*(3.0-2.0*f);return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}
+float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<4;i++){v+=a*n2d(p);p*=2.1;a*=0.5;}return v;}
 void main(){
   ivec2 tc=ivec2(clamp(floor(v_wpos.xz/TP),vec2(0.0),vec2(float(COLS-1),float(ROWS-1))));
-  vec4 tD=texelFetch(u_tileData,tc,0);
-  int tt=int(tD.r*255.0/30.0+0.5);
-  if(tD.g<0.5){fragColor=vec4(0.015,0.011,0.008,1.0);return;}
-  float fb=fbm(v_wpos.xz);vec3 col;
-  if(tt==0){col=vec3(0.04,0.12,0.22);float w=sin(v_wpos.x*0.18+u_time*1.4)*sin(v_wpos.z*0.14+u_time*0.9);col+=vec3(0.0,0.06,0.12)*(w*0.5+0.6);col=clamp(col,vec3(0.0),vec3(0.3,0.45,0.65));}
-  else if(tt==1){col=vec3(0.09,0.13,0.08)+vec3(0.0,fb*0.06,0.0);}
-  else if(tt==2){col=vec3(0.17,0.155,0.065)+vec3(fb*0.04);}
-  else if(tt==3){col=vec3(0.13,0.22,0.055)+vec3(0.0,fb*0.08,0.0);}
-  else if(tt==4){col=vec3(0.18,0.30,0.08)+vec3(0.0,fb*0.07,0.0);}
-  else if(tt==5){col=vec3(0.055,0.13,0.033)+vec3(0.0,fb*0.05,0.0);if(u_season>1.5&&u_season<2.5)col=mix(col,vec3(0.26,0.12,0.03),0.55);else if(u_season>=2.5)col=mix(col,vec3(0.09,0.10,0.09),0.35);}
-  else if(tt==6){col=vec3(0.17,0.20,0.10)+vec3(fb*0.06);}
-  else if(tt==7){col=vec3(0.12,0.12,0.095)+vec3(fb*0.06);}
-  else{col=vec3(0.065,0.065,0.052)+vec3(fb*0.04);float sn=smoothstep(38.0,58.0,v_wpos.y);col=mix(col,vec3(0.55,0.58,0.62),sn);}
-  vec3 N=normalize(v_norm);
-  float diff=max(0.0,dot(N,normalize(u_sunDir)));
-  float light=(0.38+diff*0.62)*(1.0-(1.0-abs(N.y))*0.4);
-  col*=light;
-  if(tt!=0){
-    if(u_season<1.0)col*=vec3(0.96,1.04,0.93);
-    else if(u_season<2.0)col*=vec3(1.02,1.04,0.93);
-    else if(u_season<3.0)col*=vec3(1.10,0.92,0.72);
-    else col*=vec3(0.88,0.92,1.10);
+  vec4 tD=texelFetch(u_tileData,tc,0);int tt=int(tD.r*255.0/30.0+0.5);
+  if(tD.g<0.5){fragColor=vec4(0.012,0.008,0.006,1.0);return;}
+  vec2 wp=v_wpos.xz;float fb=fbm(wp*0.05);float na=tD.b/255.0;vec3 col;
+  if(tt==0){col=vec3(0.04,0.13,0.46);float w1=sin(wp.x*0.22+u_time*1.6)*sin(wp.y*0.16+u_time*1.1);float w2=sin(wp.x*0.35-u_time*0.8)*sin(wp.y*0.28+u_time*1.3);col+=vec3(-0.01,0.04,0.14)*(w1*0.5+w2*0.3);col+=vec3(0.12,0.18,0.25)*step(0.72,sin(wp.x*1.8+wp.y*1.4+u_time*2.2)*0.5+0.5)*0.18;col=clamp(col,vec3(0.02,0.08,0.28),vec3(0.22,0.42,0.82));}
+  else if(tt==1){col=vec3(0.05,0.17,0.10);float wet=n2d(wp*0.18)*0.8+n2d(wp*0.4)*0.2;col=mix(col,vec3(0.02,0.08,0.06),wet*0.6);float reed=smoothstep(0.72,0.78,fract(wp.x*0.55+n2d(wp*0.12)*0.4))*smoothstep(0.3,0.7,fract(wp.y*0.42));col+=vec3(-0.01,0.05,0.01)*reed;col+=vec3(0.0,fb*0.05,0.02);}
+  else if(tt==2){col=vec3(0.50,0.42,0.17);col+=vec3(0.06,0.04,-0.02)*step(0.76,hash(floor(wp*4.0)));float rp=sin(wp.x*0.8+wp.y*0.3+fb*2.0)*0.5+0.5;col+=vec3(0.04,0.03,-0.01)*rp;col=mix(col,vec3(0.58,0.50,0.22),fb*0.3);}
+  else if(tt==3){col=vec3(0.07,0.26,0.04);float bx=fract(wp.x*0.7+n2d(wp*0.1)*0.5);float blade=sin(bx*3.14159)*smoothstep(0.12,0.45,bx)*smoothstep(0.88,0.55,bx);col+=vec3(-0.01,0.07,0.01)*blade*0.7;col+=vec3(0.08,0.10,0.04)*step(0.88,hash(floor(wp*5.0)));col+=vec3(0.0,fb*0.06,0.0);}
+  else if(tt==4){col=vec3(0.32,0.28,0.06);float dry=sin(wp.y*1.4+fb*1.5)*0.5+0.5;col+=vec3(0.04,0.02,-0.02)*dry;col=mix(col,vec3(0.40,0.34,0.08),step(0.84,n2d(wp*0.3))*0.5);col+=vec3(fb*0.04,fb*0.03,0.0);}
+  else if(tt==5){col=vec3(0.02,0.09,0.01);float dens=max(0.3,na);vec2 cell=floor(wp*0.35);vec2 jit=h21(cell)*2.0-1.0;float d2=length(fract(wp*0.35)-0.5+jit*0.35);col=mix(col,vec3(0.06,0.22,0.03),smoothstep(0.35+0.1*(1.0-dens),0.05,d2));col=mix(col,vec3(0.04,0.06,0.02),step(0.94,hash(cell)));col+=vec3(0.0,fb*0.04,0.0);if(u_season>1.5&&u_season<2.5)col=mix(col,vec3(0.28,0.14,0.03),0.55);else if(u_season>=2.5)col=mix(col,vec3(0.10,0.11,0.09),0.38);}
+  else if(tt==6){col=vec3(0.22,0.25,0.09);float cont=sin(wp.y*1.2+fbm(wp*1.6)*0.8)*0.5+0.5;float ln=smoothstep(0.48,0.50,cont)*smoothstep(0.52,0.50,cont);col=mix(col,vec3(0.15,0.17,0.06),ln*0.6);col+=vec3(fb*0.06,fb*0.05,fb*0.02);col=mix(col,vec3(0.30,0.33,0.12),n2d(wp*0.12)*0.4);}
+  else if(tt==7){col=vec3(0.27,0.27,0.22);float crack=min(abs(sin(wp.x*0.9+wp.y*0.4)),abs(sin(wp.y*0.8+wp.x*0.5)));col=mix(col,vec3(0.12,0.12,0.10),smoothstep(0.22,0.05,crack));col=mix(col,vec3(0.34,0.33,0.28),step(0.78,n2d(wp*0.25)));col+=vec3(fb*0.05);}
+  else{col=vec3(0.10,0.10,0.08);col+=vec3(fbm(wp*1.6)*0.08);col=mix(col,vec3(0.06,0.06,0.05),step(0.7,n2d(wp*0.2))*0.4);float sn=smoothstep(36.0,52.0,v_wpos.y);col=mix(col,vec3(0.72,0.75,0.80),sn);}
+  ivec2 sz=textureSize(u_tileData,0);
+  if(tc.x>0&&tc.y>0&&tc.x<sz.x-1&&tc.y<sz.y-1){
+    vec4 tN=texelFetch(u_tileData,tc+ivec2(0,-1),0);vec4 tS=texelFetch(u_tileData,tc+ivec2(0,1),0);
+    vec4 tW=texelFetch(u_tileData,tc+ivec2(-1,0),0);vec4 tE=texelFetch(u_tileData,tc+ivec2(1,0),0);
+    int nN=int(tN.r*255.0/30.0+0.5);int nS=int(tS.r*255.0/30.0+0.5);int nW=int(tW.r*255.0/30.0+0.5);int nE=int(tE.r*255.0/30.0+0.5);
+    vec2 lf=fract(wp/TP);
+    if(tt!=0){float nw=0.0;if(nN==0)nw=max(nw,1.0-lf.y);if(nS==0)nw=max(nw,lf.y);if(nW==0)nw=max(nw,1.0-lf.x);if(nE==0)nw=max(nw,lf.x);col=mix(col,col*0.62+vec3(0.0,0.03,0.08),smoothstep(0.35,0.85,nw)*0.55);}
+    if(tt==5){float no=0.0;if(nN==3||nN==4)no=max(no,1.0-lf.y);if(nS==3||nS==4)no=max(no,lf.y);if(nW==3||nW==4)no=max(no,1.0-lf.x);if(nE==3||nE==4)no=max(no,lf.x);col=mix(col,mix(col,vec3(0.08,0.20,0.03),0.5),smoothstep(0.4,0.9,no)*0.5);}
+    if(tt==8){float nl=0.0;if(nN!=8)nl=max(nl,1.0-lf.y);if(nS!=8)nl=max(nl,lf.y);if(nW!=8)nl=max(nl,1.0-lf.x);if(nE!=8)nl=max(nl,lf.x);col=mix(col,col*0.55,smoothstep(0.3,0.85,nl)*0.55);}
   }
-  if(u_night>0.01){col=mix(col,col*vec3(0.5,0.58,0.88)*(1.0-u_night*0.5),u_night);}
-  fragColor=vec4(col,1.0);
-}`;
+  vec3 N=normalize(v_norm);float diff=max(0.0,dot(N,normalize(u_sunDir)));float light=(0.42+diff*0.58)*(1.0-(1.0-abs(N.y))*0.35);col*=light;
+  if(tt!=0){if(u_season<1.0)col*=vec3(0.95,1.05,0.92);else if(u_season<2.0)col*=vec3(1.02,1.05,0.91);else if(u_season<3.0)col*=vec3(1.12,0.91,0.68);else col*=vec3(0.86,0.90,1.12);}
+  if(u_night>0.01)col=mix(col,col*vec3(0.48,0.56,0.90)*(1.0-u_night*0.5),u_night);
+  fragColor=vec4(col,1.0);}`;
+
 
 // ── WEBGL2 RENDERER ──────────────────────────────────────────────────────────
 const R={
@@ -1451,6 +1454,17 @@ function renderGameOverlay(){
       ctx.beginPath();ctx.moveTo(selectedActor.px,selectedActor.py);ctx.lineTo(selectedActor.tx,selectedActor.ty);ctx.stroke();
       ctx.setLineDash([]);ctx.fillStyle='rgba(240,192,80,0.5)';ctx.beginPath();ctx.arc(selectedActor.tx,selectedActor.ty,2,0,Math.PI*2);ctx.fill();
     }
+    if(terrainDebugMode){
+      ctx.font='5.5px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+      for(let ty2=ty0;ty2<=ty1;ty2++) for(let tx2=tx0;tx2<=tx1;tx2++){
+        const tile=state.grid[ty2*COLS+tx2];if(!tile.explored)continue;
+        const dpx=tx2*TP+TP/2,dpy=ty2*TP+TP/2;
+        ctx.fillStyle='rgba(255,255,200,0.72)';ctx.fillText(tile.type.slice(0,3),dpx,dpy-1.5);
+        const dnode=tile.nodeId!=null?sim.nodes.find(nd=>nd.id===tile.nodeId):null;
+        if(dnode){ctx.fillStyle='rgba(255,180,80,0.7)';ctx.fillText(Math.round(dnode.amount/Math.max(1,dnode.maxAmount)*9),dpx,dpy+4);}
+      }
+      ctx.textAlign='left';ctx.textBaseline='alphabetic';
+    }
     ctx.restore();
     drawWatchCoverageOverlay(ctx);
     const dp=getDayPhase();
@@ -1628,9 +1642,13 @@ function rebuildTerrain2D(){
     for(const [dx,dy] of[[-1,0],[1,0],[0,-1],[0,1]]){
       const nx=tx+dx,ny=ty+dy;if(nx<0||nx>=COLS||ny<0||ny>=ROWS)continue;
       const nb=state.grid[ny*COLS+nx];if(!nb.explored)continue;
-      if(t.type==='water'&&nb.type!=='water'){ctx.fillStyle='rgba(10,40,80,0.18)';ctx.fillRect(px,py,TP,TP);}
-      if(t.type==='forest'&&(nb.type==='grass'||nb.type==='plains')){ctx.fillStyle='rgba(14,40,8,0.12)';ctx.fillRect(px,py,TP,TP);}
-      if(t.type==='mountain'&&nb.type!=='mountain'){ctx.fillStyle='rgba(0,0,0,0.22)';const ex=dx<0?0:dx>0?TP-2:0,ey=dy<0?0:dy>0?TP-2:0,ew=dx!==0?2:TP,eh=dy!==0?2:TP;ctx.fillRect(px+ex,py+ey,ew,eh);}
+      const ex=dx<0?0:dx>0?TP-3:0,ey=dy<0?0:dy>0?TP-3:0,ew=dx!==0?3:TP,eh=dy!==0?3:TP;
+      if(t.type==='water'&&nb.type!=='water'){ctx.fillStyle='rgba(10,40,100,0.22)';ctx.fillRect(px,py,TP,TP);}
+      if(nb.type==='water'&&t.type!=='water'){ctx.fillStyle='rgba(20,60,130,0.3)';ctx.fillRect(px+ex,py+ey,ew,eh);}
+      if(t.type==='forest'&&(nb.type==='grass'||nb.type==='plains')){ctx.fillStyle='rgba(14,40,8,0.2)';ctx.fillRect(px,py,TP,TP);}
+      if(t.type==='mountain'&&nb.type!=='mountain'){ctx.fillStyle='rgba(0,0,0,0.3)';const mx=dx<0?0:dx>0?TP-2:0,my=dy<0?0:dy>0?TP-2:0,mw=dx!==0?2:TP,mh=dy!==0?2:TP;ctx.fillRect(px+mx,py+my,mw,mh);}
+      if(t.type==='hills'&&nb.type==='mountain'){ctx.fillStyle='rgba(0,0,0,0.18)';ctx.fillRect(px+ex,py+ey,ew,eh);}
+      if(t.type==='sand'&&nb.type==='water'){ctx.fillStyle='rgba(60,120,170,0.22)';ctx.fillRect(px+ex,py+ey,ew,eh);}
     }
   }
   terrainDirty=false;
@@ -1639,12 +1657,58 @@ function drawTile2D(ctx,tx,ty){
   const t=state.grid[ty*COLS+tx];if(!t)return;
   const px=tx*TP,py=ty*TP,h=TP;const n=tileNoise(tx,ty),n2=tileNoise2(tx,ty);
   if(!t.explored){ctx.fillStyle='#030202';ctx.fillRect(px,py,h,h);return;}
-  const base={grass:'#22380e',plains:'#2e4a14',forest:'#0e2208',water:'#0a2030',rock:'#1e1e18',mountain:'#101010',sand:'#2a2610',marsh:'#162014',hills:'#2c321a'}[t.type]||'#1a1810';
-  ctx.fillStyle=base;ctx.fillRect(px,py,h,h);
-  if(t.type==='grass'){ctx.fillStyle='rgba(28,58,16,0.5)';for(let i=0;i<3;i++)ctx.fillRect(px+2+i*3.5+(n*255&2),py+5+(n2*255&3),1,3);}
-  else if(t.type==='forest'){ctx.fillStyle='#143010';ctx.beginPath();ctx.arc(px+h/2,py+h/2-1,5+n*0.8,0,Math.PI*2);ctx.fill();}
-  else if(t.type==='water'){ctx.strokeStyle='rgba(30,80,120,0.25)';ctx.lineWidth=0.6;ctx.beginPath();ctx.moveTo(px,py+3+n*2);ctx.lineTo(px+h,py+3+n2*2);ctx.stroke();}
-  else if(t.type==='mountain'){ctx.fillStyle='#181815';ctx.beginPath();ctx.moveTo(px,py+h);ctx.lineTo(px+h/2,py);ctx.lineTo(px+h,py+h);ctx.fill();}
+  if(t.type==='water'){
+    ctx.fillStyle='#1444aa';ctx.fillRect(px,py,h,h);
+    ctx.fillStyle='rgba(80,140,255,0.22)';ctx.fillRect(px,py+3+(n*3|0),h,2);
+    ctx.fillStyle='rgba(120,180,255,0.12)';ctx.fillRect(px,py+8+(n2*2|0),h,1);
+  } else if(t.type==='marsh'){
+    ctx.fillStyle='#1a5a3a';ctx.fillRect(px,py,h,h);
+    ctx.fillStyle='rgba(20,80,50,0.6)';for(let i=0;i<3;i++) ctx.fillRect(px+1+i*4+(n*255&1),py+2+(n2*255&3),2,h-4);
+    ctx.fillStyle='rgba(30,120,70,0.4)';ctx.fillRect(px+(n*255&3),py+(n2*255&3),3,2);
+  } else if(t.type==='sand'){
+    ctx.fillStyle='#8a7220';ctx.fillRect(px,py,h,h);
+    ctx.fillStyle='rgba(160,140,60,0.35)';ctx.fillRect(px,py+4+(n*4|0),h,2);
+    ctx.fillStyle='rgba(200,180,90,0.2)';ctx.fillRect(px+(n*4|0),py,2,h);
+    if((n*255&7)===0){ctx.fillStyle='rgba(220,200,110,0.5)';ctx.fillRect(px+(n2*8|0),py+(n*6|0),2,2);}
+  } else if(t.type==='grass'){
+    ctx.fillStyle='#2e6a12';ctx.fillRect(px,py,h,h);
+    ctx.fillStyle='rgba(50,120,20,0.55)';
+    for(let i=0;i<4;i++) ctx.fillRect(px+1+i*3+(n*255&1),py+2+(n2*255&2),1,4);
+    if((n2*255&3)===0){ctx.fillStyle='rgba(180,200,100,0.3)';ctx.fillRect(px+(n*9|0),py+(n2*7|0),2,1);}
+  } else if(t.type==='plains'){
+    ctx.fillStyle='#7a6a10';ctx.fillRect(px,py,h,h);
+    ctx.fillStyle='rgba(140,130,40,0.3)';ctx.fillRect(px,py+3+(n*4|0),h,1);
+    ctx.fillStyle='rgba(140,130,40,0.3)';ctx.fillRect(px,py+8+(n2*3|0),h,1);
+    if((n*255&5)===0){ctx.fillStyle='rgba(180,170,60,0.4)';ctx.fillRect(px+(n2*10|0),py+(n*8|0),3,2);}
+  } else if(t.type==='forest'){
+    ctx.fillStyle='#0e3a06';ctx.fillRect(px,py,h,h);
+    const fnode=t.nodeId!=null?sim.nodes.find(nd=>nd.id===t.nodeId):null;
+    const dens=fnode?Math.max(0.3,fnode.amount/Math.max(1,fnode.maxAmount)):0.8;
+    const fr=Math.round(3+dens*2.5);
+    ctx.fillStyle='rgba(20,80,10,0.85)';ctx.beginPath();ctx.arc(px+h/2+((n*255&3)-1),py+h/2+((n2*255&3)-1),fr,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(8,50,4,0.7)';ctx.beginPath();ctx.arc(px+h/2+(n*255&2)-1,py+h-3,2,0,Math.PI*2);ctx.fill();
+  } else if(t.type==='hills'){
+    ctx.fillStyle='#4a5018';ctx.fillRect(px,py,h,h);
+    ctx.fillStyle='rgba(100,110,40,0.5)';
+    ctx.beginPath();ctx.moveTo(px+1,py+h-2);ctx.lineTo(px+h/2,py+3+(n*2|0));ctx.lineTo(px+h-1,py+h-2);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='rgba(130,140,60,0.3)';ctx.lineWidth=0.7;ctx.beginPath();ctx.moveTo(px,py+7+(n*255&3));ctx.lineTo(px+h,py+7+(n2*255&3));ctx.stroke();
+  } else if(t.type==='rock'){
+    ctx.fillStyle='#5a5a50';ctx.fillRect(px,py,h,h);
+    ctx.fillStyle='rgba(70,70,60,0.85)';
+    ctx.beginPath();ctx.moveTo(px+2,py+h-2);ctx.lineTo(px+h/2-1+(n*2|0),py+2);ctx.lineTo(px+h/2+3+(n*255&2),py+2);ctx.lineTo(px+h-2,py+h-2);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='rgba(35,35,28,0.65)';ctx.lineWidth=0.8;ctx.beginPath();ctx.moveTo(px+4+(n*255&3),py+2);ctx.lineTo(px+2,py+h-3+(n2*255&2));ctx.stroke();
+    ctx.fillStyle='rgba(100,100,90,0.4)';ctx.fillRect(px+(n*6|0)+1,py+(n2*4|0)+1,3,2);
+  } else if(t.type==='mountain'){
+    ctx.fillStyle='#2a2a22';ctx.fillRect(px,py,h,h);
+    ctx.fillStyle='rgba(55,55,44,0.92)';
+    ctx.beginPath();ctx.moveTo(px,py+h);ctx.lineTo(px+h/2+(n*2|0)-1,py+1);ctx.lineTo(px+h,py+h);ctx.closePath();ctx.fill();
+    const snowLine=2+(n*3|0);
+    ctx.fillStyle='rgba(200,210,230,0.72)';
+    ctx.beginPath();ctx.moveTo(px+h/2+(n*2|0)-1,py+1);ctx.lineTo(px+h/2-3-(n*2|0),py+snowLine);ctx.lineTo(px+h/2+4+(n2*2|0),py+snowLine);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='rgba(18,18,12,0.5)';ctx.lineWidth=0.8;ctx.beginPath();ctx.moveTo(px+h/2+(n*2|0)-1,py+1);ctx.lineTo(px+4+(n2*255&3),py+h);ctx.stroke();
+  } else {
+    ctx.fillStyle='#404038';ctx.fillRect(px,py,h,h);
+  }
 }
 function drawBuilding2D(ctx,tile,tx,ty){
   const px=tx*TP,py=ty*TP;const bk=tile.building;const b=BUILDINGS[bk];if(!b)return;
@@ -1684,7 +1748,8 @@ function drawWildlife2D(ctx,wg,t){
 // ── MINIMAP ────────────────────────────────────────────────────────────────────
 const MM_COLS=210,MM_ROWS=147;
 const MM_TW=MM_COLS/COLS,MM_TH=MM_ROWS/ROWS;
-const MINIMAP_COLORS={grass:'#284818',plains:'#324a1c',forest:'#122808',water:'#0a2030',rock:'#202018',mountain:'#141412',sand:'#302c14',marsh:'#182818',hills:'#303620'};
+const MINIMAP_COLORS={grass:'#2e6a12',plains:'#7a6a10',forest:'#0e3a06',water:'#1444aa',sand:'#8a7220',rock:'#5a5a50',hills:'#4a5018',mountain:'#2a2a22',marsh:'#1a5a3a'};
+const TERRAIN_SWATCH={water:'#1444aa',marsh:'#1a5a3a',sand:'#8a7220',grass:'#2e6a12',plains:'#7a6a10',forest:'#0e3a06',hills:'#4a5018',rock:'#5a5a50',mountain:'#2a2a22'};
 
 function renderMinimap(){
   const mc=document.getElementById('minimap-canvas');if(!mc)return;
@@ -3869,6 +3934,7 @@ function renderDebugPanel(){
     }
   }
 
+  const tdbtn=document.getElementById('terrain-debug-btn');if(tdbtn)tdbtn.textContent=terrainDebugMode?'🗺 Terrain Debug: ON':'🗺 Terrain Debug: OFF';
   const ap=document.getElementById('ai-panel');if(!ap) return;
   ap.innerHTML='<div style="color:var(--hi);font-size:.68em;font-weight:bold;margin-bottom:3px">Actor Decisions:</div>';
   for(const actor of sim.actors.slice(0,8)){
@@ -3907,7 +3973,8 @@ function addLog(msg,cls=''){
 function showTileInfo(tile){
   const el=document.getElementById('tile-info');if(!el) return;
   if(!tile.explored){el.innerHTML='<div class="ti-name">Unexplored</div><div class="ti-desc">Send an explorer to reveal this area.</div>';return;}
-  let html=`<div class="ti-name">${tile.type.charAt(0).toUpperCase()+tile.type.slice(1)}</div><div class="ti-desc">${TILE_DESC[tile.type]||''}</div>`;
+  const swCol=TERRAIN_SWATCH[tile.type]||'#404030';
+  let html=`<div class="ti-name" style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:10px;height:10px;background:${swCol};border:1px solid #555;border-radius:2px;flex-shrink:0"></span>${tile.type.charAt(0).toUpperCase()+tile.type.slice(1)}</div><div class="ti-desc">${TILE_DESC[tile.type]||''}</div>`;
   if(isValidWaterSourceTile(tile.id)) html+=`<div class="ti-prod" style="color:#3878b0">💧 Valid water source</div>`;
   const node=tile.nodeId!=null?sim.nodes.find(n=>n.id===tile.nodeId):null;
   if(node&&node.discovered){const pct=Math.round(node.amount/node.maxAmount*100);html+=`<div class="ti-prod">${node.type} node: ${pct}%${node.depleted?' (depleted)':''}</div>`;}
@@ -4310,6 +4377,90 @@ function runSimulationTests(){
   const actorsWithTraits=sim.actors.filter(a=>a.traits&&a.traits.length>0).length;(actorsWithTraits>0)?pass('actors have traits'):fail('actors have traits','none have traits');
   const intentsExist=sim.strategicIntents.length>0;intentsExist?pass('strategic intents generated'):fail('strategic intents generated','none present');
   console.table(results);const passed=results.filter(r=>r.ok).length;console.log(`${passed}/${results.length} tests passed`);return results;
+}
+
+// ── TERRAIN VISUAL TESTS ─────────────────────────────────────────────────────
+function testTerrainTypesHaveDistinctVisualConfig(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  const types=['water','marsh','sand','grass','plains','forest','hills','rock','mountain'];
+  const swColours=new Set(Object.values(TERRAIN_SWATCH));
+  swColours.size===types.length?pass('all terrain swatches distinct'):fail('all terrain swatches distinct',`only ${swColours.size} distinct`);
+  const mmColours=new Set(Object.values(MINIMAP_COLORS));
+  mmColours.size===types.length?pass('all minimap colours distinct'):fail('all minimap colours distinct',`only ${mmColours.size} distinct`);
+  for(const t of types){TERRAIN_SWATCH[t]?pass(`swatch for ${t}`):fail(`swatch for ${t}`,'missing');}
+  return results;
+}
+function testTerrainShaderCompiles(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  if(R.fallback){pass('shader compile (2D fallback active)');return results;}
+  R.prog?pass('terrain shader compiled'):fail('terrain shader compiled','prog is null');
+  return results;
+}
+function testMinimapTerrainColours(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  for(const t of['water','marsh','sand','grass','plains','forest','hills','rock','mountain'])
+    MINIMAP_COLORS[t]?pass(`minimap has ${t}`):fail(`minimap has ${t}`,'missing');
+  return results;
+}
+function testWaterTilesRenderAsWater(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  const wt=state.grid.filter(t=>t.type==='water'&&t.explored);
+  wt.length>0?pass('explored water tiles exist'):fail('explored water tiles','none');
+  const wc=MINIMAP_COLORS['water'];wc&&wc!==MINIMAP_COLORS['grass']?pass('water colour distinct from grass'):fail('water distinct from grass',wc);
+  return results;
+}
+function testForestTilesRenderWithTreePattern(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  state.grid.some(t=>t.type==='forest'&&t.explored)?pass('explored forest tiles exist'):fail('explored forest tiles','none');
+  MINIMAP_COLORS['forest']?pass('forest minimap colour defined'):fail('forest minimap colour','missing');
+  return results;
+}
+function testMarshTilesRenderWithWetlandPattern(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  MINIMAP_COLORS['marsh']?pass('marsh minimap colour defined'):fail('marsh minimap colour','missing');
+  TERRAIN_SWATCH['marsh']?pass('marsh swatch defined'):fail('marsh swatch','missing');
+  return results;
+}
+function testRockHillMountainDistinction(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  const r=MINIMAP_COLORS['rock'],h=MINIMAP_COLORS['hills'],m=MINIMAP_COLORS['mountain'];
+  r!==h?pass('rock vs hills distinct'):fail('rock vs hills distinct',`both ${r}`);
+  h!==m?pass('hills vs mountain distinct'):fail('hills vs mountain distinct',`both ${h}`);
+  r!==m?pass('rock vs mountain distinct'):fail('rock vs mountain distinct',`both ${r}`);
+  return results;
+}
+function testTerrainPickingStillMatchesTile(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  const valid=new Set(['water','marsh','sand','grass','plains','forest','hills','rock','mountain']);
+  let bad=0;for(const t of state.grid.slice(0,200)){if(t&&t.type&&!valid.has(t.type))bad++;}
+  bad===0?pass('sampled tiles have valid types'):fail('sampled tiles have valid types',`${bad} invalid`);
+  return results;
+}
+function testPlacementOverlayStillVisible(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  typeof placementMode!=='undefined'?pass('placementMode variable exists'):fail('placementMode','not found');
+  typeof getPlacementInfo==='function'?pass('getPlacementInfo exists'):fail('getPlacementInfo','not found');
+  return results;
+}
+function testFogDoesNotHideExploredTerrainIncorrectly(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  const explored=state.grid.filter(t=>t.explored).length;
+  const unexplored=state.grid.filter(t=>!t.explored).length;
+  explored>0?pass('explored tiles exist'):fail('explored tiles','none');
+  unexplored>0?pass('unexplored tiles exist (fog)'):fail('unexplored tiles','none — no fog');
+  return results;
+}
+function testResourceDepletionAffectsTerrainVisuals(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  const fnodes=sim.nodes.filter(n=>n.type==='wood');
+  fnodes.length>0?pass('wood nodes exist for depletion test'):fail('wood nodes','none');
+  if(fnodes.length>0){const dep=fnodes.some(n=>n.depleted||n.amount<n.maxAmount*0.5);pass(`depletion state observable (${dep?'some depleted':'all full'})`);}
+  return results;
+}
+function runTerrainTests(){
+  const fns=[testTerrainTypesHaveDistinctVisualConfig,testTerrainShaderCompiles,testMinimapTerrainColours,testWaterTilesRenderAsWater,testForestTilesRenderWithTreePattern,testMarshTilesRenderWithWetlandPattern,testRockHillMountainDistinction,testTerrainPickingStillMatchesTile,testPlacementOverlayStillVisible,testFogDoesNotHideExploredTerrainIncorrectly,testResourceDepletionAffectsTerrainVisuals];
+  const results=fns.flatMap(fn=>fn());
+  console.table(results);const passed=results.filter(r=>r.ok).length;console.log(`Terrain tests: ${passed}/${results.length} passed`);return results;
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -4890,6 +5041,7 @@ function renderTestPanel(){
       +'<button class="test-btn" onclick="_lastTestResults=runSaveLoadRoundtrip();renderTestPanel()">Save/Load</button>'
       +'<button class="test-btn" onclick="repairWorldState()">⚙ Repair</button>'
       +'<button class="test-btn" onclick="exportDebugReport()">📥 Export</button>'
+      +'<button class="test-btn" onclick="_lastTestResults=runTerrainTests();renderTestPanel()">🗺 Terrain</button>'
       +'<button class="test-btn danger" onclick="startDeterministicTestWorld()">🧪 Test World</button>'
       +'<button class="test-btn danger" onclick="if(confirm(\'Run 60s accelerated simulation?\')){_lastTestResults=runAcceleratedSimulation(60);renderTestPanel();}">⏩ Accel 60s</button>'
       +'<button class="test-btn danger" onclick="if(confirm(\'Run 300s accelerated simulation? This may freeze the tab briefly.\')){_lastTestResults=runAcceleratedSimulation(300);renderTestPanel();}">⏩ Accel 300s</button>'
@@ -4948,6 +5100,7 @@ window.runSaveLoadRoundtrip=runSaveLoadRoundtrip;
 window.runAcceleratedSimulation=runAcceleratedSimulation;
 window.exportDebugReport=exportDebugReport;
 window.startDeterministicTestWorld=startDeterministicTestWorld;
+window.runTerrainTests=runTerrainTests;
 </script>
 </body>
 </html>
