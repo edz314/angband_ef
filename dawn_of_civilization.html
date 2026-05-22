@@ -97,7 +97,15 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
 .ai-actor-card{background:var(--bg);border:1px solid #28200e;border-radius:3px;padding:4px 5px;font-size:.68em;margin-bottom:3px;}
 .ai-goal{color:#58a880;}.ai-top-task{color:var(--hi);font-weight:bold;}
 .site-card{background:var(--bg);border:1px solid #2a3010;border-radius:3px;padding:3px 6px;font-size:.68em;margin-bottom:3px;}
+.site-mini-card{border-left:3px solid #4a6030;}
 .site-state-ok{color:var(--pos);}.site-state-wait{color:#c09030;}.site-state-block{color:var(--neg);}
+.bld-tier-badge{font-size:.65em;font-weight:bold;border-radius:2px;padding:0 3px;vertical-align:middle;}
+.bld-tier-badge.t0{background:#1a2a10;color:#80c050;border:1px solid #3a5020;}
+.bld-tier-badge.t1{background:#1e2410;color:#a09050;border:1px solid #504020;}
+.bld-tier-badge.t2{background:#1a1e2a;color:#6080c0;border:1px solid #304060;}
+.bld-tier-badge.t3{background:#221a2a;color:#a060c0;border:1px solid #604080;}
+.bld-tier-badge.t4{background:#2a1818;color:#c06040;border:1px solid #804030;}
+.bld-time-est{color:#5a6040;font-size:.88em;}
 .lc-active{color:var(--pos);}.lc-maint{color:#c09030;}.lc-neglect{color:#c07030;}.lc-review{color:#c05020;}.lc-abandon{color:var(--neg);}.lc-demolish{color:#e03030;}
 .route-debug{background:#080d06;border:1px solid #283818;border-radius:2px;padding:3px 5px;font-size:.66em;margin-top:3px;color:#608050;}
 .route-chosen{color:var(--pos);font-weight:bold;}.route-dist{color:var(--neu);}.route-warn{color:#c09030;}
@@ -302,6 +310,36 @@ const BLD_CAPS={
   smokehouse:{food:200,wood:0,stone:0,water:0},
 };
 function getBldCap(k){return BLD_CAPS[k]||{food:40,wood:40,stone:40,water:40};}
+
+const TIER_LABEL=['Quick field structure','Basic survival build','Settlement infrastructure','Major structure','Civic structure — very long'];
+const BLD_BUILD_PROFILES={
+  fishingSpot:{tier:0,requiredWork:10,minBuildTime:8,maxWorkers:2},
+  foragingPatch:{tier:0,requiredWork:8,minBuildTime:6,maxWorkers:2},
+  huntingBlind:{tier:0,requiredWork:12,minBuildTime:8,maxWorkers:2},
+  waterHole:{tier:0,requiredWork:10,minBuildTime:8,maxWorkers:2},
+  leanTo:{tier:0,requiredWork:12,minBuildTime:10,maxWorkers:2},
+  flintKnapping:{tier:0,requiredWork:8,minBuildTime:6,maxWorkers:2},
+  firePit:{tier:1,requiredWork:18,minBuildTime:15,maxWorkers:3},
+  dryingRack:{tier:1,requiredWork:20,minBuildTime:15,maxWorkers:3},
+  huntingCamp:{tier:1,requiredWork:22,minBuildTime:18,maxWorkers:3},
+  rootCellar:{tier:1,requiredWork:25,minBuildTime:20,maxWorkers:3},
+  storagePit:{tier:1,requiredWork:28,minBuildTime:22,maxWorkers:3},
+  lumberCamp:{tier:1,requiredWork:20,minBuildTime:16,maxWorkers:3},
+  smokehouse:{tier:2,requiredWork:45,minBuildTime:35,maxWorkers:4},
+  earthLodge:{tier:2,requiredWork:50,minBuildTime:40,maxWorkers:4},
+  mine:{tier:2,requiredWork:55,minBuildTime:45,maxWorkers:4},
+  field:{tier:2,requiredWork:40,minBuildTime:32,maxWorkers:4},
+  potteryKiln:{tier:2,requiredWork:50,minBuildTime:40,maxWorkers:4},
+  shrine:{tier:2,requiredWork:45,minBuildTime:36,maxWorkers:4},
+  palisade:{tier:2,requiredWork:55,minBuildTime:44,maxWorkers:4},
+  watchPost:{tier:2,requiredWork:50,minBuildTime:40,maxWorkers:4},
+  wellShaft:{tier:3,requiredWork:90,minBuildTime:75,maxWorkers:5},
+  pasture:{tier:3,requiredWork:80,minBuildTime:65,maxWorkers:5},
+  granary:{tier:3,requiredWork:85,minBuildTime:70,maxWorkers:5},
+  longhouse:{tier:3,requiredWork:95,minBuildTime:80,maxWorkers:5},
+  market:{tier:3,requiredWork:90,minBuildTime:75,maxWorkers:5},
+  greatHall:{tier:4,requiredWork:180,minBuildTime:180,maxWorkers:6},
+};
 
 // ── TECHNOLOGIES ──────────────────────────────────────────────────────────────
 const TECHS={
@@ -1101,13 +1139,18 @@ function renderGame(){
     const tile=state.grid[site.tileId];if(!tile.explored) continue;
     const stx=site.tileId%COLS,sty=Math.floor(site.tileId/COLS);
     const spx=stx*TP,spy=sty*TP;
-    ctx.fillStyle='rgba(55,42,16,0.82)';ctx.fillRect(spx+1,spy+1,TP-2,TP-2);
-    ctx.strokeStyle='rgba(110,82,32,0.45)';ctx.lineWidth=0.55;
+    const ph2d=sitePhase(site);
+    const bg2d=ph2d==='almost_done'?'rgba(200,160,20,0.72)':ph2d==='building'?'rgba(110,82,32,0.82)':ph2d==='build_ready'?'rgba(30,80,30,0.82)':ph2d==='resources_in_transit'?'rgba(20,60,110,0.82)':'rgba(55,42,16,0.82)';
+    ctx.fillStyle=bg2d;ctx.fillRect(spx+1,spy+1,TP-2,TP-2);
+    const cr2d=ph2d==='build_ready'?'rgba(60,180,60,0.7)':ph2d==='resources_in_transit'?'rgba(60,130,220,0.7)':ph2d==='almost_done'?'rgba(240,200,60,0.8)':'rgba(160,110,40,0.6)';
+    ctx.strokeStyle=cr2d;ctx.lineWidth=0.55;
     ctx.beginPath();ctx.moveTo(spx+1,spy+TP/2);ctx.lineTo(spx+TP-1,spy+TP/2);ctx.stroke();
     ctx.beginPath();ctx.moveTo(spx+TP/2,spy+1);ctx.lineTo(spx+TP/2,spy+TP-1);ctx.stroke();
     const ang=-Math.PI/2+site.progress*Math.PI*2;
-    ctx.strokeStyle='rgba(240,192,80,0.68)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,TP/2-1.5,-Math.PI/2,ang);ctx.stroke();
-    if(!siteMet(site)){ctx.fillStyle='rgba(190,75,18,0.55)';ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,2,0,Math.PI*2);ctx.fill();}
+    const ring2d=ph2d==='almost_done'?'rgba(240,200,40,0.85)':ph2d==='build_ready'?'rgba(60,200,80,0.72)':ph2d==='resources_in_transit'?'rgba(100,100,200,0.55)':'rgba(240,192,80,0.68)';
+    ctx.strokeStyle=ring2d;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,TP/2-1.5,-Math.PI/2,ang);ctx.stroke();
+    if(ph2d==='awaiting_resources'){ctx.fillStyle='rgba(190,120,18,0.6)';ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,2,0,Math.PI*2);ctx.fill();}
+    else if(ph2d==='resources_in_transit'){ctx.fillStyle='rgba(60,130,220,0.55)';ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,2,0,Math.PI*2);ctx.fill();}
   }
   for(let ty2=ty0;ty2<=ty1;ty2++) for(let tx2=tx0;tx2<=tx1;tx2++){
     const tile=state.grid[ty2*COLS+tx2];if(!tile.building||!tile.explored) continue;
@@ -1364,13 +1407,18 @@ function renderGameOverlay(){
     for(const site of sim.sites){
       if(site.complete)continue;const tile=state.grid[site.tileId];if(!tile.explored)continue;
       const stx2=site.tileId%COLS,sty2=Math.floor(site.tileId/COLS);const spx=stx2*TP,spy=sty2*TP;
-      ctx.fillStyle='rgba(55,42,16,0.82)';ctx.fillRect(spx+1,spy+1,TP-2,TP-2);
-      ctx.strokeStyle='rgba(110,82,32,0.45)';ctx.lineWidth=0.55;
+      const phB=sitePhase(site);
+      const bgB=phB==='almost_done'?'rgba(200,160,20,0.72)':phB==='building'?'rgba(110,82,32,0.82)':phB==='build_ready'?'rgba(30,80,30,0.82)':phB==='resources_in_transit'?'rgba(20,60,110,0.82)':'rgba(55,42,16,0.82)';
+      ctx.fillStyle=bgB;ctx.fillRect(spx+1,spy+1,TP-2,TP-2);
+      const crB=phB==='build_ready'?'rgba(60,180,60,0.7)':phB==='resources_in_transit'?'rgba(60,130,220,0.7)':phB==='almost_done'?'rgba(240,200,60,0.8)':'rgba(160,110,40,0.6)';
+      ctx.strokeStyle=crB;ctx.lineWidth=0.55;
       ctx.beginPath();ctx.moveTo(spx+1,spy+TP/2);ctx.lineTo(spx+TP-1,spy+TP/2);ctx.stroke();
       ctx.beginPath();ctx.moveTo(spx+TP/2,spy+1);ctx.lineTo(spx+TP/2,spy+TP-1);ctx.stroke();
       const ang=-Math.PI/2+site.progress*Math.PI*2;
-      ctx.strokeStyle='rgba(240,192,80,0.68)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,TP/2-1.5,-Math.PI/2,ang);ctx.stroke();
-      if(!siteMet(site)){ctx.fillStyle='rgba(190,75,18,0.55)';ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,2,0,Math.PI*2);ctx.fill();}
+      const ringB=phB==='almost_done'?'rgba(240,200,40,0.85)':phB==='build_ready'?'rgba(60,200,80,0.72)':phB==='resources_in_transit'?'rgba(100,100,200,0.55)':'rgba(240,192,80,0.68)';
+      ctx.strokeStyle=ringB;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,TP/2-1.5,-Math.PI/2,ang);ctx.stroke();
+      if(phB==='awaiting_resources'){ctx.fillStyle='rgba(190,120,18,0.6)';ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,2,0,Math.PI*2);ctx.fill();}
+      else if(phB==='resources_in_transit'){ctx.fillStyle='rgba(60,130,220,0.55)';ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,2,0,Math.PI*2);ctx.fill();}
     }
     for(let ty2=ty0;ty2<=ty1;ty2++) for(let tx2=tx0;tx2<=tx1;tx2++){
       const tile=state.grid[ty2*COLS+tx2];if(!tile.building||!tile.explored)continue;
@@ -1458,16 +1506,22 @@ function renderGameOverlay(){
   for(const site of sim.sites){
     if(site.complete)continue;const tile=state.grid[site.tileId];if(!tile.explored)continue;
     const stx2=site.tileId%COLS,sty2=Math.floor(site.tileId/COLS);
-    drawTileQuad(ctx,stx2,sty2,'rgba(55,42,16,0.82)',1);
+    const ph=sitePhase(site);
+    const phaseOverlay=ph==='almost_done'?'rgba(200,160,20,0.72)':ph==='building'?'rgba(110,82,32,0.82)':ph==='build_ready'?'rgba(30,80,30,0.82)':ph==='resources_in_transit'?'rgba(20,60,110,0.82)':'rgba(55,42,16,0.82)';
+    drawTileQuad(ctx,stx2,sty2,phaseOverlay,1);
     const elev=tileBaseElevation(stx2,sty2);const scr=worldToScreen(stx2*TP+TP/2,elev,sty2*TP+TP/2);
     if(!scr.behind){
       const sz=Math.max(5,TP*0.5*_entityScale);
-      ctx.strokeStyle='rgba(110,82,32,0.55)';ctx.lineWidth=0.8;
+      const crossCol=ph==='build_ready'?'rgba(60,180,60,0.7)':ph==='resources_in_transit'?'rgba(60,130,220,0.7)':ph==='almost_done'?'rgba(240,200,60,0.8)':'rgba(160,110,40,0.6)';
+      ctx.strokeStyle=crossCol;ctx.lineWidth=0.8;
       ctx.beginPath();ctx.moveTo(scr.x-sz,scr.y);ctx.lineTo(scr.x+sz,scr.y);ctx.stroke();
       ctx.beginPath();ctx.moveTo(scr.x,scr.y-sz);ctx.lineTo(scr.x,scr.y+sz);ctx.stroke();
+      const ringCol=ph==='almost_done'?'rgba(240,200,40,0.85)':ph==='building'?'rgba(240,192,80,0.72)':ph==='build_ready'?'rgba(60,200,80,0.72)':'rgba(100,100,160,0.5)';
       const ang=-Math.PI/2+site.progress*Math.PI*2;
-      ctx.strokeStyle='rgba(240,192,80,0.72)';ctx.lineWidth=Math.max(1,1.2*_entityScale);ctx.beginPath();ctx.arc(scr.x,scr.y,sz,-Math.PI/2,ang);ctx.stroke();
-      if(!siteMet(site)){ctx.fillStyle='rgba(190,75,18,0.55)';ctx.beginPath();ctx.arc(scr.x,scr.y,Math.max(2,2*_entityScale),0,Math.PI*2);ctx.fill();}
+      ctx.strokeStyle=ringCol;ctx.lineWidth=Math.max(1,1.2*_entityScale);
+      ctx.beginPath();ctx.arc(scr.x,scr.y,sz,-Math.PI/2,ang);ctx.stroke();
+      if(ph==='awaiting_resources'){ctx.fillStyle='rgba(190,120,18,0.6)';ctx.beginPath();ctx.arc(scr.x,scr.y,Math.max(2,2*_entityScale),0,Math.PI*2);ctx.fill();}
+      else if(ph==='resources_in_transit'){ctx.fillStyle='rgba(60,130,220,0.55)';ctx.beginPath();ctx.arc(scr.x,scr.y,Math.max(2,2*_entityScale),0,Math.PI*2);ctx.fill();}
     }
   }
   const entities=[];
@@ -1945,6 +1999,24 @@ function consumeRes(res,amt){
   let rem=amt;
   for(const tid of Object.keys(sim.bldInv)){if(rem<=0) break;const t=Math.min(sim.bldInv[tid][res]||0,rem);sim.bldInv[tid][res]-=t;rem-=t;}
 }
+function addResNearest(fromX,fromY,res,amt){
+  const bld=findBestSupportBuilding({fromX,fromY,purpose:'deposit_resource',resource:res,amount:amt});
+  if(bld) deposit(bld.tileId,res,amt);
+}
+function cancelConstruction(siteId){
+  const site=sim.sites.find(s=>s.id===siteId);if(!site||site.pinned) return;
+  const cx=(site.tileId%COLS)*TP+TP/2,cy=Math.floor(site.tileId/COLS)*TP+TP/2;
+  for(const [r,v] of Object.entries(site.reserved)){
+    const refund=Math.max(0,v-(site.delivered[r]||0)-(site.inTransit[r]||0));
+    if(refund>0) addResNearest(cx,cy,r,refund);
+    if((site.delivered[r]||0)>0) addResNearest(cx,cy,r,site.delivered[r]);
+  }
+  state.grid[site.tileId].constrSiteId=null;
+  for(const a of sim.actors) if(a.task?.siteId===siteId) clearTask(a);
+  sim.sites=sim.sites.filter(s=>s.id!==siteId);
+  addLog('Construction cancelled. Materials returned.','warn');
+  renderSidebar();renderResources();
+}
 
 // ── SUPPORT BUILDING RESOLVER ─────────────────────────────────────────────────
 function isOperational(tileId){const meta=sim.bldMeta[tileId];return !!(meta&&!meta.abandoned&&!meta.demolitionQueued&&meta.condition>0);}
@@ -2074,16 +2146,48 @@ function updateBuildingCondition(){
 // ── CONSTRUCTION SITES ────────────────────────────────────────────────────────
 function createSite(tileId,bldKey){
   const b=BUILDINGS[bldKey];if(!b) return null;
+  const bp=BLD_BUILD_PROFILES[bldKey]||{tier:1,requiredWork:30,minBuildTime:20,maxWorkers:3};
   const tile=state.grid[tileId];tile.constrSiteId=sim.nextId;
   const tx=tileId%COLS,ty=Math.floor(tileId/COLS);
-  const site={id:sim.nextId++,tileId,bldKey,required:{...b.cost},delivered:{},progress:0,buildWork:0,totalWork:Object.values(b.cost).reduce((s,v)=>s+v,0)*1.5+10,complete:false,px:tx*TP+TP/2,py:ty*TP+TP/2};
+  const reserved={};
+  for(const [r,v] of Object.entries(b.cost)){consumeRes(r,v);reserved[r]=v;}
+  const site={id:sim.nextId++,tileId,bldKey,required:{...b.cost},reserved,inTransit:{},delivered:{},
+    phase:'awaiting_resources',progress:0,completedWork:0,totalWork:bp.requiredWork,
+    minBuildTime:bp.minBuildTime,buildStartTime:null,complete:false,pinned:false,
+    px:tx*TP+TP/2,py:ty*TP+TP/2};
   sim.sites.push(site);
-  for(const [r,v] of Object.entries(b.cost)) consumeRes(r,v);
-  for(const [r,v] of Object.entries(b.cost)) site.delivered[r]=v;
+  addLog(`🚧 ${b.name} site placed. Actors will carry materials.`);
   return site;
 }
 function siteNeedsRes(site){for(const [k,v] of Object.entries(site.required)) if((site.delivered[k]||0)<v) return k;return null;}
 function siteMet(site){return Object.keys(site.required).every(k=>(site.delivered[k]||0)>=site.required[k]);}
+function siteDeliveryPending(site){
+  return Object.entries(site.required).some(([k,v])=>{
+    const covered=(site.delivered[k]||0)+(site.inTransit[k]||0);
+    const free=Math.max(0,(site.reserved[k]||0)-(site.inTransit[k]||0));
+    return covered<v&&free>0;
+  });
+}
+function _siteCarryLoad(site,capacity){
+  const load={};let total=0;
+  for(const [r,v] of Object.entries(site.required)){
+    const covered=(site.delivered[r]||0)+(site.inTransit[r]||0);
+    const needed=Math.max(0,v-covered);
+    const free=Math.max(0,(site.reserved[r]||0)-(site.inTransit[r]||0));
+    const canCarry=Math.min(needed,free,capacity-total);
+    if(canCarry>0){load[r]=canCarry;total+=canCarry;}
+  }
+  return total>0?load:null;
+}
+function sitePhase(site){
+  if(site.completedWork>0){
+    if(site.completedWork/site.totalWork>=0.9) return 'almost_done';
+    return 'building';
+  }
+  if(siteMet(site)) return 'build_ready';
+  if(Object.values(site.inTransit||{}).some(v=>v>0)) return 'resources_in_transit';
+  return 'awaiting_resources';
+}
 
 // ── MEMORY SYSTEM ─────────────────────────────────────────────────────────────
 function addMemory(actor,type,targetId,tileId,value,confidence=0.7,emotionalWeight=0){
@@ -2510,7 +2614,9 @@ function generateCandidates(actor){
   }
   for(const site of sim.sites){
     if(site.complete) continue;
-    if(siteMet(site)){if(assignedCount('build',site.id)>=3) continue;cands.push({type:'build',site});}
+    const bp=BLD_BUILD_PROFILES[site.bldKey]||{tier:1,requiredWork:30,minBuildTime:20,maxWorkers:3};
+    if(siteDeliveryPending(site)){const dCnt=assignedCount('deliver',site.id);if(dCnt<Math.ceil(bp.maxWorkers/2)) cands.push({type:'deliver_to_site',site});}
+    if(siteMet(site)){const bCnt=assignedCount('build',site.id);if(bCnt<bp.maxWorkers) cands.push({type:'build',site});}
   }
   if(state.autoMaintain){
     for(const [tid,meta] of Object.entries(sim.bldMeta)){
@@ -2614,6 +2720,14 @@ function utilityScore(actor,cand){
     score+=getIntentBonus('build',null,null,site.tileId);
     score+=getSocialFitBonus(actor,'build',site.id);
     reasons.push('builder:'+actor.apt.builder);reasons.push('build '+BUILDINGS[site.bldKey]?.name.split(' ')[0]);
+  } else if(cand.type==='deliver_to_site'){
+    const site=cand.site;const apt=actor.aptB('carrier');const dist=actor.dist(site.px,site.py);
+    score+=22+apt*20-dist*0.004-fatPen*0.5+actor.traitFx('buildScore',0)*8;
+    if(actor.hasTrait('industrious')){score+=10;reasons.push('industrious');}
+    if(actor.hasTrait('lazy')&&crisis!=='starvation'){score-=14;penalties.push('lazy');}
+    score+=getIntentBonus('build',null,null,site.tileId);
+    const bpD=BLD_BUILD_PROFILES[site.bldKey]||{tier:1};
+    reasons.push('deliver t'+bpD.tier+' '+BUILDINGS[site.bldKey]?.name.split(' ')[0]);
   } else if(cand.type==='maintain'){
     const meta=cand.meta;const tid=cand.tid;const apt=actor.aptB('builder');
     const useful=cand.useful??scoreBuildingUsefulness(tid);
@@ -2659,6 +2773,7 @@ function taskLabel(cand){
   if(cand.type==='hunt') return'Hunt '+cand.wg.name;
   if(cand.type==='fish') return'Fish '+cand.wg.name;
   if(cand.type==='build') return'Build '+BUILDINGS[cand.site.bldKey]?.name.split(' ')[0];
+  if(cand.type==='deliver_to_site') return'Deliver → '+BUILDINGS[cand.site.bldKey]?.name.split(' ')[0];
   if(cand.type==='maintain') return'Repair '+(BUILDINGS[cand.bk]?.name.split(' ')[0]||'building');
   if(cand.type==='demolish') return'Demolish building';
   if(cand.type==='emergencyForage') return'Emergency forage!';
@@ -2681,6 +2796,14 @@ function assignTaskFromCandidate(actor,cand){
   } else if(cand.type==='build'){
     const site=cand.site;actor.task={type:'build',siteId:site.id};actor.state='moving_to_construction';
     actor.tx=site.px;actor.ty=site.py;actor.goal='Build '+BUILDINGS[site.bldKey]?.name.split(' ')[0];
+  } else if(cand.type==='deliver_to_site'){
+    const site=cand.site;
+    const load=_siteCarryLoad(site,actor.inv.capacity);
+    if(!load){clearTask(actor);return;}
+    for(const [r,v] of Object.entries(load)) site.inTransit[r]=(site.inTransit[r]||0)+v;
+    actor.task={type:'pickup_for_site',siteId:site.id,deliverLoad:load};
+    actor.state='moving_to_construction';actor.tx=site.px;actor.ty=site.py;
+    actor.goal='Deliver → '+BUILDINGS[site.bldKey]?.name.split(' ')[0];
   } else if(cand.type==='maintain'){
     const supplyBld=cand.supplyBld;
     actor.task={type:'maintain',maintainTileId:cand.tid,bk:cand.bk,supplyTileId:supplyBld?.tileId??null,materialsFetched:supplyBld==null};
@@ -2759,6 +2882,10 @@ function assignedCount(taskType,targetId){
 function clearTask(actor){
   if(actor.task?.nodeId!=null){const n=sim.nodes.find(nd=>nd.id===actor.task.nodeId);if(n) n.assignedActors=n.assignedActors.filter(i=>i!==actor.id);}
   if(actor.task?.wildlifeId!=null){const wg=sim.wildlife.find(w=>w.id===actor.task.wildlifeId);if(wg) wg.assignedHunters=(wg.assignedHunters||[]).filter(i=>i!==actor.id);}
+  if(actor.task?.type==='pickup_for_site'&&actor.task?.deliverLoad){
+    const site=sim.sites.find(s=>s.id===actor.task.siteId);
+    if(site){for(const [r,v] of Object.entries(actor.task.deliverLoad)) site.inTransit[r]=Math.max(0,(site.inTransit[r]||0)-v);}
+  }
   actor.task=null;actor.idleX=actor.px;actor.idleY=actor.py;
   const fatRest=actor.fatigue>65?Math.max(2,(actor.fatigue-50)/5):0;
   if(fatRest>0){actor.state='resting';actor.restTimer=fatRest;}
@@ -2924,16 +3051,46 @@ function updateActors(dt){
       }
       case'moving_to_construction':{
         const site=sim.sites.find(s=>s.id===actor.task?.siteId);if(!site){clearTask(actor);break;}
-        if(actor.move(site.px,site.py,dt)){actor.state='building';actor.timer=0;actor.lastStateChange=sim.gameTime;}
+        if(actor.move(site.px,site.py,dt)){
+          if(actor.task?.type==='pickup_for_site'&&actor.task?.deliverLoad){
+            const load=actor.task.deliverLoad;
+            for(const [r,v] of Object.entries(load)){
+              site.inTransit[r]=Math.max(0,(site.inTransit[r]||0)-v);
+              site.delivered[r]=(site.delivered[r]||0)+v;
+            }
+            actor.gainExp('carrier',0.03);
+            if(siteMet(site)&&!site._deliveredLogged){
+              site._deliveredLogged=true;
+              addLog(`📦 ${BUILDINGS[site.bldKey]?.name}: all materials delivered. Building begins.`,'imp');
+            }
+            if(siteMet(site)&&actor.aptB('builder')>0.3){
+              actor.task={type:'build',siteId:site.id};actor.state='building';actor.timer=0;actor.lastStateChange=sim.gameTime;
+            } else {clearTask(actor);}
+          } else {
+            actor.state='building';actor.timer=0;actor.lastStateChange=sim.gameTime;
+          }
+        }
         break;
       }
       case'building':{
         const site=sim.sites.find(s=>s.id===actor.task?.siteId);if(!site){clearTask(actor);break;}
         if(!siteMet(site)){clearTask(actor);break;}
-        const buildRate=0.5+actor.aptB('builder')*0.8;
-        site.buildWork+=dt*buildRate;site.progress=Math.min(1,site.buildWork/site.totalWork);
+        if(site.buildStartTime==null) site.buildStartTime=sim.gameTime;
+        const elapsed=sim.gameTime-site.buildStartTime;
+        const fatigueMod=Math.max(0.4,1-actor.fatigue*0.006);
+        const toolMod=state.techs.toolMaking?1.2:1;
+        const traitMod=1+actor.traitFx('buildScore',0)*0.3+(actor.hasTrait('industrious')?0.15:0)+(actor.hasTrait('careful')?0.05:0)-(actor.hasTrait('lazy')?0.2:0);
+        const coordMod=assignedCount('build',site.id)>1?1.12:1;
+        const baseRate=0.5+actor.aptB('builder')*0.8;
+        const effectiveRate=baseRate*fatigueMod*toolMod*traitMod*coordMod*(elapsed<site.minBuildTime?0.5:1);
+        site.completedWork+=dt*effectiveRate;
+        site.progress=Math.min(1,site.completedWork/site.totalWork);
         actor.gainExp('builder',0.04);
-        if(site.buildWork>=site.totalWork) completeSite(site);
+        if(site.completedWork>=site.totalWork*0.9&&!site._almostLogged){
+          site._almostLogged=true;
+          addLog(`🔨 ${BUILDINGS[site.bldKey]?.name}: almost done!`,'imp');
+        }
+        if(site.completedWork>=site.totalWork) completeSite(site);
         break;
       }
       case'hunting':{
@@ -3164,7 +3321,8 @@ function completeSite(site){
   initInv(site.tileId,site.bldKey,{});initBldMeta(site.tileId,site.bldKey);
   updateVisibility();
   state.cap={...computeStorageCaps(),pop:computePopCap()};
-  addLog(`✦ ${BUILDINGS[site.bldKey].name} complete!`,'imp');
+  const bpC=BLD_BUILD_PROFILES[site.bldKey]||{tier:0};
+  addLog(`✦ ${BUILDINGS[site.bldKey].name} complete! [${TIER_LABEL[bpC.tier]||''}]`,'imp');
   renderSidebar();
 }
 
@@ -3387,12 +3545,18 @@ function autoBuilderEvaluate(){
   const activeSites=sim.sites.filter(s=>!s.complete).length;if(activeSites>=3) return;
   const fd=foodDays(),waterAmt=totalRes('water'),pop=state.res.pop,popCap=computePopCap();
   const wood=totalRes('wood'),stone=totalRes('stone');
+  const crisis=sim.crisisMode;
   function hasBuilt(key){return state.grid.some(t=>t.building===key)||sim.sites.some(s=>!s.complete&&s.bldKey===key);}
   function tryBuild(key){
     const b=BUILDINGS[key];if(!b) return false;if(!meetsReqs(b.req)) return false;if(!canAffordCheck(b.cost)) return false;
+    const bp=BLD_BUILD_PROFILES[key]||{tier:1};
+    // During food/water crisis avoid tier 3+ buildings
+    if((crisis==='starvation'||crisis==='food'||crisis==='water')&&bp.tier>=3) return false;
+    // Avoid Great Hall entirely unless very stable
+    if(key==='greatHall'&&(fd<8||waterAmt<pop*5)) return false;
     let best=null,bestScore=-1;
     for(const tile of state.grid){if(!tile.explored) continue;const info=getPlacementInfo(key,tile.id);if(info.valid&&info.score>bestScore){bestScore=info.score;best=tile;}}
-    if(!best||bestScore<25) return false;createSite(best.id,key);addLog(`⚙ Auto: Constructing ${b.name}.`,'imp');return true;
+    if(!best||bestScore<25) return false;createSite(best.id,key);addLog(`⚙ Auto: Constructing ${b.name} [T${bp.tier}].`,'imp');return true;
   }
   if(waterAmt<pop*3&&!hasBuilt('waterHole')){if(tryBuild('waterHole')) return;}
   if(fd<4){
@@ -3481,7 +3645,10 @@ function renderAlerts(){
   for(const [tid,meta] of Object.entries(sim.bldMeta)){
     if(meta.condition<25&&!meta.abandoned){const bName=BUILDINGS[state.grid[+tid]?.building]?.name||'Building';alerts.push({msg:`🔧 ${bName}: ${Math.floor(meta.condition)}%`,tileId:+tid});}
   }
-  for(const site of sim.sites){if(site.complete) continue;if(!siteMet(site)) alerts.push({msg:`🚧 ${BUILDINGS[site.bldKey]?.name||site.bldKey}: awaiting resources`});}
+  const pendingSites=sim.sites.filter(s=>!s.complete&&!siteMet(s)&&!siteDeliveryPending(s)&&Object.values(s.inTransit||{}).every(v=>v===0));
+  if(pendingSites.length>0) alerts.push({msg:`🚧 ${pendingSites.length} site(s) blocked: no delivery assigned`});
+  const backlogSites=sim.sites.filter(s=>!s.complete&&s.completedWork===0&&assignedCount('build',s.id)===0&&siteMet(s));
+  if(backlogSites.length>0) alerts.push({msg:`🏗 ${backlogSites.length} site(s) ready but no builder assigned`});
   const idleN=sim.actors.filter(a=>a.state==='idle'&&a.restTimer<=0).length;if(idleN>=3) alerts.push({msg:`⏸ ${idleN} actors idle`});
   const stuckN=sim.actors.filter(a=>a.stuckLog).length;if(stuckN>0) alerts.push({msg:`⚠ ${stuckN} actor(s) recovered from stuck`});
   if(sim.threats.some(t=>t.active)) alerts.push({msg:'☠ Active predator threat!'});
@@ -3501,8 +3668,31 @@ function renderSidebar(){
     btn.className='bld-btn'+(locked?' locked':'')+(state.selected===key?' selected':'');
     btn.onclick=()=>{selectBuilding(key);trackInteraction();};
     const costStr=Object.entries(b.cost).map(([r,v])=>`${RES_ICON[r]}${v}`).join(' ');
-    btn.innerHTML=`<span class="bld-icon">${b.icon}</span><span class="bld-meta"><div class="bld-name">${b.name}</div><div class="bld-cost">${costStr}</div></span>`;
+    const bp=BLD_BUILD_PROFILES[key]||{tier:1,minBuildTime:20};
+    const tierBadge=`<span class="bld-tier-badge t${bp.tier}">T${bp.tier}</span>`;
+    const timeEst=bp.minBuildTime<30?Math.ceil(bp.minBuildTime/20)+'d+':bp.minBuildTime<90?Math.ceil(bp.minBuildTime/20)+'d+':'long';
+    btn.innerHTML=`<span class="bld-icon">${b.icon}</span><span class="bld-meta"><div class="bld-name">${b.name} ${tierBadge}</div><div class="bld-cost">${costStr} <span class="bld-time-est">~${timeEst}</span></div></span>`;
     list.appendChild(btn);
+  }
+  // Construction mini-cards
+  const activeSites=sim.sites.filter(s=>!s.complete);
+  if(activeSites.length>0){
+    const header=document.createElement('div');
+    header.style.cssText='color:var(--hi);font-size:.68em;font-weight:bold;margin:6px 0 3px;border-top:1px solid var(--border);padding-top:4px';
+    header.textContent=`🚧 Building (${activeSites.length})`;
+    list.appendChild(header);
+    for(const site of activeSites){
+      const b=BUILDINGS[site.bldKey];const bp=BLD_BUILD_PROFILES[site.bldKey]||{tier:1,maxWorkers:3};
+      const ph=sitePhase(site);
+      const phCol={awaiting_resources:'#c09030',resources_in_transit:'#4080c0',build_ready:'#50a050',building:'#c0a030',almost_done:'#e0b020'}[ph]||'var(--neu)';
+      const card=document.createElement('div');card.className='site-card site-mini-card';
+      card.style.cursor='pointer';
+      card.onclick=()=>{const tile=state.grid[site.tileId];if(tile){focusTile(site.tileId);showTileInfo(tile);}};
+      const pct=Math.floor(site.progress*100);
+      const builders=assignedCount('build',site.id);
+      card.innerHTML=`<div style="display:flex;justify-content:space-between"><span style="color:var(--hi)">${b?.icon} ${b?.name}</span><span class="bld-tier-badge t${bp.tier}">T${bp.tier}</span></div><div style="color:${phCol};font-size:.88em">${ph.replace(/_/g,' ')} ${pct>0?pct+'%':''}</div><div style="color:var(--neu);font-size:.82em">builders:${builders}</div>`;
+      list.appendChild(card);
+    }
   }
 }
 
@@ -3667,11 +3857,13 @@ function renderDebugPanel(){
     if(activeSites.length>0){
       const h=document.createElement('div');h.style.cssText='color:var(--hi);font-size:.68em;font-weight:bold;margin-bottom:3px';h.textContent='Construction Sites:';sdp.appendChild(h);
       for(const site of activeSites){
-        const b=BUILDINGS[site.bldKey],builders=assignedCount('build',site.id),ready=siteMet(site);
+        const b=BUILDINGS[site.bldKey],builders=assignedCount('build',site.id),deliverers=assignedCount('deliver',site.id);
+        const ph=sitePhase(site);
+        const bp=BLD_BUILD_PROFILES[site.bldKey]||{tier:1,maxWorkers:3};
         const card=document.createElement('div');card.className='site-card';
-        const stateStr=ready?`ready (${builders} building)`:'materials delivered';
-        const stateClass=ready?'site-state-ok':'site-state-wait';
-        card.innerHTML=`<div><span style="color:var(--hi)">${b?.name||site.bldKey}</span> <span class="${stateClass}">${stateStr}</span></div><div style="color:var(--neu)">Progress: ${Math.floor(site.progress*100)}%</div>`;
+        const phCol={awaiting_resources:'#c09030',resources_in_transit:'#4080c0',build_ready:'site-state-ok',building:'#c0a030',almost_done:'#e0b020'}[ph];
+        const stateClass=ph==='build_ready'?'site-state-ok':ph==='almost_done'?'site-state-ok':'site-state-wait';
+        card.innerHTML=`<div><span style="color:var(--hi)">${b?.name||site.bldKey}</span> <span class="${stateClass}">[T${bp.tier}] ${ph.replace(/_/g,' ')}</span></div><div style="color:var(--neu)">Work: ${Math.floor(site.progress*100)}% | build:${builders} carry:${deliverers}</div>`;
         sdp.appendChild(card);
       }
     }
@@ -3740,10 +3932,32 @@ function showTileInfo(tile){
   if(tile.constrSiteId){
     const site=sim.sites.find(s=>s.id===tile.constrSiteId);
     if(site){
-      const ready=siteMet(site);const builders=assignedCount('build',site.id);
-      html+=`<div class="ti-prod" style="margin-top:3px">🚧 Building: ${BUILDINGS[site.bldKey]?.name} — ${Math.floor(site.progress*100)}%</div>`;
-      html+=`<div class="ti-prod">${ready?'✓ Ready to build':'Materials delivered'}</div>`;
-      html+=`<div style="font-size:.72em;color:var(--neu)">Builders assigned: ${builders}</div>`;
+      const bp=BLD_BUILD_PROFILES[site.bldKey]||{tier:1,requiredWork:30,minBuildTime:20,maxWorkers:3};
+      const ph=sitePhase(site);
+      const phLabel={awaiting_resources:'⏳ Awaiting materials',resources_in_transit:'🚚 Materials in transit',build_ready:'✅ Ready to build',building:'🔨 Under construction',almost_done:'⚡ Almost done!'}[ph]||ph;
+      const phColor={awaiting_resources:'#c09030',resources_in_transit:'#4080c0',build_ready:'#50a050',building:'#c0a030',almost_done:'#e0b020'}[ph]||'var(--neu)';
+      html+=`<div style="margin-top:4px;font-weight:bold;color:${phColor}">${BUILDINGS[site.bldKey]?.icon} ${BUILDINGS[site.bldKey]?.name}</div>`;
+      html+=`<div style="font-size:.73em;color:${phColor}">${phLabel}</div>`;
+      html+=`<div style="font-size:.72em;color:#7a8050;margin-top:2px">Tier ${bp.tier} — ${TIER_LABEL[bp.tier]||''}</div>`;
+      const resRows=Object.entries(site.required).map(([r,v])=>{
+        const del=site.delivered[r]||0,transit=site.inTransit[r]||0;
+        const pct=Math.min(100,Math.floor(del/v*100));
+        const col=del>=v?'var(--pos)':transit>0?'#4080c0':'#c09030';
+        return`<span style="color:${col}">${RES_ICON[r]||r}${del}${transit>0?'+'+transit:''}/${v}</span>`;
+      }).join(' ');
+      html+=`<div style="font-size:.72em;margin-top:2px">Materials: ${resRows}</div>`;
+      const builders=assignedCount('build',site.id);const deliverers=assignedCount('deliver',site.id);
+      html+=`<div style="font-size:.72em;color:var(--neu);margin-top:2px">Builders: ${builders}/${bp.maxWorkers} | Carriers: ${deliverers}</div>`;
+      if(site.completedWork>0){
+        const pct=Math.floor(site.progress*100);
+        const elapsed=site.buildStartTime!=null?sim.gameTime-site.buildStartTime:0;
+        html+=`<div style="font-size:.72em;margin-top:2px">Work: ${pct}% (${site.completedWork.toFixed(0)}/${site.totalWork})</div>`;
+      }
+      html+=`<div style="display:flex;gap:3px;margin-top:4px">
+        <button class="pin-btn" onclick="(function(){const s=sim.sites.find(x=>x.id===${site.id});if(s){s.pinned=!s.pinned;showTileInfo(state.grid[${tile.id}]);}})()">
+          ${site.pinned?'📌 Unpin':'📌 Pin'}</button>
+        <button class="maint-btn" style="background:#502020;border-color:#804040;color:#e08080" onclick="cancelConstruction(${site.id});showTileInfo(state.grid[${tile.id}])">
+          Cancel</button></div>`;
     }
   }
   const wg=sim.wildlife.find(w=>w.tileX===tile.id%COLS&&w.tileY===Math.floor(tile.id/COLS)&&w.discovered);
@@ -3751,7 +3965,9 @@ function showTileInfo(tile){
   if(state.selected&&state.selected!==tile.building){
     const info=getPlacementInfo(state.selected,tile.id);
     html+=`<div style="border-top:1px solid var(--border);margin-top:5px;padding-top:4px;font-size:.73em">`;
-    html+=`<div style="color:${info.valid?'var(--pos)':'var(--neg)'}">${BUILDINGS[state.selected].icon} ${BUILDINGS[state.selected].name}: ${info.valid?'✓ Valid (score:'+info.score+')':'✗ Invalid'}</div>`;
+    const selBp=BLD_BUILD_PROFILES[state.selected]||{tier:1,requiredWork:30,minBuildTime:20,maxWorkers:3};
+    html+=`<div style="color:${info.valid?'var(--pos)':'var(--neg)'}">${BUILDINGS[state.selected].icon} ${BUILDINGS[state.selected].name} <span class="bld-tier-badge t${selBp.tier}">T${selBp.tier}</span>: ${info.valid?'✓ Valid (score:'+info.score+')':'✗ Invalid'}</div>`;
+    if(info.valid) html+=`<div style="color:#6a7040">Tier ${selBp.tier} — ${TIER_LABEL[selBp.tier]||''} | ~${selBp.minBuildTime}s build time | max ${selBp.maxWorkers} workers</div>`;
     if(info.blockers.length>0) html+=`<div style="color:var(--neg)">${info.blockers[0]}</div>`;
     if(info.warnings.length>0) html+=`<div style="color:#b08020">⚠ ${info.warnings[0]}</div>`;
     if(info.reasons.length>0) html+=`<div style="color:#688040">${info.reasons[0]}</div>`;
@@ -4016,7 +4232,19 @@ function loadGame(){
     sim.gameTime=save.sim.gameTime||0;sim.speed=save.sim.speed||1;sim.paused=save.sim.paused||false;
     sim.bldInv=save.sim.bldInv||{};sim.nextId=save.sim.nextId||0;
     sim.nodes=save.sim.nodes||[];sim.wildlife=save.sim.wildlife||[];
-    sim.predators=save.sim.predators||[];sim.threats=save.sim.threats||[];sim.sites=save.sim.sites||[];
+    sim.predators=save.sim.predators||[];sim.threats=save.sim.threats||[];
+    sim.sites=(save.sim.sites||[]).map(s=>{
+      const bp=BLD_BUILD_PROFILES[s.bldKey]||{tier:1,requiredWork:30,minBuildTime:20,maxWorkers:3};
+      return{...s,
+        reserved:s.reserved||{...s.required},inTransit:{},
+        completedWork:s.completedWork??s.buildWork??0,
+        totalWork:s.totalWork??bp.requiredWork,
+        minBuildTime:s.minBuildTime??bp.minBuildTime,
+        buildStartTime:s.buildStartTime??null,
+        pinned:s.pinned??false,
+        phase:s.phase??'awaiting_resources'
+      };
+    });
     sim.bldMeta={};
     for(const [tid,m] of Object.entries(save.sim.bldMeta||{})){
       sim.bldMeta[tid]={
@@ -4301,8 +4529,9 @@ function runConstructionChecks(){
       if(sim.actors.length>1)_chkAdd(r,'site_delivery_'+site.id,'warn',delivering>0,'Site '+site.id+' waiting materials, '+delivering+' delivering','site',site.id,'Check inventory and actor availability',{delivering});
       if(bk&&site.required){
         for(const [res,needed] of Object.entries(site.required)){
-          const stillNeeded=needed-(site.delivered[res]||0);
-          if(stillNeeded>0)_chkAdd(r,'site_res_'+site.id+'_'+res,'warn',totalRes(res)>=stillNeeded,'Site '+site.id+' needs '+stillNeeded+' more '+res+', have '+totalRes(res).toFixed(0),'site',site.id,'Gather more resources',{needed:stillNeeded,avail:totalRes(res)});
+          const stillNeeded=needed-(site.delivered[res]||0)-(site.inTransit[res]||0);
+          const reservedFree=Math.max(0,(site.reserved[res]||0)-(site.inTransit[res]||0));
+          if(stillNeeded>0)_chkAdd(r,'site_res_'+site.id+'_'+res,'warn',reservedFree>=stillNeeded,'Site '+site.id+': '+res+' needs '+stillNeeded+', reserved:'+reservedFree,'site',site.id,'Check reserved vs delivered balance',{needed:stillNeeded,reserved:reservedFree});
         }
       }
     }
@@ -4499,10 +4728,9 @@ function runAcceleratedSimulation(seconds){
     }
     stuckCount=sim.actors.filter(a=>a.stuckLog).length;
     for(const site of sim.sites.filter(s=>!s.complete)){
-      const ready=siteMet(site);
-      const delivering=sim.actors.filter(a=>a.task?.siteId===site.id).length;
-      const hasMats=siteMet(site);
-      if(!ready&&!delivering&&!hasMats) deadlockCount++;
+      const actorsOnSite=sim.actors.filter(a=>a.task?.siteId===site.id).length;
+      const pending=siteDeliveryPending(site)||!siteMet(site);
+      if(pending&&actorsOnSite===0) deadlockCount++;
     }
     _chkAdd(r,'accel_done','',true,seconds+'s simulation completed','sim',null,'',{seconds,simErrors,stuckCount,deadlockCount});
     _chkAdd(r,'accel_errors','warn',simErrors===0,simErrors+' errors during accelerated sim','sim',null,'',{simErrors});
@@ -4703,6 +4931,7 @@ function renderTestPanel(){
 }
 
 // ── CONSOLE EXPOSURES ─────────────────────────────────────────────────────────
+window.cancelConstruction=cancelConstruction;
 window.validateWorldState=validateWorldState;
 window.repairWorldState=repairWorldState;
 window.runSmokeChecks=runSmokeChecks;
