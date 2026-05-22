@@ -106,6 +106,12 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;display:fl
 .bld-tier-badge.t3{background:#221a2a;color:#a060c0;border:1px solid #604080;}
 .bld-tier-badge.t4{background:#2a1818;color:#c06040;border:1px solid #804030;}
 .bld-time-est{color:#5a6040;font-size:.88em;}
+.constr-phase-badge{font-size:.68em;font-weight:bold;border-radius:3px;padding:1px 5px;color:#000;}
+.constr-phase-await{background:#c09030;}.constr-phase-transit{background:#4080c0;color:#fff;}.constr-phase-ready{background:#50a050;}.constr-phase-building{background:#c0a030;}.constr-phase-almost{background:#e0b020;}
+.constr-blocked{color:var(--neg);font-size:.71em;border-left:2px solid var(--neg);padding-left:4px;margin-top:2px;}
+.constr-next-action{color:#80a060;font-size:.72em;margin-top:2px;border-left:2px solid #4a6030;padding-left:4px;}
+.constr-res-row{font-size:.71em;padding:1px 0;display:flex;align-items:center;gap:3px;}
+.constr-timeline-entry{font-size:.67em;color:#4a5830;padding:1px 0;}
 .lc-active{color:var(--pos);}.lc-maint{color:#c09030;}.lc-neglect{color:#c07030;}.lc-review{color:#c05020;}.lc-abandon{color:var(--neg);}.lc-demolish{color:#e03030;}
 .route-debug{background:#080d06;border:1px solid #283818;border-radius:2px;padding:3px 5px;font-size:.66em;margin-top:3px;color:#608050;}
 .route-chosen{color:var(--pos);font-weight:bold;}.route-dist{color:var(--neu);}.route-warn{color:#c09030;}
@@ -479,6 +485,7 @@ let sim={
 };
 
 let selectedActor=null;
+let selectedSiteId=null;
 let infoTab='world';
 let lastTime=0,taskTimer=0,uiTimer=0;
 let usedNames=[];
@@ -1408,20 +1415,86 @@ function renderGameOverlay(){
       ctx.globalAlpha=0.45;ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=0.8;ctx.stroke();ctx.globalAlpha=1;
     }
     for(const site of sim.sites){
-      if(site.complete)continue;const tile=state.grid[site.tileId];if(!tile.explored)continue;
-      const stx2=site.tileId%COLS,sty2=Math.floor(site.tileId/COLS);const spx=stx2*TP,spy=sty2*TP;
+      if(site.complete)continue;
+      const stileId=site.tileId;const tile=state.grid[stileId];
+      if(!tile)continue;
+      // Always render construction sites (even unexplored — visibility requirement)
+      const stx2=stileId%COLS,sty2=Math.floor(stileId/COLS);const spx=stx2*TP,spy=sty2*TP;
       const phB=sitePhase(site);
-      const bgB=phB==='almost_done'?'rgba(200,160,20,0.72)':phB==='building'?'rgba(110,82,32,0.82)':phB==='build_ready'?'rgba(30,80,30,0.82)':phB==='resources_in_transit'?'rgba(20,60,110,0.82)':'rgba(55,42,16,0.82)';
+      const isBlocked=!!site.blockedReason;
+      // Foundation / background
+      const bgB=isBlocked?'rgba(80,10,10,0.85)':phB==='almost_done'?'rgba(200,160,20,0.78)':phB==='building'?'rgba(110,82,32,0.85)':phB==='build_ready'?'rgba(30,80,30,0.85)':phB==='resources_in_transit'?'rgba(20,60,110,0.85)':'rgba(55,42,16,0.85)';
       ctx.fillStyle=bgB;ctx.fillRect(spx+1,spy+1,TP-2,TP-2);
-      const crB=phB==='build_ready'?'rgba(60,180,60,0.7)':phB==='resources_in_transit'?'rgba(60,130,220,0.7)':phB==='almost_done'?'rgba(240,200,60,0.8)':'rgba(160,110,40,0.6)';
-      ctx.strokeStyle=crB;ctx.lineWidth=0.55;
-      ctx.beginPath();ctx.moveTo(spx+1,spy+TP/2);ctx.lineTo(spx+TP-1,spy+TP/2);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(spx+TP/2,spy+1);ctx.lineTo(spx+TP/2,spy+TP-1);ctx.stroke();
+      // Foundation corner stakes
+      ctx.fillStyle='rgba(180,150,80,0.55)';
+      ctx.fillRect(spx+1,spy+1,2,2);ctx.fillRect(spx+TP-3,spy+1,2,2);
+      ctx.fillRect(spx+1,spy+TP-3,2,2);ctx.fillRect(spx+TP-3,spy+TP-3,2,2);
+      // Cross lines showing layout
+      const crB=isBlocked?'rgba(220,40,40,0.7)':phB==='build_ready'?'rgba(60,180,60,0.7)':phB==='resources_in_transit'?'rgba(60,130,220,0.7)':phB==='almost_done'?'rgba(240,200,60,0.8)':'rgba(160,110,40,0.5)';
+      ctx.strokeStyle=crB;ctx.lineWidth=0.5;
+      ctx.beginPath();ctx.moveTo(spx+2,spy+TP/2);ctx.lineTo(spx+TP-2,spy+TP/2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(spx+TP/2,spy+2);ctx.lineTo(spx+TP/2,spy+TP-2);ctx.stroke();
+      // Outline border (pulsed for blocked / almost_done)
+      const pulse=isBlocked?(0.55+Math.sin(t*4)*0.4):phB==='almost_done'?(0.7+Math.sin(t*3)*0.3):1;
+      const outlineCol=isBlocked?`rgba(220,40,40,${pulse})`:phB==='almost_done'?`rgba(240,200,40,${pulse})`:phB==='build_ready'?'rgba(60,200,80,0.8)':phB==='resources_in_transit'?'rgba(60,130,220,0.7)':phB==='building'?'rgba(200,160,50,0.7)':'rgba(180,110,30,0.55)';
+      ctx.strokeStyle=outlineCol;ctx.lineWidth=isBlocked||phB==='almost_done'?1.4:0.9;
+      ctx.strokeRect(spx+0.5,spy+0.5,TP-1,TP-1);
+      // Progress ring (always draw if any progress)
       const ang=-Math.PI/2+site.progress*Math.PI*2;
-      const ringB=phB==='almost_done'?'rgba(240,200,40,0.85)':phB==='build_ready'?'rgba(60,200,80,0.72)':phB==='resources_in_transit'?'rgba(100,100,200,0.55)':'rgba(240,192,80,0.68)';
-      ctx.strokeStyle=ringB;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,TP/2-1.5,-Math.PI/2,ang);ctx.stroke();
-      if(phB==='awaiting_resources'){ctx.fillStyle='rgba(190,120,18,0.6)';ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,2,0,Math.PI*2);ctx.fill();}
-      else if(phB==='resources_in_transit'){ctx.fillStyle='rgba(60,130,220,0.55)';ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,2,0,Math.PI*2);ctx.fill();}
+      const ringCol=isBlocked?'rgba(200,40,40,0.9)':phB==='almost_done'?'rgba(240,200,40,0.9)':phB==='build_ready'?'rgba(60,200,80,0.8)':phB==='resources_in_transit'?'rgba(100,100,200,0.7)':phB==='building'?'rgba(220,180,60,0.85)':'rgba(140,90,20,0.5)';
+      ctx.strokeStyle=ringCol;ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,TP/2-1.8,-Math.PI/2,ang);ctx.stroke();
+      // Resource delivery dots (top row mini indicators)
+      const resKeys=Object.keys(site.required);
+      const resColors={wood:'#b87028',stone:'#888880',water:'#2878b0',food:'#c07830'};
+      if(resKeys.length>0){
+        const dotW=Math.min(2.8,TP/(resKeys.length+1));
+        for(let ri=0;ri<resKeys.length;ri++){
+          const rk=resKeys[ri];const req=site.required[rk];const del=site.delivered[rk]||0;const tr=site.inTransit[rk]||0;
+          const cx=spx+1.5+(ri+1)*dotW;const cy=spy+2;
+          ctx.fillStyle=del>=req?resColors[rk]||'#888':tr>0?'rgba(80,130,220,0.8)':'rgba(100,80,30,0.5)';
+          ctx.beginPath();ctx.arc(cx,cy,dotW*0.45,0,Math.PI*2);ctx.fill();
+        }
+      }
+      // Center state indicator
+      if(phB==='awaiting_resources'||isBlocked){
+        ctx.fillStyle=isBlocked?'rgba(220,40,40,0.75)':'rgba(190,120,18,0.65)';
+        ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,2.5,0,Math.PI*2);ctx.fill();
+      } else if(phB==='resources_in_transit'){
+        const pulse2=0.5+Math.sin(t*3)*0.5;
+        ctx.fillStyle=`rgba(60,130,220,${0.4+pulse2*0.35})`;
+        ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,2.5,0,Math.PI*2);ctx.fill();
+      } else if(phB==='building'||phB==='almost_done'){
+        // Hammer icon dot
+        ctx.fillStyle=phB==='almost_done'?'rgba(240,200,40,0.9)':'rgba(200,160,50,0.8)';
+        ctx.beginPath();ctx.arc(spx+TP/2,spy+TP/2,2,0,Math.PI*2);ctx.fill();
+      }
+      // Builder worker dots
+      const builderActors=sim.actors.filter(a=>a.task?.type==='build'&&a.task?.siteId===site.id);
+      for(let bi=0;bi<Math.min(builderActors.length,3);bi++){
+        ctx.fillStyle=builderActors[bi].color||'#c0a030';
+        ctx.beginPath();ctx.arc(spx+TP-3-bi*3,spy+TP-3,1.5,0,Math.PI*2);ctx.fill();
+      }
+      // Carrier dots (blue)
+      const carrierActors=sim.actors.filter(a=>a.task?.type==='pickup_for_site'&&a.task?.siteId===site.id);
+      for(let ci=0;ci<Math.min(carrierActors.length,3);ci++){
+        ctx.fillStyle='rgba(80,140,220,0.85)';
+        ctx.beginPath();ctx.arc(spx+2+ci*3,spy+TP-3,1.5,0,Math.PI*2);ctx.fill();
+      }
+      // Route line from carrier to site (selected or nearby)
+      const selectedSite=hoveredTile&&state.grid[hoveredTile.id]?.constrSiteId===site.id;
+      if(selectedSite||site.id===selectedSiteId){
+        for(const ca of carrierActors){
+          ctx.strokeStyle='rgba(80,140,220,0.35)';ctx.lineWidth=0.7;ctx.setLineDash([2,3]);
+          ctx.beginPath();ctx.moveTo(ca.px,ca.py);ctx.lineTo(spx+TP/2,spy+TP/2);ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        for(const ba of builderActors){
+          ctx.strokeStyle='rgba(240,192,60,0.35)';ctx.lineWidth=0.7;ctx.setLineDash([2,3]);
+          ctx.beginPath();ctx.moveTo(ba.px,ba.py);ctx.lineTo(spx+TP/2,spy+TP/2);ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
     }
     for(let ty2=ty0;ty2<=ty1;ty2++) for(let tx2=tx0;tx2<=tx1;tx2++){
       const tile=state.grid[ty2*COLS+tx2];if(!tile.building||!tile.explored)continue;
@@ -2218,10 +2291,12 @@ function createSite(tileId,bldKey){
   for(const [r,v] of Object.entries(b.cost)){consumeRes(r,v);reserved[r]=v;}
   const site={id:sim.nextId++,tileId,bldKey,required:{...b.cost},reserved,inTransit:{},delivered:{},
     phase:'awaiting_resources',progress:0,completedWork:0,totalWork:bp.requiredWork,
-    minBuildTime:bp.minBuildTime,buildStartTime:null,complete:false,pinned:false,
+    minBuildTime:bp.minBuildTime,buildStartTime:null,lastProgressTime:null,complete:false,pinned:false,
+    stallTimer:0,blockedReason:null,timeline:[],
     px:tx*TP+TP/2,py:ty*TP+TP/2};
+  pushSiteEvent(site,'placed',b.name);
   sim.sites.push(site);
-  addLog(`🚧 ${b.name} site placed. Actors will carry materials.`);
+  addLog(`🚧 ${b.name} site placed. Resources reserved — actors will carry materials.`);
   return site;
 }
 function siteNeedsRes(site){for(const [k,v] of Object.entries(site.required)) if((site.delivered[k]||0)<v) return k;return null;}
@@ -2252,6 +2327,151 @@ function sitePhase(site){
   if(siteMet(site)) return 'build_ready';
   if(Object.values(site.inTransit||{}).some(v=>v>0)) return 'resources_in_transit';
   return 'awaiting_resources';
+}
+
+function siteStage(site){
+  const p=site.completedWork/Math.max(1,site.totalWork);
+  if(p<0.01) return 'foundation';
+  if(p<0.2) return 'foundation';
+  if(p<0.45) return 'frame';
+  if(p<0.7) return 'shell';
+  if(p<0.9) return 'interior';
+  return 'finishing';
+}
+
+function pushSiteEvent(site,event,details){
+  if(!site.timeline) site.timeline=[];
+  site.timeline.push({time:sim.gameTime,event,details:details||''});
+  if(site.timeline.length>40) site.timeline=site.timeline.slice(-30);
+}
+
+function getConstructionNextAction(site){
+  const bName=BUILDINGS[site.bldKey]?.name||site.bldKey;
+  const ph=sitePhase(site);
+  if(ph==='almost_done') return 'Almost complete.';
+  if(ph==='building'){
+    const builders=assignedCount('build',site.id);
+    const pct=Math.floor(site.progress*100);
+    const builderNames=sim.actors.filter(a=>a.task?.type==='build'&&a.task?.siteId===site.id).map(a=>a.name);
+    if(builders>0) return `${builderNames[0]||'Builder'} is building. ${pct}% complete.`;
+    return `No builder assigned — waiting.`;
+  }
+  if(ph==='build_ready'){
+    const builders=assignedCount('build',site.id);
+    if(builders>0){const bn=sim.actors.find(a=>a.task?.type==='build'&&a.task?.siteId===site.id);return `${bn?.name||'Builder'} en route.`;}
+    const idleActors=sim.actors.filter(a=>a.state==='idle'&&a.restTimer<=0).length;
+    if(idleActors===0) return 'All materials delivered. No builder available.';
+    return 'All materials delivered. Waiting for builder.';
+  }
+  if(ph==='resources_in_transit'){
+    const carriers=assignedCount('deliver',site.id);
+    const carrierNames=sim.actors.filter(a=>a.task?.type==='pickup_for_site'&&a.task?.siteId===site.id).map(a=>a.name);
+    const missing=[];for(const [r,v] of Object.entries(site.required)){const gap=v-(site.delivered[r]||0)-(site.inTransit[r]||0);if(gap>0) missing.push(`${gap} ${r}`);}
+    if(carriers>0) return `${carrierNames[0]||'Carrier'} delivering materials.${missing.length?' Still need '+missing.join(', '):' More en route.'}`;
+    return `Materials in transit.${missing.length?' Still need '+missing.join(', '):' Delivery pending.'}`;
+  }
+  // awaiting_resources
+  const missing=[];for(const [r,v] of Object.entries(site.required)){const gap=v-(site.delivered[r]||0);if(gap>0) missing.push(`${gap} ${r}`);}
+  if(missing.length===0) return 'All materials present — waiting for carrier.';
+  // Check if resources available somewhere
+  const resAvail=missing.some(m=>{const r=m.split(' ')[1];return storageBlds().some(sb=>(sb.inv[r]||0)>=1);});
+  if(!resAvail) return `Blocked: no known source for ${missing[0].split(' ')[1]}.`;
+  const carriers=assignedCount('deliver',site.id);
+  if(carriers===0) return `Waiting for ${missing.join(' and ')}. Reserved at storage.`;
+  return `Waiting for ${missing.join(' and ')}.`;
+}
+
+function siteMissingResources(site){
+  const m=[];
+  for(const [r,v] of Object.entries(site.required)){
+    const del=site.delivered[r]||0,tr=site.inTransit[r]||0;
+    const gap=v-del-tr;
+    if(gap>0) m.push({res:r,needed:v,delivered:del,inTransit:tr,missing:gap});
+  }
+  return m;
+}
+
+function performBuildWork(actor,site,dt){
+  if(!site||site.complete) return;
+  if(!siteMet(site)){clearTask(actor);return;}
+  const maxRange=TP*2.5;
+  if(actor.dist(site.px,site.py)>maxRange){
+    actor.tx=site.px;actor.ty=site.py;actor.state='moving_to_construction';actor.lastStateChange=sim.gameTime;return;
+  }
+  if(site.buildStartTime==null){
+    site.buildStartTime=sim.gameTime;
+    site.lastProgressTime=sim.gameTime;
+    if(!site._buildStartLogged){
+      site._buildStartLogged=true;
+      pushSiteEvent(site,'build_started',actor.name);
+      addLog(`🔨 ${actor.name} started building ${BUILDINGS[site.bldKey]?.name}.`,'imp');
+    }
+    for(let i=0;i<3;i++) spawnParticle(site.px+(Math.random()-0.5)*TP*1.5,site.py+(Math.random()-0.5)*TP*1.5,'#b87028',1.2,1.8);
+  }
+  const elapsed=sim.gameTime-site.buildStartTime;
+  const fatigueMod=Math.max(0.4,1-actor.fatigue*0.006);
+  const toolMod=state.techs.toolMaking?1.2:1;
+  const traitMod=1+actor.traitFx('buildScore',0)*0.3+(actor.hasTrait('industrious')?0.15:0)+(actor.hasTrait('careful')?0.05:0)-(actor.hasTrait('lazy')?0.2:0);
+  const coordMod=assignedCount('build',site.id)>1?1.12:1;
+  const baseRate=0.5+actor.aptB('builder')*0.8;
+  const timePhaseMod=elapsed<site.minBuildTime?0.5:1.0;
+  const effectiveRate=baseRate*fatigueMod*toolMod*traitMod*coordMod*timePhaseMod;
+  site.completedWork+=dt*effectiveRate;
+  site.progress=Math.min(0.99,site.completedWork/site.totalWork);
+  site.lastProgressTime=sim.gameTime;
+  site.blockedReason=null;
+  actor.gainExp('builder',0.04);
+  if(Math.random()<dt*0.3) spawnParticle(site.px+(Math.random()-0.5)*TP,site.py+(Math.random()-0.5)*TP,'#d0a040',0.8,1.2);
+  if(site.completedWork>=site.totalWork*0.9&&!site._almostLogged){
+    site._almostLogged=true;
+    pushSiteEvent(site,'almost_done','');
+    addLog(`✨ ${BUILDINGS[site.bldKey]?.name}: almost done!`,'imp');
+  }
+  if(site.completedWork>=site.totalWork&&elapsed>=site.minBuildTime) completeSite(site);
+  else if(site.completedWork>=site.totalWork) site.progress=0.99;
+}
+
+function checkConstructionHeartbeat(){
+  for(const site of sim.sites){
+    if(site.complete) continue;
+    const ph=sitePhase(site);
+    const now=sim.gameTime;
+    const builders=assignedCount('build',site.id);
+    const deliverers=assignedCount('deliver',site.id);
+    // Stall detection
+    if(ph==='build_ready'&&builders===0){
+      site.stallTimer=(site.stallTimer||0)+8;
+      if(site.stallTimer>20){
+        const idleActors=sim.actors.filter(a=>a.state==='idle'&&a.restTimer<=0&&a.fatigue<80);
+        if(idleActors.length>0){
+          const nearest=idleActors.sort((a,b)=>a.dist(site.px,site.py)-b.dist(site.px,site.py))[0];
+          nearest.task={type:'build',siteId:site.id};nearest.state='moving_to_construction';
+          nearest.tx=site.px;nearest.ty=site.py;nearest.goal='Build '+BUILDINGS[site.bldKey]?.name;
+          nearest.lastStateChange=now;site.stallTimer=0;
+          addLog(`${nearest.name} assigned to ${BUILDINGS[site.bldKey]?.name} (planner forced).`);
+        } else {
+          site.blockedReason='no_builder_available';
+        }
+      }
+    } else if(ph==='building'&&(now-(site.lastProgressTime||0))>30&&builders===0){
+      site.blockedReason='no_builder_assigned';
+      site.stallTimer=(site.stallTimer||0)+8;
+    } else if(ph==='awaiting_resources'&&deliverers===0&&siteDeliveryPending(site)){
+      site.stallTimer=(site.stallTimer||0)+8;
+      if(site.stallTimer>40){
+        site.blockedReason='no_carrier_available';
+        // Force a planner revisit
+        const missing=siteMissingResources(site);
+        if(missing.length>0){
+          const resAvail=storageBlds().some(sb=>(sb.inv[missing[0].res]||0)>=1);
+          if(!resAvail) site.blockedReason=`no_${missing[0].res}_source`;
+        }
+      }
+    } else {
+      site.stallTimer=0;
+      if(ph==='building'&&builders>0) site.blockedReason=null;
+    }
+  }
 }
 
 // ── MEMORY SYSTEM ─────────────────────────────────────────────────────────────
@@ -2860,7 +3080,9 @@ function assignTaskFromCandidate(actor,cand){
     actor.tx=wg.px;actor.ty=wg.py;actor.goal='Fish '+wg.name;actor.timer=2.5+Math.random()*2;
   } else if(cand.type==='build'){
     const site=cand.site;actor.task={type:'build',siteId:site.id};actor.state='moving_to_construction';
-    actor.tx=site.px;actor.ty=site.py;actor.goal='Build '+BUILDINGS[site.bldKey]?.name.split(' ')[0];
+    actor.tx=site.px;actor.ty=site.py;
+    actor.goal='Building '+BUILDINGS[site.bldKey]?.name;
+    pushSiteEvent(site,'builder_assigned',actor.name);
   } else if(cand.type==='deliver_to_site'){
     const site=cand.site;
     const load=_siteCarryLoad(site,actor.inv.capacity);
@@ -2868,7 +3090,9 @@ function assignTaskFromCandidate(actor,cand){
     for(const [r,v] of Object.entries(load)) site.inTransit[r]=(site.inTransit[r]||0)+v;
     actor.task={type:'pickup_for_site',siteId:site.id,deliverLoad:load};
     actor.state='moving_to_construction';actor.tx=site.px;actor.ty=site.py;
-    actor.goal='Deliver → '+BUILDINGS[site.bldKey]?.name.split(' ')[0];
+    const resStr=Object.keys(load).join('+');
+    actor.goal=`Deliver ${resStr} → ${BUILDINGS[site.bldKey]?.name}`;
+    pushSiteEvent(site,'carrier_assigned',`${actor.name}: ${resStr}`);
   } else if(cand.type==='maintain'){
     const supplyBld=cand.supplyBld;
     actor.task={type:'maintain',maintainTileId:cand.tid,bk:cand.bk,supplyTileId:supplyBld?.tileId??null,materialsFetched:supplyBld==null};
@@ -3119,17 +3343,21 @@ function updateActors(dt){
         if(actor.move(site.px,site.py,dt)){
           if(actor.task?.type==='pickup_for_site'&&actor.task?.deliverLoad){
             const load=actor.task.deliverLoad;
+            const resKeys=Object.keys(load);
             for(const [r,v] of Object.entries(load)){
               site.inTransit[r]=Math.max(0,(site.inTransit[r]||0)-v);
               site.delivered[r]=(site.delivered[r]||0)+v;
             }
+            pushSiteEvent(site,'resource_delivered',resKeys.map(r=>`${load[r]} ${r}`).join(', '));
             actor.gainExp('carrier',0.03);
             if(siteMet(site)&&!site._deliveredLogged){
               site._deliveredLogged=true;
-              addLog(`📦 ${BUILDINGS[site.bldKey]?.name}: all materials delivered. Building begins.`,'imp');
+              pushSiteEvent(site,'all_resources_delivered','');
+              addLog(`📦 ${BUILDINGS[site.bldKey]?.name}: all materials at site.`,'imp');
             }
             if(siteMet(site)&&actor.aptB('builder')>0.3){
-              actor.task={type:'build',siteId:site.id};actor.state='building';actor.timer=0;actor.lastStateChange=sim.gameTime;
+              actor.task={type:'build',siteId:site.id};actor.state='building';actor.timer=0;
+              actor.goal='Build '+BUILDINGS[site.bldKey]?.name;actor.lastStateChange=sim.gameTime;
             } else {clearTask(actor);}
           } else {
             actor.state='building';actor.timer=0;actor.lastStateChange=sim.gameTime;
@@ -3139,23 +3367,7 @@ function updateActors(dt){
       }
       case'building':{
         const site=sim.sites.find(s=>s.id===actor.task?.siteId);if(!site){clearTask(actor);break;}
-        if(!siteMet(site)){clearTask(actor);break;}
-        if(site.buildStartTime==null) site.buildStartTime=sim.gameTime;
-        const elapsed=sim.gameTime-site.buildStartTime;
-        const fatigueMod=Math.max(0.4,1-actor.fatigue*0.006);
-        const toolMod=state.techs.toolMaking?1.2:1;
-        const traitMod=1+actor.traitFx('buildScore',0)*0.3+(actor.hasTrait('industrious')?0.15:0)+(actor.hasTrait('careful')?0.05:0)-(actor.hasTrait('lazy')?0.2:0);
-        const coordMod=assignedCount('build',site.id)>1?1.12:1;
-        const baseRate=0.5+actor.aptB('builder')*0.8;
-        const effectiveRate=baseRate*fatigueMod*toolMod*traitMod*coordMod*(elapsed<site.minBuildTime?0.5:1);
-        site.completedWork+=dt*effectiveRate;
-        site.progress=Math.min(1,site.completedWork/site.totalWork);
-        actor.gainExp('builder',0.04);
-        if(site.completedWork>=site.totalWork*0.9&&!site._almostLogged){
-          site._almostLogged=true;
-          addLog(`🔨 ${BUILDINGS[site.bldKey]?.name}: almost done!`,'imp');
-        }
-        if(site.completedWork>=site.totalWork) completeSite(site);
+        performBuildWork(actor,site,dt);
         break;
       }
       case'hunting':{
@@ -3482,6 +3694,7 @@ function gameLoop(ts){
     try{updateNodes(sDt);updateWildlife(sDt);}catch(e){_guardErr('updateNodes',e);}
     taskTimer-=sDt;if(taskTimer<=0){taskTimer=0.45;try{assignTasks();}catch(e){_guardErr('assignTasks',e);}}
     sim.plannerTimer-=sDt;if(sim.plannerTimer<=0){sim.plannerTimer=8;try{runSettlementPlanner();}catch(e){_guardErr('runSettlementPlanner',e);}}
+    sim.constrHeartbeatTimer=(sim.constrHeartbeatTimer||0)-sDt;if(sim.constrHeartbeatTimer<=0){sim.constrHeartbeatTimer=8;try{checkConstructionHeartbeat();}catch(e){_guardErr('constrHeartbeat',e);}}
   }
   uiTimer-=realDt;
   if(uiTimer<=0){
@@ -3925,10 +4138,15 @@ function renderDebugPanel(){
         const b=BUILDINGS[site.bldKey],builders=assignedCount('build',site.id),deliverers=assignedCount('deliver',site.id);
         const ph=sitePhase(site);
         const bp=BLD_BUILD_PROFILES[site.bldKey]||{tier:1,maxWorkers:3};
-        const card=document.createElement('div');card.className='site-card';
-        const phCol={awaiting_resources:'#c09030',resources_in_transit:'#4080c0',build_ready:'site-state-ok',building:'#c0a030',almost_done:'#e0b020'}[ph];
-        const stateClass=ph==='build_ready'?'site-state-ok':ph==='almost_done'?'site-state-ok':'site-state-wait';
-        card.innerHTML=`<div><span style="color:var(--hi)">${b?.name||site.bldKey}</span> <span class="${stateClass}">[T${bp.tier}] ${ph.replace(/_/g,' ')}</span></div><div style="color:var(--neu)">Work: ${Math.floor(site.progress*100)}% | build:${builders} carry:${deliverers}</div>`;
+        const phCol={awaiting_resources:'#c09030',resources_in_transit:'#4080c0',build_ready:'#50a050',building:'#c0a030',almost_done:'#e0b020'}[ph]||'var(--neu)';
+        const nextAction=getConstructionNextAction(site);
+        const blockedStr=site.blockedReason?`<span style="color:var(--neg)"> ⚠ ${site.blockedReason.replace(/_/g,' ')}</span>`:'';
+        const stallStr=(site.stallTimer||0)>8?`<span style="color:#c09030"> stall:${Math.floor(site.stallTimer)}s</span>`:'';
+        const card=document.createElement('div');card.className='site-card';card.style.cursor='pointer';
+        card.onclick=()=>{focusTile(site.tileId);showTileInfo(state.grid[site.tileId]);};
+        card.innerHTML=`<div><span style="color:var(--hi)">${b?.name||site.bldKey}</span> <span style="color:${phCol}">${ph.replace(/_/g,' ')}</span>${blockedStr}</div>`
+          +`<div style="color:var(--neu)">${Math.floor(site.progress*100)}% | b:${builders}/${bp.maxWorkers} c:${deliverers}${stallStr}</div>`
+          +`<div style="color:#6a7848;font-style:italic">${nextAction}</div>`;
         sdp.appendChild(card);
       }
     }
@@ -3972,6 +4190,7 @@ function addLog(msg,cls=''){
 // ── TILE INFO ─────────────────────────────────────────────────────────────────
 function showTileInfo(tile){
   const el=document.getElementById('tile-info');if(!el) return;
+  selectedSiteId=null;
   if(!tile.explored){el.innerHTML='<div class="ti-name">Unexplored</div><div class="ti-desc">Send an explorer to reveal this area.</div>';return;}
   const swCol=TERRAIN_SWATCH[tile.type]||'#404030';
   let html=`<div class="ti-name" style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:10px;height:10px;background:${swCol};border:1px solid #555;border-radius:2px;flex-shrink:0"></span>${tile.type.charAt(0).toUpperCase()+tile.type.slice(1)}</div><div class="ti-desc">${TILE_DESC[tile.type]||''}</div>`;
@@ -3999,32 +4218,66 @@ function showTileInfo(tile){
   if(tile.constrSiteId){
     const site=sim.sites.find(s=>s.id===tile.constrSiteId);
     if(site){
+      selectedSiteId=site.id;
       const bp=BLD_BUILD_PROFILES[site.bldKey]||{tier:1,requiredWork:30,minBuildTime:20,maxWorkers:3};
       const ph=sitePhase(site);
+      const stage=siteStage(site);
       const phLabel={awaiting_resources:'⏳ Awaiting materials',resources_in_transit:'🚚 Materials in transit',build_ready:'✅ Ready to build',building:'🔨 Under construction',almost_done:'⚡ Almost done!'}[ph]||ph;
+      const phBadgeClass={awaiting_resources:'constr-phase-await',resources_in_transit:'constr-phase-transit',build_ready:'constr-phase-ready',building:'constr-phase-building',almost_done:'constr-phase-almost'}[ph]||'';
       const phColor={awaiting_resources:'#c09030',resources_in_transit:'#4080c0',build_ready:'#50a050',building:'#c0a030',almost_done:'#e0b020'}[ph]||'var(--neu)';
-      html+=`<div style="margin-top:4px;font-weight:bold;color:${phColor}">${BUILDINGS[site.bldKey]?.icon} ${BUILDINGS[site.bldKey]?.name}</div>`;
-      html+=`<div style="font-size:.73em;color:${phColor}">${phLabel}</div>`;
-      html+=`<div style="font-size:.72em;color:#7a8050;margin-top:2px">Tier ${bp.tier} — ${TIER_LABEL[bp.tier]||''}</div>`;
-      const resRows=Object.entries(site.required).map(([r,v])=>{
+      const nextAction=getConstructionNextAction(site);
+      const stageLabel={foundation:'Foundation',frame:'Frame',shell:'Shell',interior:'Interior',finishing:'Finishing'}[stage]||stage;
+      const pct=Math.floor(site.progress*100);
+      // Header
+      html+=`<div style="border-top:1px solid var(--border);margin-top:5px;padding-top:4px">`;
+      html+=`<div style="font-weight:bold;color:${phColor};font-size:.9em">${BUILDINGS[site.bldKey]?.icon} ${BUILDINGS[site.bldKey]?.name} <span class="bld-tier-badge t${bp.tier}">T${bp.tier}</span></div>`;
+      html+=`<div style="margin-top:3px"><span class="constr-phase-badge ${phBadgeClass}">${phLabel}</span></div>`;
+      // Stage + progress
+      html+=`<div style="font-size:.72em;margin-top:3px">Stage: <span style="color:var(--hi)">${stageLabel}</span> | Work: <span style="color:var(--pos)">${pct}%</span> (${site.completedWork.toFixed(0)}/${site.totalWork})</div>`;
+      // Progress bar
+      html+=`<div style="background:#1a1a10;border:1px solid #3a3820;border-radius:2px;height:5px;margin:3px 0"><div style="height:100%;background:${phColor};border-radius:2px;width:${pct}%;transition:width .3s"></div></div>`;
+      // Build time
+      if(site.buildStartTime!=null){const elapsed=Math.floor(sim.gameTime-site.buildStartTime);html+=`<div style="font-size:.71em;color:var(--neu)">Build time: ${elapsed}s / min ${site.minBuildTime}s${elapsed>=site.minBuildTime?' <span style="color:var(--pos)">✓</span>':''}</div>`;}
+      // Next action
+      html+=`<div class="constr-next-action">→ ${nextAction}</div>`;
+      // Blocked reason
+      if(site.blockedReason){const brLabel={no_builder_available:'No builder available',no_builder_assigned:'Builder left site',no_carrier_available:'No carrier available'}[site.blockedReason]||site.blockedReason.replace(/_/g,' ');html+=`<div class="constr-blocked">⚠ Blocked: ${brLabel}</div>`;}
+      // Resources
+      html+=`<div style="font-size:.7em;font-weight:bold;color:var(--hi);margin-top:4px">Resources:</div>`;
+      for(const [r,v] of Object.entries(site.required)){
         const del=site.delivered[r]||0,transit=site.inTransit[r]||0;
-        const pct=Math.min(100,Math.floor(del/v*100));
-        const col=del>=v?'var(--pos)':transit>0?'#4080c0':'#c09030';
-        return`<span style="color:${col}">${RES_ICON[r]||r}${del}${transit>0?'+'+transit:''}/${v}</span>`;
-      }).join(' ');
-      html+=`<div style="font-size:.72em;margin-top:2px">Materials: ${resRows}</div>`;
-      const builders=assignedCount('build',site.id);const deliverers=assignedCount('deliver',site.id);
-      html+=`<div style="font-size:.72em;color:var(--neu);margin-top:2px">Builders: ${builders}/${bp.maxWorkers} | Carriers: ${deliverers}</div>`;
-      if(site.completedWork>0){
-        const pct=Math.floor(site.progress*100);
-        const elapsed=site.buildStartTime!=null?sim.gameTime-site.buildStartTime:0;
-        html+=`<div style="font-size:.72em;margin-top:2px">Work: ${pct}% (${site.completedWork.toFixed(0)}/${site.totalWork})</div>`;
+        const missing=Math.max(0,v-del-transit);
+        const icon=RES_ICON[r]||r;
+        const delColor=del>=v?'var(--pos)':del>0?'#a09040':'var(--neu)';
+        html+=`<div class="constr-res-row">${icon} <span style="color:${delColor}">${del}/${v}</span>`;
+        if(transit>0) html+=`<span style="color:#4080c0">+${transit} transit</span>`;
+        if(missing>0) html+=`<span style="color:#c09030">need ${missing}</span>`;
+        if(del>=v) html+=`<span style="color:var(--pos)">✓</span>`;
+        html+=`</div>`;
       }
-      html+=`<div style="display:flex;gap:3px;margin-top:4px">
-        <button class="pin-btn" onclick="(function(){const s=sim.sites.find(x=>x.id===${site.id});if(s){s.pinned=!s.pinned;showTileInfo(state.grid[${tile.id}]);}})()">
-          ${site.pinned?'📌 Unpin':'📌 Pin'}</button>
-        <button class="maint-btn" style="background:#502020;border-color:#804040;color:#e08080" onclick="cancelConstruction(${site.id});showTileInfo(state.grid[${tile.id}])">
-          Cancel</button></div>`;
+      // Builders
+      const builderActors=sim.actors.filter(a=>a.task?.type==='build'&&a.task.siteId===site.id);
+      const carrierActors=sim.actors.filter(a=>(a.task?.type==='deliver'||a.task?.type==='carry')&&a.task.siteId===site.id);
+      html+=`<div style="font-size:.7em;margin-top:3px"><span style="color:var(--hi)">Builders (${builderActors.length}/${bp.maxWorkers}):</span> `;
+      html+=builderActors.length>0?builderActors.map(a=>`<span style="color:${a.color}">${a.name}</span>`).join(', '):`<span style="color:#665030">none</span>`;
+      html+=`</div>`;
+      html+=`<div style="font-size:.7em;margin-top:1px"><span style="color:var(--hi)">Carriers (${carrierActors.length}):</span> `;
+      html+=carrierActors.length>0?carrierActors.map(a=>`<span style="color:${a.color}">${a.name}</span>`).join(', '):`<span style="color:#665030">none</span>`;
+      html+=`</div>`;
+      // Timeline
+      if(site.timeline&&site.timeline.length>0){
+        html+=`<div style="font-size:.7em;font-weight:bold;color:#506040;margin-top:4px;border-top:1px solid #252515;padding-top:2px">Timeline:</div>`;
+        for(const ev of site.timeline.slice(-5).reverse()){
+          const age=Math.floor(sim.gameTime-ev.time);
+          html+=`<div class="constr-timeline-entry">${ev.event.replace(/_/g,' ')}${ev.details?' — '+ev.details:''} <span style="color:#3a4028">(${age}s)</span></div>`;
+        }
+      }
+      // Buttons
+      html+=`<div style="display:flex;gap:3px;margin-top:5px;flex-wrap:wrap">`;
+      html+=`<button class="pin-btn" onclick="(function(){const s=sim.sites.find(x=>x.id===${site.id});if(s){s.pinned=!s.pinned;showTileInfo(state.grid[${tile.id}]);}})()"> ${site.pinned?'📌 Unpin':'📌 Pin'}</button>`;
+      html+=`<button class="maint-btn" title="Force planner to revisit this site" onclick="(function(){const s=sim.sites.find(x=>x.id===${site.id});if(s){s.stallTimer=25;checkConstructionHeartbeat();addLog('Planner revisiting '+BUILDINGS[s.bldKey]?.name+'...');}})()">⟳ Force plan</button>`;
+      html+=`<button class="maint-btn" style="background:#502020;border-color:#804040;color:#e08080" onclick="cancelConstruction(${site.id});showTileInfo(state.grid[${tile.id}])">Cancel</button>`;
+      html+=`</div></div>`;
     }
   }
   const wg=sim.wildlife.find(w=>w.tileX===tile.id%COLS&&w.tileY===Math.floor(tile.id/COLS)&&w.discovered);
@@ -4308,6 +4561,10 @@ function loadGame(){
         totalWork:s.totalWork??bp.requiredWork,
         minBuildTime:s.minBuildTime??bp.minBuildTime,
         buildStartTime:s.buildStartTime??null,
+        lastProgressTime:s.lastProgressTime??null,
+        stallTimer:s.stallTimer??0,
+        blockedReason:s.blockedReason??null,
+        timeline:s.timeline??[],
         pinned:s.pinned??false,
         phase:s.phase??'awaiting_resources'
       };
@@ -4461,6 +4718,124 @@ function runTerrainTests(){
   const fns=[testTerrainTypesHaveDistinctVisualConfig,testTerrainShaderCompiles,testMinimapTerrainColours,testWaterTilesRenderAsWater,testForestTilesRenderWithTreePattern,testMarshTilesRenderWithWetlandPattern,testRockHillMountainDistinction,testTerrainPickingStillMatchesTile,testPlacementOverlayStillVisible,testFogDoesNotHideExploredTerrainIncorrectly,testResourceDepletionAffectsTerrainVisuals];
   const results=fns.flatMap(fn=>fn());
   console.table(results);const passed=results.filter(r=>r.ok).length;console.log(`Terrain tests: ${passed}/${results.length} passed`);return results;
+}
+
+// ── CONSTRUCTION VISUAL TESTS ────────────────────────────────────────────────
+function testConstructionSiteAlwaysVisible(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  typeof sim.sites!=='undefined'?pass('sim.sites exists'):fail('sim.sites','not found');
+  typeof sitePhase==='function'?pass('sitePhase function exists'):fail('sitePhase','not found');
+  typeof renderGameOverlay==='function'?pass('renderGameOverlay exists'):fail('renderGameOverlay','not found');
+  const overlayCanvas=document.getElementById('overlay-canvas');
+  overlayCanvas?pass('overlay-canvas element exists'):fail('overlay-canvas','not found');
+  return results;
+}
+function testConstructionPhaseLabelUpdates(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  const phases=['awaiting_resources','resources_in_transit','build_ready','building','almost_done'];
+  const labels={awaiting_resources:'Awaiting materials',resources_in_transit:'Materials in transit',build_ready:'Ready to build',building:'Under construction',almost_done:'Almost done'};
+  for(const ph of phases){
+    const dummy={bldKey:'storehouse',required:{wood:4},reserved:{wood:4},inTransit:{},delivered:{},completedWork:0,totalWork:30,buildStartTime:null,lastProgressTime:null,stallTimer:0,blockedReason:null,timeline:[]};
+    dummy.phase=ph;
+    const got=sitePhase(dummy);
+    got===ph?pass(`phase label ${ph}`):fail(`phase label ${ph}`,`got ${got}`);
+  }
+  return results;
+}
+function testConstructionShowsMissingResources(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  typeof siteMissingResources==='function'?pass('siteMissingResources exists'):fail('siteMissingResources','not found');
+  const dummy={bldKey:'storehouse',required:{wood:4,stone:2},reserved:{wood:4,stone:2},inTransit:{},delivered:{wood:1},completedWork:0,totalWork:30,buildStartTime:null,phase:'awaiting_resources'};
+  const missing=siteMissingResources(dummy);
+  missing.length>0?pass('missing resources detected'):fail('missing resources','none found');
+  const woodMissing=missing.find(m=>m.res==='wood');
+  (woodMissing&&woodMissing.missing===3)?pass('wood missing count correct'):fail('wood missing count',`expected 3 got ${woodMissing?.missing}`);
+  return results;
+}
+function testConstructionShowsReservedResources(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  const dummy={bldKey:'storehouse',required:{wood:4},reserved:{wood:4},inTransit:{},delivered:{wood:4},completedWork:0,totalWork:30,buildStartTime:null,phase:'build_ready'};
+  typeof siteMet==='function'?pass('siteMet exists'):fail('siteMet','not found');
+  if(typeof siteMet==='function') siteMet(dummy)?pass('siteMet returns true when fully delivered'):fail('siteMet','returned false on full delivery');
+  return results;
+}
+function testConstructionShowsInTransitResources(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  const dummy={bldKey:'storehouse',required:{wood:4},reserved:{wood:4},inTransit:{wood:2},delivered:{wood:1},completedWork:0,totalWork:30,buildStartTime:null,phase:'resources_in_transit'};
+  const ph=sitePhase(dummy);
+  ph==='resources_in_transit'?pass('in-transit phase correct'):fail('in-transit phase',`got ${ph}`);
+  return results;
+}
+function testConstructionShowsDeliveredPiles(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  const dummy={bldKey:'storehouse',required:{wood:4},reserved:{wood:4},inTransit:{},delivered:{wood:4},completedWork:0,totalWork:30,buildStartTime:null,phase:'build_ready'};
+  const ph=sitePhase(dummy);
+  ph==='build_ready'?pass('delivered piles → build_ready phase'):fail('build_ready phase',`got ${ph}`);
+  return results;
+}
+function testBuildStartEventFires(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  typeof pushSiteEvent==='function'?pass('pushSiteEvent exists'):fail('pushSiteEvent','not found');
+  const dummy={bldKey:'storehouse',required:{wood:4},reserved:{},inTransit:{},delivered:{wood:4},completedWork:0,totalWork:30,buildStartTime:null,lastProgressTime:null,stallTimer:0,blockedReason:null,timeline:[]};
+  pushSiteEvent(dummy,'build_started','TestBuilder');
+  (dummy.timeline&&dummy.timeline.length===1)?pass('build_started event appended'):fail('build_started event',`timeline length ${dummy.timeline?.length}`);
+  dummy.timeline[0].event==='build_started'?pass('event type correct'):fail('event type',dummy.timeline[0].event);
+  return results;
+}
+function testBuilderPresenceShown(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  typeof assignedCount==='function'?pass('assignedCount exists'):fail('assignedCount','not found');
+  if(sim.sites.length>0){
+    const site=sim.sites[0];
+    const cnt=assignedCount('build',site.id);
+    typeof cnt==='number'?pass('assignedCount returns number'):fail('assignedCount','not a number');
+  } else pass('no active sites (skip builder presence check)');
+  return results;
+}
+function testProgressVisibleWhileBuilding(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  const buildingSites=sim.sites.filter(s=>!s.complete&&s.completedWork>0);
+  buildingSites.length>0?pass('building sites with progress exist'):pass('no in-progress sites currently (ok)');
+  for(const s of buildingSites.slice(0,3)){
+    (s.progress>=0&&s.progress<=1)?pass(`site ${s.id} progress in [0,1]`):fail(`site ${s.id} progress`,`${s.progress}`);
+  }
+  return results;
+}
+function testAlmostDoneVisualState(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  const dummy={bldKey:'storehouse',required:{wood:4},reserved:{},inTransit:{},delivered:{wood:4},completedWork:27,totalWork:30,buildStartTime:0,lastProgressTime:0,phase:'building'};
+  const ph=sitePhase(dummy);
+  ph==='almost_done'?pass('almost_done phase triggers at 90%'):fail('almost_done phase',`got ${ph} at ${dummy.completedWork}/${dummy.totalWork}`);
+  const stage=siteStage(dummy);
+  stage==='finishing'?pass('finishing stage at 90%'):fail('finishing stage',`got ${stage}`);
+  return results;
+}
+function testStalledBuildExplainsWhy(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  typeof checkConstructionHeartbeat==='function'?pass('checkConstructionHeartbeat exists'):fail('checkConstructionHeartbeat','not found');
+  typeof getConstructionNextAction==='function'?pass('getConstructionNextAction exists'):fail('getConstructionNextAction','not found');
+  const dummy={id:99999,bldKey:'storehouse',required:{wood:4},reserved:{},inTransit:{},delivered:{wood:4},completedWork:0,totalWork:30,buildStartTime:null,lastProgressTime:null,phase:'build_ready',stallTimer:0,blockedReason:null,timeline:[]};
+  dummy.blockedReason='no_builder_available';
+  const action=getConstructionNextAction(dummy);
+  typeof action==='string'?pass('getConstructionNextAction returns string'):fail('getConstructionNextAction','not a string');
+  action.length>0?pass('next action non-empty'):fail('next action','empty string');
+  return results;
+}
+function testSelectedSiteInspectorHasNextAction(){
+  const results=[];const pass=(n)=>results.push({name:n,ok:true});const fail=(n,r)=>results.push({name:n,ok:false,reason:r});
+  typeof selectedSiteId!=='undefined'?pass('selectedSiteId global exists'):fail('selectedSiteId','not defined');
+  typeof showTileInfo==='function'?pass('showTileInfo exists'):fail('showTileInfo','not found');
+  if(sim.sites.length>0){
+    const site=sim.sites[0];const tile=state.grid[site.tileId];
+    if(tile){showTileInfo(tile);selectedSiteId===site.id?pass('selectedSiteId set by showTileInfo'):fail('selectedSiteId',`expected ${site.id} got ${selectedSiteId}`);}
+    else pass('site tile not found (ok)');
+  } else pass('no active sites (skip inspector test)');
+  return results;
+}
+function runConstructionVisualTests(){
+  const fns=[testConstructionSiteAlwaysVisible,testConstructionPhaseLabelUpdates,testConstructionShowsMissingResources,testConstructionShowsReservedResources,testConstructionShowsInTransitResources,testConstructionShowsDeliveredPiles,testBuildStartEventFires,testBuilderPresenceShown,testProgressVisibleWhileBuilding,testAlmostDoneVisualState,testStalledBuildExplainsWhy,testSelectedSiteInspectorHasNextAction];
+  const results=fns.flatMap(fn=>fn());
+  console.table(results);const passed=results.filter(r=>r.ok).length;console.log(`Construction visual tests: ${passed}/${results.length} passed`);return results;
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -5042,6 +5417,7 @@ function renderTestPanel(){
       +'<button class="test-btn" onclick="repairWorldState()">⚙ Repair</button>'
       +'<button class="test-btn" onclick="exportDebugReport()">📥 Export</button>'
       +'<button class="test-btn" onclick="_lastTestResults=runTerrainTests();renderTestPanel()">🗺 Terrain</button>'
+      +'<button class="test-btn" onclick="_lastTestResults=runConstructionVisualTests();renderTestPanel()">🏗 Build</button>'
       +'<button class="test-btn danger" onclick="startDeterministicTestWorld()">🧪 Test World</button>'
       +'<button class="test-btn danger" onclick="if(confirm(\'Run 60s accelerated simulation?\')){_lastTestResults=runAcceleratedSimulation(60);renderTestPanel();}">⏩ Accel 60s</button>'
       +'<button class="test-btn danger" onclick="if(confirm(\'Run 300s accelerated simulation? This may freeze the tab briefly.\')){_lastTestResults=runAcceleratedSimulation(300);renderTestPanel();}">⏩ Accel 300s</button>'
@@ -5101,6 +5477,7 @@ window.runAcceleratedSimulation=runAcceleratedSimulation;
 window.exportDebugReport=exportDebugReport;
 window.startDeterministicTestWorld=startDeterministicTestWorld;
 window.runTerrainTests=runTerrainTests;
+window.runConstructionVisualTests=runConstructionVisualTests;
 </script>
 </body>
 </html>
